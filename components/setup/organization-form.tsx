@@ -32,6 +32,7 @@ export function OrganizationForm() {
     inviteMember,
     getPendingInvitations,
     revokeInvitation,
+    getMembers,
   } = useOrganizationManager();
 
   const createOrUpdateOrg = useMutation(
@@ -49,6 +50,9 @@ export function OrganizationForm() {
   const [error, setError] = useState<string | null>(null);
   const [pendingInvitations, setPendingInvitations] = useState<
     Array<{ id: string; emailAddress: string; role: string }>
+  >([]);
+  const [existingMembers, setExistingMembers] = useState<
+    Array<{ id: string; emailAddress: string; role: string; publicUserData?: { firstName?: string; lastName?: string; imageUrl?: string } }>
   >([]);
   const [currentStep, setCurrentStep] = useState(0);
   const initializedOrgIdRef = useRef<string | null>(null);
@@ -84,11 +88,15 @@ export function OrganizationForm() {
     }
   }, [organization?.id, existingOrg]);
 
-  // Load pending invitations
+  // Load pending invitations and existing members
   useEffect(() => {
-    const loadInvitations = async () => {
+    const loadData = async () => {
       if (organization) {
-        const invitations = await getPendingInvitations();
+        const [invitations, members] = await Promise.all([
+          getPendingInvitations(),
+          getMembers(),
+        ]);
+        
         setPendingInvitations(
           invitations.map((inv) => ({
             id: inv.id,
@@ -96,10 +104,19 @@ export function OrganizationForm() {
             role: inv.role ?? "org:member",
           }))
         );
+
+        setExistingMembers(
+          members.map((member) => ({
+            id: member.id,
+            emailAddress: member.publicUserData?.identifier ?? "",
+            role: member.role ?? "org:member",
+            publicUserData: member.publicUserData,
+          }))
+        );
       }
     };
-    loadInvitations();
-  }, [organization, getPendingInvitations]);
+    loadData();
+  }, [organization, getPendingInvitations, getMembers]);
 
   const handleSaveAndContinue = async () => {
     if (!organization) return;
@@ -186,13 +203,24 @@ export function OrganizationForm() {
     role: "org:admin" | "org:member"
   ) => {
     await inviteMember(email, role);
-    // Refresh pending invitations
-    const invitations = await getPendingInvitations();
+    // Refresh pending invitations and existing members
+    const [invitations, members] = await Promise.all([
+      getPendingInvitations(),
+      getMembers(),
+    ]);
     setPendingInvitations(
       invitations.map((inv) => ({
         id: inv.id,
         emailAddress: inv.emailAddress ?? "",
         role: inv.role ?? "org:member",
+      }))
+    );
+    setExistingMembers(
+      members.map((member) => ({
+        id: member.id,
+        emailAddress: member.publicUserData?.identifier ?? "",
+        role: member.role ?? "org:member",
+        publicUserData: member.publicUserData,
       }))
     );
   };
@@ -393,6 +421,7 @@ export function OrganizationForm() {
               onInvite={handleInvite}
               pendingInvitations={pendingInvitations}
               onRevokeInvitation={handleRevokeInvitation}
+              existingMembers={existingMembers}
             />
           </div>
         )}

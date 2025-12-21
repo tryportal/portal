@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple } from "@phosphor-icons/react";
+import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface MemberInvitationProps {
@@ -15,12 +16,19 @@ interface MemberInvitationProps {
     role: string;
   }>;
   onRevokeInvitation: (invitationId: string) => Promise<void>;
+  existingMembers: Array<{
+    id: string;
+    emailAddress: string;
+    role: string;
+    publicUserData?: { firstName?: string; lastName?: string; imageUrl?: string };
+  }>;
 }
 
 export function MemberInvitation({
   onInvite,
   pendingInvitations,
   onRevokeInvitation,
+  existingMembers,
 }: MemberInvitationProps) {
   const [emails, setEmails] = useState<string[]>([""]);
   const [isInviting, setIsInviting] = useState(false);
@@ -79,8 +87,72 @@ export function MemberInvitation({
     }
   };
 
+  const getMemberDisplayName = (member: typeof existingMembers[0]) => {
+    const firstName = member.publicUserData?.firstName;
+    const lastName = member.publicUserData?.lastName;
+    if (firstName || lastName) {
+      return `${firstName || ""} ${lastName || ""}`.trim();
+    }
+    return member.emailAddress;
+  };
+
+  const getMemberInitials = (member: typeof existingMembers[0]) => {
+    const firstName = member.publicUserData?.firstName;
+    const lastName = member.publicUserData?.lastName;
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName[0].toUpperCase();
+    }
+    if (lastName) {
+      return lastName[0].toUpperCase();
+    }
+    if (member.emailAddress && member.emailAddress.length > 0) {
+      return member.emailAddress[0].toUpperCase();
+    }
+    return "?";
+  };
+
   return (
     <div className="space-y-6">
+      {/* Existing team members */}
+      {existingMembers.length > 0 && (
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-primary">Team members</Label>
+          <div className="space-y-2">
+            {existingMembers.map((member) => (
+              <div
+                key={member.id}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2",
+                  "bg-primary/5 rounded-lg text-sm"
+                )}
+              >
+                <Avatar className="size-8">
+                  <AvatarImage src={member.publicUserData?.imageUrl} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {getMemberInitials(member)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary font-medium truncate">
+                      {getMemberDisplayName(member)}
+                    </span>
+                    <span className="text-xs text-primary/60 capitalize shrink-0">
+                      ({member.role.replace("org:", "")})
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary/60 truncate">{member.emailAddress}</p>
+                </div>
+                <User className="size-4 text-primary/40 shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         <Label className="text-sm font-medium text-primary">Invite team members</Label>
         <p className="text-xs text-primary/60">
