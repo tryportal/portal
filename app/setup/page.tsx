@@ -82,12 +82,9 @@ export default function SetupPage() {
     createDefaultOrg();
   }, [orgListLoaded, isSignedIn, userMemberships?.data?.length, isCreatingOrg, createOrganization]);
 
-  // Redirect to home if organization is already set up
-  useEffect(() => {
-    if (isOrgSetup === true) {
-      router.replace("/");
-    }
-  }, [isOrgSetup, router]);
+  // Note: We don't auto-redirect here because the user might be in the middle
+  // of the setup flow. The redirect happens when they click "Finish setup" 
+  // in the OrganizationForm component.
 
   // Loading state
   if (!authLoaded || !orgListLoaded || isCreatingOrg || !isSignedIn) {
