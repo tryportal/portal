@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrganization } from "@clerk/nextjs";
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -25,6 +25,11 @@ export default function WorkspacePage({
 }) {
   const router = useRouter();
   const { organization, isLoaded: clerkLoaded } = useOrganization();
+  const { userMemberships, isLoaded: orgListLoaded, setActive } = useOrganizationList({
+    userMemberships: {
+      infinite: true,
+    },
+  });
   const [slug, setSlug] = React.useState<string>("");
   const [activeTab, setActiveTab] = React.useState("home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
@@ -56,22 +61,68 @@ export default function WorkspacePage({
     organization?.id ? { clerkOrgId: organization.id } : "skip"
   );
 
-  // Verify slug matches organization
-  useEffect(() => {
-    if (clerkLoaded && organization && slug) {
-      // If the slug doesn't match, redirect to the correct slug
-      if (organization.slug && organization.slug !== slug) {
-        router.replace(`/${organization.slug}`);
-      }
-    }
-  }, [clerkLoaded, organization, slug, router]);
+  const orgBySlug = useQuery(
+    api.organizations.getOrganizationBySlug,
+    slug ? { slug } : "skip"
+  );
 
-  // Redirect to setup if organization is not set up
+  // Verify user has access to the organization with this slug
   useEffect(() => {
-    if (clerkLoaded && !organization) {
+    if (!clerkLoaded || !orgListLoaded || !slug || orgBySlug === undefined) return;
+
+    // If no organization found for this slug, redirect to setup
+    if (orgBySlug === null) {
+      router.replace("/setup");
+      return;
+    }
+
+    // Check if user is a member of the organization with this slug
+    const targetMembership = userMemberships?.data?.find(
+      (membership) => membership.organization.id === orgBySlug.clerkOrgId
+    );
+
+    if (!targetMembership) {
+      // User doesn't have access to this organization
+      // Redirect to their first organization or setup
+      const firstOrg = userMemberships?.data?.[0]?.organization;
+      if (firstOrg?.slug) {
+        router.replace(`/${firstOrg.slug}`);
+      } else {
+        router.replace("/setup");
+      }
+      return;
+    }
+
+    // If user has access but the active organization doesn't match, switch to it
+    if (organization?.id !== orgBySlug.clerkOrgId && setActive) {
+      // Use Clerk's setActive to switch organizations
+      // This will update the organization context
+      setActive({ organization: orgBySlug.clerkOrgId });
+      return;
+    }
+
+    // Ensure the slug matches the organization's slug
+    if (organization.slug && organization.slug !== slug) {
+      router.replace(`/${organization.slug}`);
+    }
+  }, [
+    clerkLoaded,
+    orgListLoaded,
+    slug,
+    orgBySlug,
+    userMemberships?.data,
+    organization?.id,
+    organization?.slug,
+    setActive,
+    router,
+  ]);
+
+  // Redirect to setup if no organization is active
+  useEffect(() => {
+    if (clerkLoaded && orgListLoaded && !organization && userMemberships?.data?.length === 0) {
       router.replace("/setup");
     }
-  }, [clerkLoaded, organization, router]);
+  }, [clerkLoaded, orgListLoaded, organization, userMemberships?.data?.length, router]);
 
   const channelInfo = getChannelInfo(activeChannel);
   const currentMessages = messages[activeChannel] || [];
@@ -93,7 +144,18 @@ export default function WorkspacePage({
     }));
   };
 
-  if (!clerkLoaded) {
+  if (!clerkLoaded || !orgListLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while checking access
+  if (orgBySlug === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">

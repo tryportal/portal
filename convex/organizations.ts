@@ -15,6 +15,19 @@ export const getOrganization = query({
 });
 
 /**
+ * Get organization by slug
+ */
+export const getOrganizationBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("organizations")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+  },
+});
+
+/**
  * Check if organization setup is complete (has description)
  */
 export const isOrganizationSetup = query({
@@ -27,6 +40,28 @@ export const isOrganizationSetup = query({
 
     // Organization is set up if it exists and has a description
     return org !== null && org.description !== undefined && org.description.trim() !== "";
+  },
+});
+
+/**
+ * Check setup status for multiple organizations
+ * Returns a map of clerkOrgId -> boolean
+ */
+export const checkMultipleOrganizationsSetup = query({
+  args: { clerkOrgIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const results: Record<string, boolean> = {};
+    
+    for (const clerkOrgId of args.clerkOrgIds) {
+      const org = await ctx.db
+        .query("organizations")
+        .withIndex("by_clerk_org_id", (q) => q.eq("clerkOrgId", clerkOrgId))
+        .first();
+      
+      results[clerkOrgId] = org !== null && org.description !== undefined && org.description.trim() !== "";
+    }
+    
+    return results;
   },
 });
 

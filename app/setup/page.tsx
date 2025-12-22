@@ -22,6 +22,13 @@ export default function SetupPage() {
   const firstOrg = userMemberships?.data?.[0]?.organization;
   const clerkOrgId = firstOrg?.id;
 
+  // Check setup status for all organizations the user is a member of
+  const allOrgIds = userMemberships?.data?.map((m) => m.organization.id) || [];
+  const orgSetupChecks = useQuery(
+    api.organizations.checkMultipleOrganizationsSetup,
+    allOrgIds.length > 0 ? { clerkOrgIds: allOrgIds } : "skip"
+  );
+
   const isOrgSetup = useQuery(
     api.organizations.isOrganizationSetup,
     clerkOrgId ? { clerkOrgId } : "skip"
@@ -33,6 +40,35 @@ export default function SetupPage() {
       router.replace("/sign-in");
     }
   }, [authLoaded, isSignedIn, router]);
+
+  // Redirect if user is already a member of a fully set up organization
+  useEffect(() => {
+    if (
+      orgListLoaded &&
+      isSignedIn &&
+      orgSetupChecks &&
+      userMemberships?.data
+    ) {
+      // Find the first organization that is fully set up
+      for (const membership of userMemberships.data) {
+        const orgId = membership.organization.id;
+        const orgSlug = membership.organization.slug;
+        const isSetup = orgSetupChecks[orgId];
+
+        if (isSetup && orgSlug) {
+          // User is already a member of a fully set up organization, redirect them
+          router.replace(`/${orgSlug}`);
+          return;
+        }
+      }
+    }
+  }, [
+    orgListLoaded,
+    isSignedIn,
+    orgSetupChecks,
+    userMemberships?.data,
+    router,
+  ]);
 
   // If user has no organization, create one for them
   useEffect(() => {
@@ -83,7 +119,13 @@ export default function SetupPage() {
   }, [orgListLoaded, isSignedIn, userMemberships?.data?.length, isCreatingOrg, createOrganization]);
 
   // Loading state
-  if (!authLoaded || !orgListLoaded || isCreatingOrg || !isSignedIn) {
+  if (
+    !authLoaded ||
+    !orgListLoaded ||
+    isCreatingOrg ||
+    !isSignedIn ||
+    (allOrgIds.length > 0 && orgSetupChecks === undefined)
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
@@ -96,17 +138,6 @@ export default function SetupPage() {
               {isCreatingOrg ? "Setting up your workspace..." : "Loading..."}
             </p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Waiting for organization setup check
-  if (isOrgSetup === undefined && clerkOrgId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
-         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
         </div>
       </div>
     );

@@ -9,5 +9,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_clerk_org_id", ["clerkOrgId"]),
+  })
+    .index("by_clerk_org_id", ["clerkOrgId"])
+    .index("by_slug", ["slug"]),
 });
