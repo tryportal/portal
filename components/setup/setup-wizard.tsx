@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -12,6 +12,20 @@ import { SetupProgress } from "@/components/setup/setup-progress";
 import { IdentityStep } from "@/components/setup/steps/identity-step";
 import { AboutStep } from "@/components/setup/steps/about-step";
 import { InviteStep } from "@/components/setup/steps/invite-step";
+
+// Type for member data returned from the action
+type MemberWithUserData = {
+  _id: Id<"organizationMembers">;
+  organizationId: Id<"organizations">;
+  userId: string;
+  role: "admin" | "member";
+  emailAddress: string | null;
+  publicUserData: {
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+  } | undefined;
+};
 
 // Reserved routes that cannot be used as workspace slugs
 const RESERVED_ROUTES = [
@@ -71,14 +85,25 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     api.organizations.getOrganizationInvitations,
     currentOrgId ? { organizationId: currentOrgId } : "skip"
   );
-  const members = useQuery(
-    api.organizations.getOrganizationMembers,
-    currentOrgId ? { organizationId: currentOrgId } : "skip"
-  );
   const inviteLink = useQuery(
     api.organizations.getInviteLink,
     currentOrgId ? { organizationId: currentOrgId, role: "member" as const } : "skip"
   );
+
+  // Members state (fetched via action)
+  const [members, setMembers] = useState<MemberWithUserData[]>([]);
+  const fetchMembers = useAction(api.organizations.getOrganizationMembers);
+
+  // Fetch members when organization ID changes
+  useEffect(() => {
+    if (currentOrgId) {
+      fetchMembers({ organizationId: currentOrgId })
+        .then(setMembers)
+        .catch(console.error);
+    } else {
+      setMembers([]);
+    }
+  }, [currentOrgId, fetchMembers]);
 
   // Form state
   const [name, setName] = useState("");
@@ -226,7 +251,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
   };
 
   // Format members for display
-  const formattedMembers = (members || []).map((member) => ({
+  const formattedMembers = members.map((member: MemberWithUserData) => ({
     id: member._id,
     emailAddress: member.emailAddress || member.userId,
     role: member.role === "admin" ? "org:admin" : "org:member",

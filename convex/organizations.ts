@@ -1,5 +1,21 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+
+// Member type returned from the action
+type MemberWithUserData = {
+  _id: Id<"organizationMembers">;
+  organizationId: Id<"organizations">;
+  userId: string;
+  role: "admin" | "member";
+  emailAddress: string | null;
+  publicUserData: {
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+  } | undefined;
+};
 
 // Reserved routes that cannot be used as workspace slugs
 const RESERVED_ROUTES = [
@@ -422,13 +438,13 @@ export const getUserMembership = query({
 });
 
 /**
- * Get members of an organization with enriched user data
+ * Get members of an organization (query for internal use)
  */
-export const getOrganizationMembers = query({
+export const getOrganizationMembersQuery = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return { members: [], isAuthorized: false };
 
     const userId = identity.subject;
 
@@ -440,7 +456,7 @@ export const getOrganizationMembers = query({
       )
       .first();
 
-    if (!membership) return [];
+    if (!membership) return { members: [], isAuthorized: false };
 
     const members = await ctx.db
       .query("organizationMembers")
@@ -449,10 +465,28 @@ export const getOrganizationMembers = query({
       )
       .collect();
 
+    return { members, isAuthorized: true };
+  },
+});
+
+/**
+ * Get members of an organization with enriched user data
+ */
+export const getOrganizationMembers = action({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args): Promise<MemberWithUserData[]> => {
+    const result = await ctx.runQuery(api.organizations.getOrganizationMembersQuery, {
+      organizationId: args.organizationId,
+    });
+
+    if (!result.isAuthorized) return [];
+
+    const members: Doc<"organizationMembers">[] = result.members;
+
     // Fetch user data from Clerk for each member
     const clerkSecretKey = process.env.CLERK_SECRET_KEY;
     if (!clerkSecretKey) {
-      return members.map((member) => ({
+      return members.map((member: Doc<"organizationMembers">): MemberWithUserData => ({
         _id: member._id,
         organizationId: member.organizationId,
         userId: member.userId,
@@ -462,8 +496,8 @@ export const getOrganizationMembers = query({
       }));
     }
 
-    const membersWithUserData = await Promise.all(
-      members.map(async (member) => {
+    const membersWithUserData: MemberWithUserData[] = await Promise.all(
+      members.map(async (member: Doc<"organizationMembers">): Promise<MemberWithUserData> => {
         try {
           const response = await fetch(
             `https://api.clerk.com/v1/users/${member.userId}`,
