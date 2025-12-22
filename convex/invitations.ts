@@ -39,7 +39,7 @@ export const sendInvitationEmail = action({
 
     // Send email using inbound.new API
     try {
-      const response = await fetch("https://api.inbound.new/email/send", {
+      const response = await fetch("https://inbound.new/api/v2/emails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,7 +47,7 @@ export const sendInvitationEmail = action({
         },
         body: JSON.stringify({
           from: `Portal <noreply@${process.env.INBOUND_DOMAIN || "tryportal.app"}>`,
-          to: args.email,
+          to: [args.email],
           subject: `You've been invited to join ${org.name} on Portal`,
           html: `
 <!DOCTYPE html>
@@ -101,8 +101,21 @@ export const sendInvitationEmail = action({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Failed to send invitation email:", errorText);
+        let errorMessage = `Failed to send invitation email: ${response.status} ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch {
+          // If errorText is not JSON, use it as-is
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        console.error("Failed to send invitation email:", errorMessage);
         // Don't throw - invitation was created, just email failed
+      } else {
+        const result = await response.json();
+        console.log("Invitation email sent successfully:", result.id || result.message_id);
       }
     } catch (error) {
       console.error("Error sending invitation email:", error);

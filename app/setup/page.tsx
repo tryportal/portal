@@ -49,20 +49,8 @@ export default function SetupPage() {
     }
   }, [authLoaded, isSignedIn, router]);
 
-  // Redirect if user is already a member of a fully set up organization
-  useEffect(() => {
-    if (!authLoaded || !isSignedIn || userOrgs === undefined || orgSetupChecks === undefined) return;
-
-    // Find the first organization that is fully set up
-    for (const org of userOrgs) {
-      const isSetup = orgSetupChecks[org._id];
-      if (isSetup && org.slug) {
-        // User is already a member of a fully set up organization, redirect them
-        router.replace(`/${org.slug}`);
-        return;
-      }
-    }
-  }, [authLoaded, isSignedIn, userOrgs, orgSetupChecks, router]);
+  // Note: We removed the redirect that prevented users from creating new organizations
+  // Users can now create multiple organizations even if they already have one
 
   // Check if user has other fully set up organizations (for exit button)
   const otherSetupOrgs = userOrgs?.filter((org: { _id: Id<"organizations">; slug?: string }) => {
