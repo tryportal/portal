@@ -39,6 +39,7 @@ export function WorkspaceSettingsPage({
   const membership = useQuery(api.organizations.getUserMembership, {
     organizationId,
   })
+  const userOrgs = useQuery(api.organizations.getUserOrganizations)
   const updateOrganization = useMutation(api.organizations.updateOrganization)
   const deleteOrganization = useMutation(api.organizations.deleteOrganization)
 
@@ -128,9 +129,23 @@ export function WorkspaceSettingsPage({
     setError(null)
 
     try {
+      // Get other workspaces before deletion to ensure we have a reliable list
+      const otherOrgs = userOrgs?.filter(
+        (org) => org._id !== organizationId
+      ) || []
+      
+      // Prioritize organization where user is admin, otherwise use first org
+      const targetOrg = otherOrgs.find((org) => org.role === "admin") || otherOrgs[0]
+      
       await deleteOrganization({ organizationId })
-      // Redirect to setup page after successful deletion
-      router.push("/setup")
+      
+      if (targetOrg?.slug) {
+        // Redirect to another workspace
+        router.push(`/${targetOrg.slug}`)
+      } else {
+        // Fallback to setup if no other workspaces exist
+        router.push("/setup")
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete organization")
       setIsDeleting(false)

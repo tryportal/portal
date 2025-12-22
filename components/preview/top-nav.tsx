@@ -57,7 +57,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+    <header className="grid h-14 grid-cols-3 items-center border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
       {/* Left: Portal Logo */}
       <div className="flex items-center">
         <Image
@@ -70,7 +70,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       </div>
 
       {/* Center: Workspace + Tabs */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         {/* Organization Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
@@ -178,7 +178,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       </div>
 
       {/* Right: User Account */}
-      <UserButton
+      <div className="flex justify-end">
+        <UserButton
         appearance={{
           elements: {
             rootBox: "h-8",
@@ -189,7 +190,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             userButtonPopoverFooter: "hidden",
           },
         }}
-      />
+        />
+      </div>
     </header>
   )
 }
