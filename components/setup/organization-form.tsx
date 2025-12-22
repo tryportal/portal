@@ -54,16 +54,40 @@ export function OrganizationForm() {
     Array<{ id: string; emailAddress: string; role: string }>
   >([]);
   const [existingMembers, setExistingMembers] = useState<
-    Array<{ id: string; emailAddress: string; role: string; publicUserData?: { firstName?: string; lastName?: string; imageUrl?: string } }>
+    Array<{
+      id: string;
+      emailAddress: string;
+      role: string;
+      publicUserData?: {
+        firstName?: string;
+        lastName?: string;
+        imageUrl?: string;
+      };
+    }>
   >([]);
   const [currentStep, setCurrentStep] = useState(0);
   const initializedOrgIdRef = useRef<string | null>(null);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
   const steps = [
-    { id: "basics", title: "Identity", description: "Name & Logo", icon: Buildings },
-    { id: "description", title: "About", description: "Mission & Goals", icon: TextAlignLeft },
-    { id: "members", title: "Team", description: "Invite Members", icon: LinkIcon },
+    {
+      id: "basics",
+      title: "Identity",
+      description: "Name & Logo",
+      icon: Buildings,
+    },
+    {
+      id: "description",
+      title: "About",
+      description: "Mission & Goals",
+      icon: TextAlignLeft,
+    },
+    {
+      id: "members",
+      title: "Team",
+      description: "Invite Members",
+      icon: LinkIcon,
+    },
   ];
 
   // Initialize form with organization data (only once per organization)
@@ -94,7 +118,7 @@ export function OrganizationForm() {
           getPendingInvitations(),
           getMembers(),
         ]);
-        
+
         setPendingInvitations(
           invitations.map((inv) => ({
             id: inv.id,
@@ -258,25 +282,29 @@ export function OrganizationForm() {
   return (
     <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12 md:gap-24 items-start">
       {/* Sidebar Stepper - Left Side */}
-      <div className="hidden md:flex flex-col space-y-1 relative sticky top-8">
+      <div className="hidden md:flex flex-col space-y-1 sticky top-8">
         <div className="absolute left-3.5 top-4 bottom-4 w-px bg-[#26251E]/5 -z-10" />
         {steps.map((step, index) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
-          
+
           return (
-            <div 
-              key={step.id} 
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => setCurrentStep(index)}
               className={cn(
-                "flex items-center gap-4 py-3 px-3 rounded-lg transition-all duration-300",
-                isActive ? "bg-white shadow-sm" : "opacity-60 hover:opacity-100 hover:bg-[#26251E]/5"
+                "flex items-center gap-4 py-3 px-3 rounded-lg transition-all duration-300 cursor-pointer text-left w-full",
+                isActive
+                  ? "bg-white shadow-sm"
+                  : "opacity-60 hover:opacity-100 hover:bg-[#26251E]/5"
               )}
             >
-              <div 
+              <div
                 className={cn(
-                  "size-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors duration-300 z-10",
-                  isActive 
-                    ? "bg-[#26251E] text-white border-[#26251E]" 
+                  "size-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors duration-300 z-10 shrink-0",
+                  isActive
+                    ? "bg-[#26251E] text-white border-[#26251E]"
                     : isCompleted
                       ? "bg-[#26251E] text-white border-[#26251E]"
                       : "bg-[#F7F7F4] text-[#26251E]/40 border-[#26251E]/20"
@@ -285,17 +313,19 @@ export function OrganizationForm() {
                 {isCompleted ? <Check weight="bold" /> : index + 1}
               </div>
               <div className="flex flex-col">
-                <span className={cn(
-                  "text-sm font-medium transition-colors",
-                  isActive ? "text-[#26251E]" : "text-[#26251E]/80"
-                )}>
+                <span
+                  className={cn(
+                    "text-sm font-medium transition-colors",
+                    isActive ? "text-[#26251E]" : "text-[#26251E]/80"
+                  )}
+                >
                   {step.title}
                 </span>
                 <span className="text-[10px] text-[#26251E]/40 font-medium tracking-wide uppercase">
                   {step.description}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -304,8 +334,12 @@ export function OrganizationForm() {
       <div className="flex flex-col gap-8 w-full max-w-lg">
         {/* Mobile Step Indicator */}
         <div className="flex md:hidden items-center justify-between mb-4 border-b border-[#26251E]/10 pb-4">
-          <span className="text-sm font-medium text-[#26251E]/60">Step {currentStep + 1} of {steps.length}</span>
-          <span className="text-sm font-semibold text-[#26251E]">{steps[currentStep].title}</span>
+          <span className="text-sm font-medium text-[#26251E]/60">
+            Step {currentStep + 1} of {steps.length}
+          </span>
+          <span className="text-sm font-semibold text-[#26251E]">
+            {steps[currentStep].title}
+          </span>
         </div>
 
         {currentStep === 0 && (
@@ -315,7 +349,8 @@ export function OrganizationForm() {
                 Let's start with the basics
               </h1>
               <p className="text-[#26251E]/60 text-lg">
-                Your organization's identity helps your team recognize where they are.
+                Your organization's identity helps your team recognize where
+                they are.
               </p>
             </div>
 
@@ -350,14 +385,16 @@ export function OrganizationForm() {
                   </Label>
                   <div className="flex items-center group focus-within:ring-1 focus-within:ring-[#26251E] rounded-md transition-all">
                     <span className="h-12 px-4 flex items-center text-sm text-[#26251E]/40 bg-[#26251E]/5 border border-[#26251E]/10 border-r-0 rounded-l-md group-focus-within:border-[#26251E]">
-                      portal.app/
+                      tryportal.app/
                     </span>
                     <Input
                       id="slug"
                       value={slug}
                       onChange={(e) => {
                         setSlug(
-                          e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]/g, "")
                         );
                         setHasUserEdited(true);
                       }}
@@ -386,8 +423,14 @@ export function OrganizationForm() {
             </div>
 
             <div className="space-y-2 py-4">
-              <Label htmlFor="description" className="text-[#26251E] font-medium">
-                Description <span className="text-[#26251E]/40 font-normal">(optional)</span>
+              <Label
+                htmlFor="description"
+                className="text-[#26251E] font-medium"
+              >
+                Description{" "}
+                <span className="text-[#26251E]/40 font-normal">
+                  (optional)
+                </span>
               </Label>
               <Textarea
                 id="description"
@@ -451,8 +494,8 @@ export function OrganizationForm() {
               Skip for now
             </Button>
           ) : (
-             // Spacer
-             <div />
+            // Spacer
+            <div />
           )}
 
           <Button
