@@ -1,0 +1,139 @@
+"use client";
+
+import { useOrganization } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { api } from "@/convex/_generated/api";
+import { TopNav } from "@/components/preview/top-nav";
+import { Sidebar } from "@/components/preview/sidebar";
+import { ChatInterface } from "@/components/preview/chat-interface";
+import {
+  mockCategories,
+  getMessagesForChannel,
+  getChannelInfo,
+  mockUsers,
+} from "@/components/preview/mock-data";
+import type { Message } from "@/components/preview/message-list";
+import { Spinner } from "@phosphor-icons/react";
+import * as React from "react";
+
+export default function WorkspacePage({
+  params,
+}: {
+  params: Promise<{ slug: string }> | { slug: string };
+}) {
+  const router = useRouter();
+  const { organization, isLoaded: clerkLoaded } = useOrganization();
+  const [slug, setSlug] = React.useState<string>("");
+  const [activeTab, setActiveTab] = React.useState("home");
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [activeChannel, setActiveChannel] = React.useState("general");
+  const [messages, setMessages] = React.useState<Record<string, Message[]>>(
+    () => {
+      // Initialize with mock messages
+      const initial: Record<string, Message[]> = {};
+      for (const category of mockCategories) {
+        for (const channel of category.channels) {
+          initial[channel.id] = getMessagesForChannel(channel.id);
+        }
+      }
+      return initial;
+    }
+  );
+
+  // Resolve params if it's a Promise (Next.js 15+)
+  React.useEffect(() => {
+    if (params instanceof Promise) {
+      params.then((resolved) => setSlug(resolved.slug));
+    } else {
+      setSlug(params.slug);
+    }
+  }, [params]);
+
+  const orgData = useQuery(
+    api.organizations.getOrganization,
+    organization?.id ? { clerkOrgId: organization.id } : "skip"
+  );
+
+  // Verify slug matches organization
+  useEffect(() => {
+    if (clerkLoaded && organization && slug) {
+      // If the slug doesn't match, redirect to the correct slug
+      if (organization.slug && organization.slug !== slug) {
+        router.replace(`/${organization.slug}`);
+      }
+    }
+  }, [clerkLoaded, organization, slug, router]);
+
+  // Redirect to setup if organization is not set up
+  useEffect(() => {
+    if (clerkLoaded && !organization) {
+      router.replace("/setup");
+    }
+  }, [clerkLoaded, organization, router]);
+
+  const channelInfo = getChannelInfo(activeChannel);
+  const currentMessages = messages[activeChannel] || [];
+
+  const handleSendMessage = (content: string) => {
+    const newMessage: Message = {
+      id: `${Date.now()}`,
+      content,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      user: mockUsers.john, // Current user
+    };
+
+    setMessages((prev) => ({
+      ...prev,
+      [activeChannel]: [...(prev[activeChannel] || []), newMessage],
+    }));
+  };
+
+  if (!clerkLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!organization) {
+    return null; // Will redirect to setup
+  }
+
+  return (
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
+      {/* Top Navigation */}
+      <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen((prev) => !prev)}
+          activeChannel={activeChannel}
+          onChannelSelect={setActiveChannel}
+          categories={mockCategories}
+        />
+
+        {/* Chat Interface */}
+        <main className="flex-1 overflow-hidden">
+          <ChatInterface
+            channelName={channelInfo.name}
+            channelIcon={channelInfo.icon}
+            messages={currentMessages}
+            onSendMessage={handleSendMessage}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}
+

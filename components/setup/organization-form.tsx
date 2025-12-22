@@ -196,7 +196,8 @@ export function OrganizationForm() {
         setCurrentStep(currentStep + 1);
         setError(null);
       } else {
-        router.replace("/");
+        // Navigate to workspace page using the slug
+        router.replace(`/${slug}`);
       }
     } catch (err) {
       console.error("Failed to save organization:", err);
@@ -253,7 +254,8 @@ export function OrganizationForm() {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.replace("/");
+      // Navigate to workspace page using the slug
+      router.replace(`/${slug}`);
     }
   };
 

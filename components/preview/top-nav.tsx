@@ -6,20 +6,11 @@ import {
   ChatCircleIcon,
   TrayIcon,
   CaretDownIcon,
-  GearIcon,
-  UserIcon,
-  SignOutIcon,
 } from "@phosphor-icons/react"
+import { useOrganization } from "@clerk/nextjs"
+import { UserButton } from "@clerk/nextjs"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface TopNavProps {
   activeTab: string
@@ -33,6 +24,8 @@ const tabs = [
 ]
 
 export function TopNav({ activeTab, onTabChange }: TopNavProps) {
+  const { organization, isLoaded } = useOrganization()
+
   return (
     <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
       {/* Left: Portal Logo */}
@@ -53,16 +46,28 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           variant="ghost"
           className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8"
         >
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+          {organization?.imageUrl ? (
             <Image
-              src="/portal.svg"
-              alt="Workspace"
-              width={12}
-              height={12}
-              className="invert"
+              src={organization.imageUrl}
+              alt={organization.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded"
             />
-          </div>
-          <span className="text-sm font-medium">Acme Inc</span>
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+              <Image
+                src="/portal.svg"
+                alt="Workspace"
+                width={12}
+                height={12}
+                className="invert"
+              />
+            </div>
+          )}
+          <span className="text-sm font-medium">
+            {isLoaded ? (organization?.name || "Organization") : "Loading..."}
+          </span>
           <CaretDownIcon className="ml-1 size-3 text-[#26251E]/50" />
         </Button>
 
@@ -94,31 +99,18 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       </div>
 
       {/* Right: User Account */}
-      <DropdownMenu>
-        <DropdownMenuTrigger className="h-6 gap-2 px-2 text-xs/relaxed [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none shrink-0">
-          <Avatar size="sm">
-            <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" />
-            <AvatarFallback>JD</AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium text-[#26251E]">John Doe</span>
-          <CaretDownIcon className="size-3 text-[#26251E]/50" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem>
-            <UserIcon className="size-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <GearIcon className="size-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">
-            <SignOutIcon className="size-4" />
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <UserButton
+        appearance={{
+          elements: {
+            rootBox: "h-8",
+            avatarBox: "h-8 w-8",
+            userButtonPopoverCard: "shadow-lg",
+            userButtonPopoverActions: "p-2",
+            userButtonPopoverActionButton: "text-[#26251E] hover:bg-[#26251E]/5",
+            userButtonPopoverFooter: "hidden",
+          },
+        }}
+      />
     </header>
   )
 }

@@ -17,6 +17,7 @@ import {
   LinkIcon,
   SidebarIcon,
 } from "@phosphor-icons/react"
+import { useOrganization } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -59,6 +60,7 @@ export function Sidebar({
   onChannelSelect,
   categories,
 }: SidebarProps) {
+  const { organization, isLoaded } = useOrganization()
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     categories.map((c) => c.id)
   )
@@ -91,17 +93,27 @@ export function Sidebar({
       {/* Header with toggle */}
       <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+          {organization?.imageUrl ? (
             <Image
-              src="/portal.svg"
-              alt="Workspace"
-              width={12}
-              height={12}
-              className="invert"
+              src={organization.imageUrl}
+              alt={organization.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded"
             />
-          </div>
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+              <Image
+                src="/portal.svg"
+                alt="Workspace"
+                width={12}
+                height={12}
+                className="invert"
+              />
+            </div>
+          )}
           <span className="text-sm font-medium text-[#26251E]">
-            Acme Inc
+            {isLoaded ? (organization?.name || "Organization") : "Loading..."}
           </span>
         </div>
         <Button
