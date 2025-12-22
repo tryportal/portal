@@ -497,8 +497,8 @@ export const acceptInvitation = mutation({
       throw new Error("This invitation has expired");
     }
 
-    // Verify email matches (optional - can be removed for more flexibility)
-    if (userEmail && invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    // Verify email matches (only for email-based invites, not link invites)
+    if (invitation.email && userEmail && invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
       throw new Error("This invitation was sent to a different email address");
     }
 
@@ -528,6 +528,164 @@ export const acceptInvitation = mutation({
     // Get the organization for redirect
     const org = await ctx.db.get(invitation.organizationId);
     return { organizationId: invitation.organizationId, slug: org?.slug };
+  },
+});
+
+/**
+ * Create or get an invite link for the organization
+ */
+export const createInviteLink = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if user is an admin of this organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only organization admins can create invite links");
+    }
+
+    // Check if there's already an active link invite for this role
+    const existingLink = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isLinkInvite"), true),
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("role"), args.role),
+          q.gt(q.field("expiresAt"), Date.now())
+        )
+      )
+      .first();
+
+    if (existingLink) {
+      return { token: existingLink.token, expiresAt: existingLink.expiresAt };
+    }
+
+    // Generate a unique token
+    const token = crypto.randomUUID();
+
+    // Create the invite link (expires in 7 days)
+    await ctx.db.insert("organizationInvitations", {
+      organizationId: args.organizationId,
+      role: args.role,
+      invitedBy: userId,
+      token,
+      status: "pending",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      isLinkInvite: true,
+    });
+
+    return { token, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+  },
+});
+
+/**
+ * Get active invite link for an organization
+ */
+export const getInviteLink = query({
+  args: {
+    organizationId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const userId = identity.subject;
+
+    // Check if user is an admin of this organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      return null;
+    }
+
+    // Find active link invite
+    const activeLink = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isLinkInvite"), true),
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("role"), args.role),
+          q.gt(q.field("expiresAt"), Date.now())
+        )
+      )
+      .first();
+
+    return activeLink ? { token: activeLink.token, expiresAt: activeLink.expiresAt } : null;
+  },
+});
+
+/**
+ * Revoke an invite link
+ */
+export const revokeInviteLink = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if user is an admin of this organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only organization admins can revoke invite links");
+    }
+
+    // Find and revoke all active link invites for this role
+    const activeLinks = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isLinkInvite"), true),
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("role"), args.role)
+        )
+      )
+      .collect();
+
+    for (const link of activeLinks) {
+      await ctx.db.patch(link._id, { status: "revoked" });
+    }
+
+    return { revokedCount: activeLinks.length };
   },
 });
 

@@ -25,13 +25,14 @@ export default defineSchema({
 
   organizationInvitations: defineTable({
     organizationId: v.id("organizations"),
-    email: v.string(),
+    email: v.optional(v.string()), // Optional for link-based invites
     role: v.union(v.literal("admin"), v.literal("member")),
     invitedBy: v.string(), // Clerk user ID
     token: v.string(),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("revoked")),
     createdAt: v.number(),
     expiresAt: v.number(),
+    isLinkInvite: v.optional(v.boolean()), // True for shareable link invites
   })
     .index("by_organization", ["organizationId"])
     .index("by_token", ["token"])

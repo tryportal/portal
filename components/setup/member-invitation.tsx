@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User, CheckCircle } from "@phosphor-icons/react";
+import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User, CheckCircle, Link as LinkIcon, Copy, Check, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,13 @@ interface MemberInvitationProps {
     role: string;
     publicUserData?: { firstName?: string; lastName?: string; imageUrl?: string };
   }>;
+  inviteLink?: {
+    token: string;
+    expiresAt: number;
+  } | null;
+  onCreateInviteLink?: () => Promise<{ token: string; expiresAt: number }>;
+  onRevokeInviteLink?: () => Promise<void>;
+  isLoadingInviteLink?: boolean;
 }
 
 export function MemberInvitation({
@@ -29,11 +36,64 @@ export function MemberInvitation({
   pendingInvitations,
   onRevokeInvitation,
   existingMembers,
+  inviteLink,
+  onCreateInviteLink,
+  onRevokeInviteLink,
+  isLoadingInviteLink,
 }: MemberInvitationProps) {
   const [emails, setEmails] = useState<string[]>([""]);
   const [isInviting, setIsInviting] = useState(false);
   const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+
+  const getInviteUrl = () => {
+    if (!inviteLink?.token) return "";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return `${baseUrl}/invite/${inviteLink.token}`;
+  };
+
+  const handleCopyLink = async () => {
+    const url = getInviteUrl();
+    if (!url) return;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    if (!onCreateInviteLink) return;
+    setIsGeneratingLink(true);
+    try {
+      await onCreateInviteLink();
+    } catch (err) {
+      console.error("Failed to generate invite link:", err);
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleRevokeLink = async () => {
+    if (!onRevokeInviteLink) return;
+    try {
+      await onRevokeInviteLink();
+    } catch (err) {
+      console.error("Failed to revoke invite link:", err);
+    }
+  };
+
+  const formatExpiryDate = (expiresAt: number) => {
+    const days = Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days <= 0) return "Expired";
+    if (days === 1) return "Expires in 1 day";
+    return `Expires in ${days} days`;
+  };
 
   const addEmailField = () => {
     setEmails([...emails, ""]);
@@ -149,6 +209,73 @@ export function MemberInvitation({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Invite Link Section */}
+      {onCreateInviteLink && (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Invite Link</Label>
+          
+          {inviteLink ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/30" />
+                  <Input
+                    type="text"
+                    value={getInviteUrl()}
+                    readOnly
+                    className="pl-10 h-11 w-full bg-white border-[#26251E]/10 text-sm font-mono text-[#26251E]/70 cursor-text"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyLink}
+                  className="shrink-0 size-11 border-[#26251E]/10 hover:bg-[#26251E]/5"
+                >
+                  {copied ? (
+                    <Check className="size-4 text-green-600" weight="bold" />
+                  ) : (
+                    <Copy className="size-4 text-[#26251E]/60" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-[#26251E]/40">
+                  {formatExpiryDate(inviteLink.expiresAt)} • Anyone with this link can join as a member
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRevokeLink}
+                  className="h-7 px-2 text-xs text-[#26251E]/40 hover:text-red-500 hover:bg-red-50"
+                >
+                  <ArrowsClockwise className="size-3 mr-1" />
+                  Reset link
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerateLink}
+              disabled={isGeneratingLink || isLoadingInviteLink}
+              className="w-full h-11 gap-2 border-[#26251E]/10 hover:bg-[#26251E]/5 text-[#26251E]/70"
+            >
+              {isGeneratingLink ? (
+                <Spinner className="size-4 animate-spin" />
+              ) : (
+                <LinkIcon className="size-4" />
+              )}
+              Generate invite link
+            </Button>
+          )}
         </div>
       )}
 

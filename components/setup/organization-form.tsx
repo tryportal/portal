@@ -10,7 +10,6 @@ import {
   Link as LinkIcon,
   TextAlignLeft,
   Check,
-  X,
 } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -55,6 +54,8 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
   const updateOrg = useMutation(api.organizations.updateOrganization);
   const sendInvitation = useAction(api.invitations.sendInvitationEmail);
   const revokeInvitationMutation = useMutation(api.organizations.revokeInvitation);
+  const createInviteLinkMutation = useMutation(api.organizations.createInviteLink);
+  const revokeInviteLinkMutation = useMutation(api.organizations.revokeInviteLink);
 
   // Query organization data if we have an ID
   const existingOrg = useQuery(
@@ -83,6 +84,12 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
   const [currentStep, setCurrentStep] = useState(0);
   const [currentOrgId, setCurrentOrgId] = useState<Id<"organizations"> | undefined>(organizationId);
   const [hasUserEdited, setHasUserEdited] = useState(false);
+
+  // Get active invite link (needs to be after currentOrgId state declaration)
+  const inviteLink = useQuery(
+    api.organizations.getInviteLink,
+    currentOrgId ? { organizationId: currentOrgId, role: "member" as const } : "skip"
+  );
 
   const steps = [
     {
@@ -224,6 +231,24 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
     });
   };
 
+  const handleCreateInviteLink = async () => {
+    if (!currentOrgId) {
+      throw new Error("Please save the organization first");
+    }
+    return await createInviteLinkMutation({
+      organizationId: currentOrgId,
+      role: "member",
+    });
+  };
+
+  const handleRevokeInviteLink = async () => {
+    if (!currentOrgId) return;
+    await revokeInviteLinkMutation({
+      organizationId: currentOrgId,
+      role: "member",
+    });
+  };
+
   const handleSkip = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -244,12 +269,14 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
     publicUserData: undefined,
   }));
 
-  // Format invitations for display
-  const formattedInvitations = (pendingInvitations || []).map((inv: { _id: string; email: string; role: string }) => ({
-    id: inv._id,
-    emailAddress: inv.email,
-    role: inv.role === "admin" ? "org:admin" : "org:member",
-  }));
+  // Format invitations for display (filter out link invites)
+  const formattedInvitations = (pendingInvitations || [])
+    .filter((inv) => inv.email && !inv.isLinkInvite)
+    .map((inv) => ({
+      id: inv._id,
+      emailAddress: inv.email!,
+      role: inv.role === "admin" ? "org:admin" : "org:member",
+    }));
 
   return (
     <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12 md:gap-24 items-start">
@@ -440,6 +467,9 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
                 pendingInvitations={formattedInvitations}
                 onRevokeInvitation={handleRevokeInvitation}
                 existingMembers={formattedMembers}
+                inviteLink={inviteLink}
+                onCreateInviteLink={handleCreateInviteLink}
+                onRevokeInviteLink={handleRevokeInviteLink}
               />
             </div>
           </div>
@@ -456,18 +486,6 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-[#26251E]/5 mt-auto">
           <div className="flex items-center gap-2">
-            {onExit && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onExit}
-                disabled={isSaving}
-                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-2"
-              >
-                <X className="size-4" />
-                Exit
-              </Button>
-            )}
             {currentStep === 2 && (
               <Button
                 type="button"
