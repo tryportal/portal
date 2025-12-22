@@ -1,14 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User, CheckCircle, Link as LinkIcon, Copy, Check, ArrowsClockwise } from "@phosphor-icons/react";
+import {
+  Plus,
+  X,
+  PaperPlaneTilt,
+  Spinner,
+  EnvelopeSimple,
+  CheckCircle,
+  Link as LinkIcon,
+  Copy,
+  Check,
+  ArrowsClockwise,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-interface MemberInvitationProps {
+interface InviteFormProps {
   onInvite: (email: string, role: "org:admin" | "org:member") => Promise<void>;
   pendingInvitations: Array<{
     id: string;
@@ -20,7 +31,11 @@ interface MemberInvitationProps {
     id: string;
     emailAddress: string;
     role: string;
-    publicUserData?: { firstName?: string; lastName?: string; imageUrl?: string };
+    publicUserData?: {
+      firstName?: string | null;
+      lastName?: string | null;
+      imageUrl?: string | null;
+    };
   }>;
   inviteLink?: {
     token: string;
@@ -28,10 +43,9 @@ interface MemberInvitationProps {
   } | null;
   onCreateInviteLink?: () => Promise<{ token: string; expiresAt: number }>;
   onRevokeInviteLink?: () => Promise<void>;
-  isLoadingInviteLink?: boolean;
 }
 
-export function MemberInvitation({
+export function InviteForm({
   onInvite,
   pendingInvitations,
   onRevokeInvitation,
@@ -39,8 +53,7 @@ export function MemberInvitation({
   inviteLink,
   onCreateInviteLink,
   onRevokeInviteLink,
-  isLoadingInviteLink,
-}: MemberInvitationProps) {
+}: InviteFormProps) {
   const [emails, setEmails] = useState<string[]>([""]);
   const [isInviting, setIsInviting] = useState(false);
   const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
@@ -57,7 +70,7 @@ export function MemberInvitation({
   const handleCopyLink = async () => {
     const url = getInviteUrl();
     if (!url) return;
-    
+
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -91,8 +104,8 @@ export function MemberInvitation({
   const formatExpiryDate = (expiresAt: number) => {
     const days = Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
     if (days <= 0) return "Expired";
-    if (days === 1) return "Expires in 1 day";
-    return `Expires in ${days} days`;
+    if (days === 1) return "1 day";
+    return `${days} days`;
   };
 
   const addEmailField = () => {
@@ -116,8 +129,10 @@ export function MemberInvitation({
   };
 
   const handleInviteAll = async () => {
-    const validEmails = emails.filter((email) => email.trim() && isValidEmail(email.trim()));
-    
+    const validEmails = emails.filter(
+      (email) => email.trim() && isValidEmail(email.trim())
+    );
+
     if (validEmails.length === 0) {
       setError("Please enter at least one valid email address");
       return;
@@ -147,7 +162,7 @@ export function MemberInvitation({
     }
   };
 
-  const getMemberDisplayName = (member: typeof existingMembers[0]) => {
+  const getMemberDisplayName = (member: (typeof existingMembers)[0]) => {
     const firstName = member.publicUserData?.firstName;
     const lastName = member.publicUserData?.lastName;
     if (firstName || lastName) {
@@ -156,77 +171,69 @@ export function MemberInvitation({
     return member.emailAddress;
   };
 
-  const getMemberInitials = (member: typeof existingMembers[0]) => {
+  const getMemberInitials = (member: (typeof existingMembers)[0]) => {
     const firstName = member.publicUserData?.firstName;
     const lastName = member.publicUserData?.lastName;
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
     }
-    if (firstName) {
-      return firstName[0].toUpperCase();
-    }
-    if (lastName) {
-      return lastName[0].toUpperCase();
-    }
-    if (member.emailAddress && member.emailAddress.length > 0) {
-      return member.emailAddress[0].toUpperCase();
-    }
+    if (firstName) return firstName[0].toUpperCase();
+    if (lastName) return lastName[0].toUpperCase();
+    if (member.emailAddress) return member.emailAddress[0].toUpperCase();
     return "?";
   };
 
   return (
-    <div className="space-y-8">
-      {/* Existing team members */}
+    <div className="space-y-6">
+      {/* Existing members */}
       {existingMembers.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Team members</Label>
-          <div className="grid grid-cols-1 gap-2">
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Team members
+          </Label>
+          <div className="space-y-1">
             {existingMembers.map((member) => (
               <div
                 key={member.id}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3",
-                  "bg-white border border-[#26251E]/5 rounded-xl text-sm shadow-sm"
-                )}
+                className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg"
               >
-                <Avatar className="size-8">
-                  <AvatarImage src={member.publicUserData?.imageUrl} />
-                  <AvatarFallback className="bg-[#26251E]/5 text-[#26251E] text-xs font-medium">
+                <Avatar className="size-7">
+                  <AvatarImage src={member.publicUserData?.imageUrl ?? undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
                     {getMemberInitials(member)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#26251E] font-medium truncate">
-                      {getMemberDisplayName(member)}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#26251E]/5 text-[#26251E]/60 capitalize shrink-0 border border-[#26251E]/5">
-                      {member.role.replace("org:", "")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#26251E]/40 truncate">{member.emailAddress}</p>
+                  <span className="text-sm font-medium truncate block">
+                    {getMemberDisplayName(member)}
+                  </span>
                 </div>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                  {member.role.replace("org:", "")}
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Invite Link Section */}
+      {/* Invite link */}
       {onCreateInviteLink && (
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Invite Link</Label>
-          
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Invite link
+          </Label>
+
           {inviteLink ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex gap-2">
-                <div className="relative flex-1 min-w-0">
-                  <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/30" />
+                <div className="relative flex-1">
+                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
                     type="text"
                     value={getInviteUrl()}
                     readOnly
-                    className="pl-10 h-11 w-full bg-white border-[#26251E]/10 text-sm font-mono text-[#26251E]/70 cursor-text"
+                    className="pl-9 h-9 font-mono text-xs"
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                 </div>
@@ -235,38 +242,35 @@ export function MemberInvitation({
                   variant="outline"
                   size="icon"
                   onClick={handleCopyLink}
-                  className="shrink-0 size-11 border-[#26251E]/10 hover:bg-[#26251E]/5"
+                  className="size-9 shrink-0"
                 >
                   {copied ? (
                     <Check className="size-4 text-green-600" weight="bold" />
                   ) : (
-                    <Copy className="size-4 text-[#26251E]/60" />
+                    <Copy className="size-4" />
                   )}
                 </Button>
               </div>
-              <div className="flex items-center justify-between px-1">
-                <p className="text-xs text-[#26251E]/40">
-                  {formatExpiryDate(inviteLink.expiresAt)} • Anyone with this link can join as a member
-                </p>
-                <Button
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Expires in {formatExpiryDate(inviteLink.expiresAt)}</span>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={handleRevokeLink}
-                  className="h-7 px-2 text-xs text-[#26251E]/40 hover:text-red-500 hover:bg-red-50"
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
-                  <ArrowsClockwise className="size-3 mr-1" />
-                  Reset link
-                </Button>
+                  <ArrowsClockwise className="size-3" />
+                  Reset
+                </button>
               </div>
             </div>
           ) : (
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={handleGenerateLink}
-              disabled={isGeneratingLink || isLoadingInviteLink}
-              className="w-full h-11 gap-2 border-[#26251E]/10 hover:bg-[#26251E]/5 text-[#26251E]/70"
+              disabled={isGeneratingLink}
+              className="w-full h-9 gap-2"
             >
               {isGeneratingLink ? (
                 <Spinner className="size-4 animate-spin" />
@@ -279,27 +283,27 @@ export function MemberInvitation({
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="flex items-end justify-between">
-           <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Invite by Email</Label>
-        </div>
+      {/* Email invitations */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground">
+          Invite by email
+        </Label>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {emails.map((email, index) => (
-            <div key={index} className="flex gap-2 group">
+            <div key={index} className="flex gap-2">
               <div className="relative flex-1">
-                <EnvelopeSimple className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/30 group-focus-within:text-[#26251E]/60 transition-colors" />
+                <EnvelopeSimple className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   type="email"
                   placeholder="colleague@company.com"
                   value={email}
                   onChange={(e) => updateEmail(index, e.target.value)}
-                  className="pl-10 h-11 bg-white border-[#26251E]/10 focus:border-[#26251E] focus:ring-0 text-sm transition-all"
+                  className="pl-9 h-9"
                   disabled={isInviting}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && email.trim()) {
+                    if (e.key === "Enter" && email.trim()) {
                       e.preventDefault();
-                      // If it's the last field, add a new one
                       if (index === emails.length - 1) {
                         addEmailField();
                       }
@@ -314,86 +318,90 @@ export function MemberInvitation({
                   size="icon"
                   onClick={() => removeEmailField(index)}
                   disabled={isInviting}
-                  className="shrink-0 size-11 text-[#26251E]/30 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
                 >
-                  <X className="size-4" weight="bold" />
+                  <X className="size-4" />
                 </Button>
               )}
             </div>
           ))}
         </div>
 
-        {error && (
-          <p className="text-xs text-red-500 pl-1">{error}</p>
-        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-2 pt-1">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={addEmailField}
             disabled={isInviting}
-            className="gap-2 h-9 border-[#26251E]/10 hover:bg-[#26251E]/5 text-[#26251E]/70"
+            className="gap-1 h-8 text-xs"
           >
-            <Plus className="size-3.5" />
-            Add another
+            <Plus className="size-3" />
+            Add
           </Button>
-
           <div className="flex-1" />
-
           <Button
             type="button"
             size="sm"
             onClick={handleInviteAll}
             disabled={isInviting || emails.every((e) => !e.trim())}
-            className="gap-2 h-9 bg-[#26251E] text-white hover:bg-[#26251E]/90"
+            className="gap-1 h-8"
           >
             {isInviting ? (
-              <Spinner className="size-3.5 animate-spin" />
+              <Spinner className="size-3 animate-spin" />
             ) : (
-              <PaperPlaneTilt className="size-3.5" weight="fill" />
+              <PaperPlaneTilt className="size-3" weight="fill" />
             )}
-            Send Invitations
+            Send
           </Button>
         </div>
       </div>
 
-      {/* Pending & Sent */}
+      {/* Pending invitations */}
       {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
-        <div className="space-y-3 pt-4 border-t border-[#26251E]/5">
-          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Pending & Sent</Label>
+        <div className="space-y-2 pt-2 border-t border-border">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Pending
+          </Label>
           <div className="space-y-1">
-             {invitedEmails.map((email, index) => (
+            {invitedEmails.map((email, index) => (
               <div
                 key={`sent-${index}`}
-                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-green-50/50 border border-green-100/50"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20"
               >
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle className="size-4 text-green-600" weight="fill" />
-                  <span className="text-sm text-[#26251E]/80">{email}</span>
-                </div>
-                <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Sent</span>
+                <CheckCircle
+                  className="size-4 text-green-600"
+                  weight="fill"
+                />
+                <span className="text-sm text-green-800 dark:text-green-200 flex-1">
+                  {email}
+                </span>
+                <span className="text-[10px] font-medium text-green-600 uppercase">
+                  Sent
+                </span>
               </div>
             ))}
-            
+
             {pendingInvitations.map((invitation) => (
               <div
                 key={invitation.id}
-                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-[#26251E]/5 transition-colors group"
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg group",
+                  "hover:bg-muted/50 transition-colors"
+                )}
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="size-4 rounded-full border border-[#26251E]/20 flex items-center justify-center">
-                    <div className="size-2 rounded-full bg-[#26251E]/10" />
-                  </div>
-                  <span className="text-sm text-[#26251E]/70">{invitation.emailAddress}</span>
-                </div>
+                <div className="size-4 rounded-full border-2 border-muted-foreground/30" />
+                <span className="text-sm text-muted-foreground flex-1">
+                  {invitation.emailAddress}
+                </span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-xs"
                   onClick={() => handleRevoke(invitation.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity size-6 text-[#26251E]/30 hover:text-red-500 hover:bg-red-50"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                 >
                   <X className="size-3" />
                 </Button>

@@ -53,7 +53,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   }
 
   const handleCreateOrganization = () => {
-    router.push("/setup")
+    router.push("/setup?new=true")
   }
 
   return (

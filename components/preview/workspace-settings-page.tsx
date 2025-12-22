@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { OrgImageUpload } from "@/components/setup/org-image-upload"
+import { LogoUpload } from "@/components/setup/logo-upload"
 import { CheckIcon, GearIcon, WarningCircleIcon, TrashIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -46,7 +46,8 @@ export function WorkspaceSettingsPage({
   const [name, setName] = React.useState("")
   const [slug, setSlug] = React.useState("")
   const [description, setDescription] = React.useState("")
-  const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined)
+  const [pendingLogoId, setPendingLogoId] = React.useState<Id<"_storage"> | null>(null)
+  const [removeLogo, setRemoveLogo] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [deleteConfirmName, setDeleteConfirmName] = React.useState("")
@@ -59,7 +60,8 @@ export function WorkspaceSettingsPage({
       setName(organization.name)
       setSlug(organization.slug)
       setDescription(organization.description || "")
-      setImageUrl(organization.imageUrl)
+      setPendingLogoId(null)
+      setRemoveLogo(false)
     }
   }, [organization])
 
@@ -70,7 +72,8 @@ export function WorkspaceSettingsPage({
     name !== organization?.name ||
     slug !== organization?.slug ||
     description !== (organization?.description || "") ||
-    imageUrl !== organization?.imageUrl
+    pendingLogoId !== null ||
+    removeLogo
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -92,7 +95,8 @@ export function WorkspaceSettingsPage({
         name: name.trim(),
         slug: slug.trim().toLowerCase(),
         description: description.trim() || undefined,
-        imageUrl,
+        logoId: pendingLogoId ?? undefined,
+        removeLogo: removeLogo || undefined,
       })
 
       // If slug changed, redirect to new URL
@@ -106,17 +110,14 @@ export function WorkspaceSettingsPage({
     }
   }
 
-  const handleImageSelect = async (file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string
-      setImageUrl(dataUrl)
-    }
-    reader.readAsDataURL(file)
+  const handleLogoUploaded = (storageId: Id<"_storage">) => {
+    setPendingLogoId(storageId)
+    setRemoveLogo(false)
   }
 
-  const handleImageRemove = async () => {
-    setImageUrl(undefined)
+  const handleLogoRemoved = () => {
+    setPendingLogoId(null)
+    setRemoveLogo(true)
   }
 
   const handleDelete = async () => {
@@ -207,11 +208,11 @@ export function WorkspaceSettingsPage({
                     <Label className="mb-3 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
                       Logo
                     </Label>
-                    <OrgImageUpload
-                      currentImageUrl={imageUrl}
+                    <LogoUpload
+                      currentLogoUrl={removeLogo ? null : organization.logoUrl}
                       organizationName={name}
-                      onImageSelect={handleImageSelect}
-                      onImageRemove={handleImageRemove}
+                      onLogoUploaded={handleLogoUploaded}
+                      onLogoRemoved={handleLogoRemoved}
                     />
                   </div>
 
@@ -289,7 +290,8 @@ export function WorkspaceSettingsPage({
                     setName(organization.name)
                     setSlug(organization.slug)
                     setDescription(organization.description || "")
-                    setImageUrl(organization.imageUrl)
+                    setPendingLogoId(null)
+                    setRemoveLogo(false)
                   }} 
                   disabled={!hasChanges || isSaving}
                   className="text-[#26251E]/60 hover:text-[#26251E]"

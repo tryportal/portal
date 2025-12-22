@@ -22,42 +22,79 @@ const RESERVED_ROUTES = [
   "register",
 ];
 
+// ============================================================================
+// File Storage
+// ============================================================================
+
 /**
- * Debug: Check authentication status
+ * Generate an upload URL for organization logo
  */
-export const checkAuth = query({
+export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    return {
-      authenticated: identity !== null,
-      userId: identity?.subject || null,
-      email: identity?.email || null,
-      issuer: identity?.issuer || null,
-    };
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
 /**
- * Get organization by ID
+ * Get the URL for a stored file
+ */
+export const getStorageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+// ============================================================================
+// Organization Queries
+// ============================================================================
+
+/**
+ * Get organization by ID with logo URL resolved
  */
 export const getOrganization = query({
   args: { id: v.id("organizations") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const org = await ctx.db.get(args.id);
+    if (!org) return null;
+
+    // Resolve logo URL from storage ID or use legacy imageUrl
+    let logoUrl: string | undefined = org.imageUrl;
+    if (org.logoId) {
+      const url = await ctx.storage.getUrl(org.logoId);
+      logoUrl = url ?? undefined;
+    }
+
+    return { ...org, logoUrl };
   },
 });
 
 /**
- * Get organization by slug
+ * Get organization by slug with logo URL resolved
  */
 export const getOrganizationBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const org = await ctx.db
       .query("organizations")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
+
+    if (!org) return null;
+
+    // Resolve logo URL from storage ID or use legacy imageUrl
+    let logoUrl: string | undefined = org.imageUrl;
+    if (org.logoId) {
+      const url = await ctx.storage.getUrl(org.logoId);
+      logoUrl = url ?? undefined;
+    }
+
+    return { ...org, logoUrl };
   },
 });
 
@@ -79,7 +116,16 @@ export const getUserOrganizations = query({
     const organizations = await Promise.all(
       memberships.map(async (membership) => {
         const org = await ctx.db.get(membership.organizationId);
-        return org ? { ...org, role: membership.role } : null;
+        if (!org) return null;
+
+        // Resolve logo URL
+        let logoUrl: string | undefined = org.imageUrl;
+        if (org.logoId) {
+          const url = await ctx.storage.getUrl(org.logoId);
+          logoUrl = url ?? undefined;
+        }
+
+        return { ...org, logoUrl, role: membership.role };
       })
     );
 
@@ -88,13 +134,17 @@ export const getUserOrganizations = query({
 });
 
 /**
- * Check if organization setup is complete (has description)
+ * Check if organization setup is complete (has name and slug)
  */
 export const isOrganizationSetup = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
     const org = await ctx.db.get(args.organizationId);
-    return org !== null && org.description !== undefined && org.description.trim() !== "";
+    return (
+      org !== null &&
+      Boolean(org.name && org.name.trim() !== "") &&
+      Boolean(org.slug && org.slug.trim() !== "")
+    );
   },
 });
 
@@ -108,12 +158,20 @@ export const checkMultipleOrganizationsSetup = query({
 
     for (const orgId of args.organizationIds) {
       const org = await ctx.db.get(orgId);
-      results[orgId] = org !== null && org.description !== undefined && org.description.trim() !== "";
+      const isSetup =
+        org !== null &&
+        Boolean(org.name && org.name.trim() !== "") &&
+        Boolean(org.slug && org.slug.trim() !== "");
+      results[orgId] = isSetup;
     }
 
     return results;
   },
 });
+
+// ============================================================================
+// Organization Mutations
+// ============================================================================
 
 /**
  * Create a new organization
@@ -123,25 +181,20 @@ export const createOrganization = mutation({
     name: v.string(),
     slug: v.string(),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    logoId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      console.error("[Convex Auth] createOrganization: No identity found");
-      console.error("[Convex Auth] This usually means:");
-      console.error("  1. CLERK_JWT_ISSUER_DOMAIN is not set in Convex Dashboard");
-      console.error("  2. Domain format is incorrect (should match Clerk issuer exactly)");
-      console.error("  3. Token is not being sent from client");
       throw new Error("Not authenticated");
     }
 
     const userId = identity.subject;
 
-    // Check if slug matches any reserved routes
+    // Validate slug
     if (RESERVED_ROUTES.includes(args.slug.toLowerCase())) {
       throw new Error(
-        `"${args.slug}" is a reserved route and cannot be used as a workspace URL. Please choose a different one.`
+        `"${args.slug}" is a reserved route and cannot be used as a workspace URL.`
       );
     }
 
@@ -152,7 +205,7 @@ export const createOrganization = mutation({
       .first();
 
     if (existingOrg) {
-      throw new Error("That organization URL is already taken. Please choose a different one.");
+      throw new Error("That organization URL is already taken.");
     }
 
     // Create the organization
@@ -160,7 +213,7 @@ export const createOrganization = mutation({
       name: args.name,
       slug: args.slug,
       description: args.description,
-      imageUrl: args.imageUrl,
+      logoId: args.logoId,
       createdBy: userId,
       createdAt: Date.now(),
     });
@@ -186,7 +239,8 @@ export const updateOrganization = mutation({
     name: v.optional(v.string()),
     slug: v.optional(v.string()),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    logoId: v.optional(v.id("_storage")),
+    removeLogo: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -208,39 +262,53 @@ export const updateOrganization = mutation({
       throw new Error("Only organization admins can update the organization");
     }
 
-    // If slug is being changed, check it's not taken
+    // Validate slug if being changed
     if (args.slug !== undefined) {
-      const slugToCheck = args.slug;
-
-      // Check if slug matches any reserved routes
-      if (RESERVED_ROUTES.includes(slugToCheck.toLowerCase())) {
+      const slugValue = args.slug;
+      if (RESERVED_ROUTES.includes(slugValue.toLowerCase())) {
         throw new Error(
-          `"${slugToCheck}" is a reserved route and cannot be used as a workspace URL. Please choose a different one.`
+          `"${slugValue}" is a reserved route and cannot be used as a workspace URL.`
         );
       }
 
       const existingOrg = await ctx.db
         .query("organizations")
-        .withIndex("by_slug", (q) => q.eq("slug", slugToCheck))
+        .withIndex("by_slug", (q) => q.eq("slug", slugValue))
         .first();
 
       if (existingOrg && existingOrg._id !== args.id) {
-        throw new Error("That organization URL is already taken. Please choose a different one.");
+        throw new Error("That organization URL is already taken.");
       }
     }
 
-    // Update the organization
-    const updates: Partial<{
-      name: string;
-      slug: string;
-      description: string;
-      imageUrl: string;
-    }> = {};
+    // Get current org to handle logo deletion
+    const currentOrg = await ctx.db.get(args.id);
+    if (!currentOrg) {
+      throw new Error("Organization not found");
+    }
 
+    // Build updates object
+    const updates: Record<string, unknown> = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.slug !== undefined) updates.slug = args.slug;
     if (args.description !== undefined) updates.description = args.description;
-    if (args.imageUrl !== undefined) updates.imageUrl = args.imageUrl;
+
+    // Handle logo update
+    if (args.removeLogo) {
+      // Delete old logo from storage if exists
+      if (currentOrg.logoId) {
+        await ctx.storage.delete(currentOrg.logoId);
+      }
+      updates.logoId = undefined;
+      updates.imageUrl = undefined;
+    } else if (args.logoId !== undefined) {
+      // Delete old logo from storage if exists and different
+      if (currentOrg.logoId && currentOrg.logoId !== args.logoId) {
+        await ctx.storage.delete(currentOrg.logoId);
+      }
+      updates.logoId = args.logoId;
+      updates.imageUrl = undefined; // Clear legacy field when using new storage
+    }
 
     await ctx.db.patch(args.id, updates);
     return args.id;
@@ -248,47 +316,19 @@ export const updateOrganization = mutation({
 });
 
 /**
- * Get members of an organization
+ * Delete an organization
  */
-export const getOrganizationMembers = query({
+export const deleteOrganization = mutation({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const userId = identity.subject;
-
-    // Check if user is a member of this organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) {
-      return [];
+    if (!identity) {
+      throw new Error("Not authenticated");
     }
 
-    return await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-  },
-});
-
-/**
- * Get pending invitations for an organization
- */
-export const getOrganizationInvitations = query({
-  args: { organizationId: v.id("organizations") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
     const userId = identity.subject;
 
-    // Check if user is an admin of this organization
+    // Check if user is an admin
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -297,16 +337,49 @@ export const getOrganizationInvitations = query({
       .first();
 
     if (!membership || membership.role !== "admin") {
-      return [];
+      throw new Error("Only organization admins can delete the organization");
     }
 
-    return await ctx.db
-      .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .filter((q) => q.eq(q.field("status"), "pending"))
+    // Get org to delete logo
+    const org = await ctx.db.get(args.organizationId);
+    if (org?.logoId) {
+      await ctx.storage.delete(org.logoId);
+    }
+
+    // Delete all memberships
+    const memberships = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
       .collect();
+
+    for (const member of memberships) {
+      await ctx.db.delete(member._id);
+    }
+
+    // Delete all invitations
+    const invitations = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    for (const invitation of invitations) {
+      await ctx.db.delete(invitation._id);
+    }
+
+    // Delete the organization
+    await ctx.db.delete(args.organizationId);
+
+    return { success: true };
   },
 });
+
+// ============================================================================
+// Membership Queries
+// ============================================================================
 
 /**
  * Check if user is a member of an organization
@@ -349,6 +422,213 @@ export const getUserMembership = query({
 });
 
 /**
+ * Get members of an organization with enriched user data
+ */
+export const getOrganizationMembers = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Check if user is a member
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return [];
+
+    const members = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    // Fetch user data from Clerk for each member
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      return members.map((member) => ({
+        _id: member._id,
+        organizationId: member.organizationId,
+        userId: member.userId,
+        role: member.role,
+        emailAddress: null,
+        publicUserData: undefined,
+      }));
+    }
+
+    const membersWithUserData = await Promise.all(
+      members.map(async (member) => {
+        try {
+          const response = await fetch(
+            `https://api.clerk.com/v1/users/${member.userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${clerkSecretKey}`,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            return {
+              _id: member._id,
+              organizationId: member.organizationId,
+              userId: member.userId,
+              role: member.role,
+              emailAddress: null,
+              publicUserData: undefined,
+            };
+          }
+
+          const userData = await response.json();
+          return {
+            _id: member._id,
+            organizationId: member.organizationId,
+            userId: member.userId,
+            role: member.role,
+            emailAddress: userData.email_addresses?.[0]?.email_address || null,
+            publicUserData: {
+              firstName: userData.first_name || null,
+              lastName: userData.last_name || null,
+              imageUrl: userData.image_url || null,
+            },
+          };
+        } catch {
+          return {
+            _id: member._id,
+            organizationId: member.organizationId,
+            userId: member.userId,
+            role: member.role,
+            emailAddress: null,
+            publicUserData: undefined,
+          };
+        }
+      })
+    );
+
+    return membersWithUserData;
+  },
+});
+
+// ============================================================================
+// Invitation Queries
+// ============================================================================
+
+/**
+ * Get pending invitations for an organization
+ */
+export const getOrganizationInvitations = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Only admins can see invitations
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") return [];
+
+    return await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+  },
+});
+
+/**
+ * Get invitation by token
+ */
+export const getInvitationByToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+
+    if (!invitation) return null;
+
+    const org = await ctx.db.get(invitation.organizationId);
+
+    // Resolve logo URL
+    let logoUrl: string | undefined = org?.imageUrl;
+    if (org?.logoId) {
+      const url = await ctx.storage.getUrl(org.logoId);
+      logoUrl = url ?? undefined;
+    }
+
+    return {
+      invitation,
+      organization: org ? { ...org, logoUrl } : null,
+    };
+  },
+});
+
+/**
+ * Get active invite link for an organization
+ */
+export const getInviteLink = query({
+  args: {
+    organizationId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const userId = identity.subject;
+
+    // Only admins can see invite links
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") return null;
+
+    const activeLink = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isLinkInvite"), true),
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("role"), args.role),
+          q.gt(q.field("expiresAt"), Date.now())
+        )
+      )
+      .first();
+
+    return activeLink
+      ? { token: activeLink.token, expiresAt: activeLink.expiresAt }
+      : null;
+  },
+});
+
+// ============================================================================
+// Invitation Mutations
+// ============================================================================
+
+/**
  * Invite a member to the organization
  */
 export const inviteMember = mutation({
@@ -365,7 +645,7 @@ export const inviteMember = mutation({
 
     const userId = identity.subject;
 
-    // Check if user is an admin of this organization
+    // Check if user is an admin
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -377,10 +657,12 @@ export const inviteMember = mutation({
       throw new Error("Only organization admins can invite members");
     }
 
-    // Check if there's already a pending invitation for this email
+    // Check for existing pending invitation
     const existingInvitation = await ctx.db
       .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
       .filter((q) =>
         q.and(
           q.eq(q.field("email"), args.email),
@@ -393,10 +675,8 @@ export const inviteMember = mutation({
       throw new Error("An invitation has already been sent to this email");
     }
 
-    // Generate a unique token
     const token = crypto.randomUUID();
 
-    // Create the invitation (expires in 7 days)
     const invitationId = await ctx.db.insert("organizationInvitations", {
       organizationId: args.organizationId,
       email: args.email,
@@ -408,7 +688,6 @@ export const inviteMember = mutation({
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Return the invitation ID and token (email sending handled separately)
     return { invitationId, token };
   },
 });
@@ -431,7 +710,6 @@ export const revokeInvitation = mutation({
       throw new Error("Invitation not found");
     }
 
-    // Check if user is an admin of this organization
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -445,24 +723,6 @@ export const revokeInvitation = mutation({
 
     await ctx.db.patch(args.invitationId, { status: "revoked" });
     return args.invitationId;
-  },
-});
-
-/**
- * Get invitation by token
- */
-export const getInvitationByToken = query({
-  args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const invitation = await ctx.db
-      .query("organizationInvitations")
-      .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
-
-    if (!invitation) return null;
-
-    const org = await ctx.db.get(invitation.organizationId);
-    return { invitation, organization: org };
   },
 });
 
@@ -497,8 +757,12 @@ export const acceptInvitation = mutation({
       throw new Error("This invitation has expired");
     }
 
-    // Verify email matches (only for email-based invites, not link invites)
-    if (invitation.email && userEmail && invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    // Verify email matches for email-based invites
+    if (
+      invitation.email &&
+      userEmail &&
+      invitation.email.toLowerCase() !== userEmail.toLowerCase()
+    ) {
       throw new Error("This invitation was sent to a different email address");
     }
 
@@ -525,7 +789,6 @@ export const acceptInvitation = mutation({
     // Mark invitation as accepted
     await ctx.db.patch(invitation._id, { status: "accepted" });
 
-    // Get the organization for redirect
     const org = await ctx.db.get(invitation.organizationId);
     return { organizationId: invitation.organizationId, slug: org?.slug };
   },
@@ -547,7 +810,6 @@ export const createInviteLink = mutation({
 
     const userId = identity.subject;
 
-    // Check if user is an admin of this organization
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -559,10 +821,12 @@ export const createInviteLink = mutation({
       throw new Error("Only organization admins can create invite links");
     }
 
-    // Check if there's already an active link invite for this role
+    // Check for existing active link
     const existingLink = await ctx.db
       .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
       .filter((q) =>
         q.and(
           q.eq(q.field("isLinkInvite"), true),
@@ -577,10 +841,9 @@ export const createInviteLink = mutation({
       return { token: existingLink.token, expiresAt: existingLink.expiresAt };
     }
 
-    // Generate a unique token
     const token = crypto.randomUUID();
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
 
-    // Create the invite link (expires in 7 days)
     await ctx.db.insert("organizationInvitations", {
       organizationId: args.organizationId,
       role: args.role,
@@ -588,55 +851,11 @@ export const createInviteLink = mutation({
       token,
       status: "pending",
       createdAt: Date.now(),
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      expiresAt,
       isLinkInvite: true,
     });
 
-    return { token, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 };
-  },
-});
-
-/**
- * Get active invite link for an organization
- */
-export const getInviteLink = query({
-  args: {
-    organizationId: v.id("organizations"),
-    role: v.union(v.literal("admin"), v.literal("member")),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    // Check if user is an admin of this organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      return null;
-    }
-
-    // Find active link invite
-    const activeLink = await ctx.db
-      .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("isLinkInvite"), true),
-          q.eq(q.field("status"), "pending"),
-          q.eq(q.field("role"), args.role),
-          q.gt(q.field("expiresAt"), Date.now())
-        )
-      )
-      .first();
-
-    return activeLink ? { token: activeLink.token, expiresAt: activeLink.expiresAt } : null;
+    return { token, expiresAt };
   },
 });
 
@@ -656,7 +875,6 @@ export const revokeInviteLink = mutation({
 
     const userId = identity.subject;
 
-    // Check if user is an admin of this organization
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -668,10 +886,11 @@ export const revokeInviteLink = mutation({
       throw new Error("Only organization admins can revoke invite links");
     }
 
-    // Find and revoke all active link invites for this role
     const activeLinks = await ctx.db
       .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
       .filter((q) =>
         q.and(
           q.eq(q.field("isLinkInvite"), true),
@@ -686,87 +905,5 @@ export const revokeInviteLink = mutation({
     }
 
     return { revokedCount: activeLinks.length };
-  },
-});
-
-/**
- * Remove organization image
- */
-export const removeOrganizationImage = mutation({
-  args: { organizationId: v.id("organizations") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    // Check if user is an admin of this organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      throw new Error("Only organization admins can update the organization");
-    }
-
-    await ctx.db.patch(args.organizationId, { imageUrl: undefined });
-    return args.organizationId;
-  },
-});
-
-/**
- * Delete an organization
- */
-export const deleteOrganization = mutation({
-  args: { organizationId: v.id("organizations") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    // Check if user is an admin of this organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      throw new Error("Only organization admins can delete the organization");
-    }
-
-    // Delete all memberships for this organization
-    const memberships = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    for (const member of memberships) {
-      await ctx.db.delete(member._id);
-    }
-
-    // Delete all invitations for this organization
-    const invitations = await ctx.db
-      .query("organizationInvitations")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    for (const invitation of invitations) {
-      await ctx.db.delete(invitation._id);
-    }
-
-    // Delete the organization itself
-    await ctx.db.delete(args.organizationId);
-
-    return { success: true };
   },
 });

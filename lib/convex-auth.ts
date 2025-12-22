@@ -21,7 +21,8 @@ export function useAuthState() {
  * Use this in server components or API routes
  */
 export async function getConvexToken() {
-  const { getToken } = await import("@clerk/nextjs/server");
+  const { auth } = await import("@clerk/nextjs/server");
+  const { getToken } = await auth();
   return await getToken({ template: "convex" });
 }
 

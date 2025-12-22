@@ -6,7 +6,9 @@ export default defineSchema({
     name: v.string(),
     slug: v.string(),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    // Logo can be stored as a Convex file storage ID or a URL (for backwards compatibility)
+    logoId: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()), // Deprecated: kept for backwards compatibility
     createdBy: v.string(), // Clerk user ID
     createdAt: v.number(),
   })

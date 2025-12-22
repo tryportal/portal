@@ -1,5 +1,4 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 // Define public routes that don't require authentication
@@ -12,7 +11,7 @@ const isPublicRoute = createRouteMatcher([
 
 const isSetupRoute = createRouteMatcher(["/setup(.*)"]);
 
-const clerkHandler = clerkMiddleware(async (auth, request) => {
+export const proxy = clerkMiddleware(async (auth, request) => {
   const { userId } = await auth();
 
   // Allow public routes
@@ -37,10 +36,6 @@ const clerkHandler = clerkMiddleware(async (auth, request) => {
 
   return NextResponse.next();
 });
-
-export function proxy(request: NextRequest) {
-  return clerkHandler(request);
-}
 
 export const config = {
   matcher: [

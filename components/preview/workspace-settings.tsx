@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { OrgImageUpload } from "@/components/setup/org-image-upload"
+import { LogoUpload } from "@/components/setup/logo-upload"
 import { XIcon, CheckIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 
@@ -33,7 +33,8 @@ export function WorkspaceSettings({
   const [name, setName] = React.useState("")
   const [slug, setSlug] = React.useState("")
   const [description, setDescription] = React.useState("")
-  const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined)
+  const [pendingLogoId, setPendingLogoId] = React.useState<Id<"_storage"> | null>(null)
+  const [removeLogo, setRemoveLogo] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -43,7 +44,8 @@ export function WorkspaceSettings({
       setName(organization.name)
       setSlug(organization.slug)
       setDescription(organization.description || "")
-      setImageUrl(organization.imageUrl)
+      setPendingLogoId(null)
+      setRemoveLogo(false)
     }
   }, [organization])
 
@@ -99,7 +101,8 @@ export function WorkspaceSettings({
         name: name.trim(),
         slug: slug.trim().toLowerCase(),
         description: description.trim() || undefined,
-        imageUrl,
+        logoId: pendingLogoId ?? undefined,
+        removeLogo: removeLogo || undefined,
       })
 
       // If slug changed, redirect to new URL
@@ -115,25 +118,22 @@ export function WorkspaceSettings({
     }
   }
 
-  const handleImageSelect = async (file: File) => {
-    // For now, we'll use a data URL. In production, you'd upload to Convex file storage
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string
-      setImageUrl(dataUrl)
-    }
-    reader.readAsDataURL(file)
+  const handleLogoUploaded = (storageId: Id<"_storage">) => {
+    setPendingLogoId(storageId)
+    setRemoveLogo(false)
   }
 
-  const handleImageRemove = async () => {
-    setImageUrl(undefined)
+  const handleLogoRemoved = () => {
+    setPendingLogoId(null)
+    setRemoveLogo(true)
   }
 
   const hasChanges =
     name !== organization.name ||
     slug !== organization.slug ||
     description !== (organization.description || "") ||
-    imageUrl !== organization.imageUrl
+    pendingLogoId !== null ||
+    removeLogo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -160,11 +160,11 @@ export function WorkspaceSettings({
             <div>
               <Label htmlFor="image">Workspace Image</Label>
               <div className="mt-2">
-                <OrgImageUpload
-                  currentImageUrl={imageUrl}
+                <LogoUpload
+                  currentLogoUrl={removeLogo ? null : organization.logoUrl}
                   organizationName={name}
-                  onImageSelect={handleImageSelect}
-                  onImageRemove={handleImageRemove}
+                  onLogoUploaded={handleLogoUploaded}
+                  onLogoRemoved={handleLogoRemoved}
                 />
               </div>
             </div>
