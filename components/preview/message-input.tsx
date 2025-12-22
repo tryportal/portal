@@ -109,7 +109,7 @@ export function MessageInput({ onSendMessage, channelName }: MessageInputProps) 
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Message #${channelName}`}
-          className="min-h-[40px] max-h-[120px] flex-1 resize-none border-0 bg-transparent py-2.5 px-2 text-base text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0"
+          className="min-h-[40px] max-h-[120px] flex-1 resize-none border-0 bg-transparent py-2.5 px-2 text-base text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none"
           rows={1}
         />
 
