@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { OrgImageUpload } from "@/components/setup/org-image-upload"
-import { CheckIcon } from "@phosphor-icons/react"
+import { CheckIcon, GearIcon, WarningCircleIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 interface WorkspaceSettingsPageProps {
   organizationId: Id<"organizations">
@@ -48,28 +49,11 @@ export function WorkspaceSettingsPage({
   // Check if user is admin
   const isAdmin = membership?.role === "admin"
 
-  if (!organization || !membership) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-[#26251E]/60">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-sm border border-[#26251E]/10">
-          <h2 className="text-lg font-semibold text-[#26251E] mb-2">
-            Workspace Settings
-          </h2>
-          <p className="text-sm text-[#26251E]/60">
-            Only workspace admins can access settings.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const hasChanges =
+    name !== organization?.name ||
+    slug !== organization?.slug ||
+    description !== (organization?.description || "") ||
+    imageUrl !== organization?.imageUrl
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -95,7 +79,7 @@ export function WorkspaceSettingsPage({
       })
 
       // If slug changed, redirect to new URL
-      if (slug.trim().toLowerCase() !== organization.slug) {
+      if (organization && slug.trim().toLowerCase() !== organization.slug) {
         router.push(`/${slug.trim().toLowerCase()}/settings`)
       }
     } catch (err) {
@@ -106,7 +90,6 @@ export function WorkspaceSettingsPage({
   }
 
   const handleImageSelect = async (file: File) => {
-    // For now, we'll use a data URL. In production, you'd upload to Convex file storage
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string
@@ -119,109 +102,179 @@ export function WorkspaceSettingsPage({
     setImageUrl(undefined)
   }
 
-  const hasChanges =
-    name !== organization.name ||
-    slug !== organization.slug ||
-    description !== (organization.description || "") ||
-    imageUrl !== organization.imageUrl
-
-  return (
-    <div className="flex h-full flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#26251E]/10 px-6 py-4">
-        <h2 className="text-lg font-semibold text-[#26251E]">
-          Workspace Settings
-        </h2>
+  if (!organization || !membership) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#F7F7F4]">
+        <div className="text-sm text-[#26251E]/60">Loading...</div>
       </div>
+    )
+  }
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-2xl space-y-5">
-          {/* Profile Picture */}
-          <div>
-            <Label htmlFor="image">Workspace Image</Label>
-            <div className="mt-2">
-              <OrgImageUpload
-                currentImageUrl={imageUrl}
-                organizationName={name}
-                onImageSelect={handleImageSelect}
-                onImageRemove={handleImageRemove}
-              />
-            </div>
+  if (!isAdmin) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#F7F7F4] p-6">
+        <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm border border-[#26251E]/5 text-center">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+            <WarningCircleIcon className="size-6" weight="fill" />
           </div>
-
-          {/* Name */}
-          <div>
-            <Label htmlFor="name">Workspace Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="My Workspace"
-              className="mt-2"
-            />
-          </div>
-
-          {/* Slug */}
-          <div>
-            <Label htmlFor="slug">Workspace URL</Label>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-sm text-[#26251E]/50">
-                {typeof window !== "undefined" ? window.location.origin : ""}/
-              </span>
-              <Input
-                id="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                placeholder="my-workspace"
-                className="flex-1"
-              />
-            </div>
-            <p className="mt-1 text-xs text-[#26251E]/50">
-              This is your workspace's unique URL identifier
-            </p>
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's your workspace about?"
-              className="mt-2 min-h-[100px] resize-none"
-            />
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          <h2 className="text-lg font-semibold text-[#26251E] mb-2">
+            Access Denied
+          </h2>
+          <p className="text-sm text-[#26251E]/60">
+            Only workspace admins can access settings.
+          </p>
         </div>
       </div>
+    )
+  }
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-3 border-t border-[#26251E]/10 px-6 py-4">
-        <Button variant="outline" onClick={() => router.back()} disabled={isSaving}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
-          className="gap-2"
-        >
-          {isSaving ? (
-            <>Saving...</>
-          ) : (
-            <>
-              <CheckIcon className="size-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
+  return (
+    <div className="flex h-full flex-col bg-[#F7F7F4]">
+      {/* Header */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+        <div className="flex items-center gap-2">
+          <GearIcon className="size-5 text-[#26251E]" weight="fill" />
+          <h1 className="text-base font-semibold text-[#26251E]">Workspace Settings</h1>
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl py-12 px-6">
+          <div className="space-y-10">
+            
+            {/* Profile Section */}
+            <section className="space-y-6">
+              <div>
+                <h2 className="text-lg font-medium text-[#26251E]">Workspace Profile</h2>
+                <p className="text-sm text-[#26251E]/60">Manage your workspace's public identity.</p>
+              </div>
+              
+              <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
+                <div className="space-y-6">
+                  {/* Image Upload */}
+                  <div>
+                    <Label className="mb-3 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                      Logo
+                    </Label>
+                    <OrgImageUpload
+                      currentImageUrl={imageUrl}
+                      organizationName={name}
+                      onImageSelect={handleImageSelect}
+                      onImageRemove={handleImageRemove}
+                    />
+                  </div>
+
+                  {/* Name Input */}
+                  <div>
+                    <Label htmlFor="name" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                      Workspace Name
+                    </Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Acme Corp"
+                      className="bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                    />
+                  </div>
+
+                  {/* Description Input */}
+                  <div>
+                    <Label htmlFor="description" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What is this workspace about?"
+                      className="min-h-[100px] resize-none bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* URL Section */}
+            <section className="space-y-6">
+               <div>
+                <h2 className="text-lg font-medium text-[#26251E]">Workspace URL</h2>
+                <p className="text-sm text-[#26251E]/60">The web address for your workspace.</p>
+              </div>
+
+              <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
+                <div>
+                   <Label htmlFor="slug" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                    Workspace Slug
+                  </Label>
+                  <div className="flex items-center rounded-md border border-[#26251E]/10 bg-[#F7F7F4] px-3 focus-within:border-[#26251E]/20 focus-within:bg-white focus-within:ring-1 focus-within:ring-[#26251E]/20 transition-all">
+                    <span className="text-sm text-[#26251E]/40 select-none">
+                      {typeof window !== "undefined" ? window.location.host : "portal.app"}/
+                    </span>
+                    <input
+                      id="slug"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                      placeholder="acme-corp"
+                      className="flex-1 bg-transparent py-2 text-sm text-[#26251E] placeholder:text-[#26251E]/30 focus:outline-none"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-[#26251E]/50">
+                    Changing this will update the URL for all members.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Save Actions */}
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-sm text-[#26251E]/60">
+                {hasChanges && "Unsaved changes"}
+              </div>
+              <div className="flex gap-3">
+                 <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setName(organization.name)
+                    setSlug(organization.slug)
+                    setDescription(organization.description || "")
+                    setImageUrl(organization.imageUrl)
+                  }} 
+                  disabled={!hasChanges || isSaving}
+                  className="text-[#26251E]/60 hover:text-[#26251E]"
+                >
+                  Discard
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !hasChanges}
+                  className={cn(
+                    "gap-2 transition-all",
+                    hasChanges ? "bg-[#26251E] text-white hover:bg-[#26251E]/90" : "bg-[#26251E]/5 text-[#26251E]/30"
+                  )}
+                >
+                  {isSaving ? (
+                    <>Saving...</>
+                  ) : (
+                    <>
+                      <CheckIcon className="size-4" weight="bold" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-100 flex items-center gap-2">
+                <WarningCircleIcon className="size-4" weight="fill" />
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
