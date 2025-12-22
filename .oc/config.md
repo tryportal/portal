@@ -29,3 +29,4 @@ Generate commit messages following the Conventional Commits specification.
 4. Keep the first line under 72 characters
 5. Do not end the description with a period
 6. Only return the commit message, no explanations or markdown formatting
+7. Keep it very simple. Simple enough for a normal person to understand that describes the main changes.
