@@ -68,8 +68,8 @@ export function MessageInput({ onSendMessage, channelName }: MessageInputProps) 
   }
 
   return (
-    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] p-4">
-      <div className="flex items-center gap-2 rounded-xl border border-[#26251E]/15 bg-white p-2 shadow-sm">
+    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-3 py-2">
+      <div className="flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm">
         {/* Attachment button */}
         <DropdownMenu>
           <Tooltip>
@@ -82,7 +82,7 @@ export function MessageInput({ onSendMessage, channelName }: MessageInputProps) 
                 />}
               />}
             >
-              <PlusIcon className="size-5" />
+              <PlusIcon className="size-4" />
             </TooltipTrigger>
             <TooltipContent side="top">Add attachment</TooltipContent>
           </Tooltip>
@@ -109,7 +109,7 @@ export function MessageInput({ onSendMessage, channelName }: MessageInputProps) 
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Message #${channelName}`}
-          className="min-h-[40px] max-h-[120px] flex-1 resize-none border-0 bg-transparent py-2.5 px-2 text-base text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none"
+          className="min-h-[32px] max-h-[100px] flex-1 resize-none border-0 bg-transparent py-1.5 px-2 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px]"
           rows={1}
         />
 
@@ -127,7 +127,7 @@ export function MessageInput({ onSendMessage, channelName }: MessageInputProps) 
                   />}
                 />}
               >
-                <SmileyIcon className="size-5" />
+                <SmileyIcon className="size-4" />
               </TooltipTrigger>
               <TooltipContent side="top">Add emoji</TooltipContent>
             </Tooltip>

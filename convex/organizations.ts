@@ -1,6 +1,27 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+// Reserved routes that cannot be used as workspace slugs
+const RESERVED_ROUTES = [
+  "invite",
+  "preview",
+  "setup",
+  "sign-in",
+  "sign-up",
+  "api",
+  "admin",
+  "dashboard",
+  "settings",
+  "help",
+  "about",
+  "contact",
+  "privacy",
+  "terms",
+  "login",
+  "logout",
+  "register",
+];
+
 /**
  * Debug: Check authentication status
  */
@@ -117,6 +138,13 @@ export const createOrganization = mutation({
 
     const userId = identity.subject;
 
+    // Check if slug matches any reserved routes
+    if (RESERVED_ROUTES.includes(args.slug.toLowerCase())) {
+      throw new Error(
+        `"${args.slug}" is a reserved route and cannot be used as a workspace URL. Please choose a different one.`
+      );
+    }
+
     // Check if slug is already taken
     const existingOrg = await ctx.db
       .query("organizations")
@@ -183,6 +211,14 @@ export const updateOrganization = mutation({
     // If slug is being changed, check it's not taken
     if (args.slug !== undefined) {
       const slugToCheck = args.slug;
+
+      // Check if slug matches any reserved routes
+      if (RESERVED_ROUTES.includes(slugToCheck.toLowerCase())) {
+        throw new Error(
+          `"${slugToCheck}" is a reserved route and cannot be used as a workspace URL. Please choose a different one.`
+        );
+      }
+
       const existingOrg = await ctx.db
         .query("organizations")
         .withIndex("by_slug", (q) => q.eq("slug", slugToCheck))

@@ -22,6 +22,27 @@ import { OrgImageUpload } from "./org-image-upload";
 import { MemberInvitation } from "./member-invitation";
 import { cn } from "@/lib/utils";
 
+// Reserved routes that cannot be used as workspace slugs
+const RESERVED_ROUTES = [
+  "invite",
+  "preview",
+  "setup",
+  "sign-in",
+  "sign-up",
+  "api",
+  "admin",
+  "dashboard",
+  "settings",
+  "help",
+  "about",
+  "contact",
+  "privacy",
+  "terms",
+  "login",
+  "logout",
+  "register",
+];
+
 interface OrganizationFormProps {
   organizationId?: Id<"organizations">;
   onExit?: () => void;
@@ -109,6 +130,13 @@ export function OrganizationForm({ organizationId, onExit }: OrganizationFormPro
       if (!/^[a-z0-9-]+$/.test(slug)) {
         throw new Error(
           "Organization URL can only contain lowercase letters, numbers, and hyphens"
+        );
+      }
+
+      // Check if slug matches any reserved routes
+      if (RESERVED_ROUTES.includes(slug.trim().toLowerCase())) {
+        throw new Error(
+          `"${slug.trim()}" is a reserved route and cannot be used as a workspace URL. Please choose a different one.`
         );
       }
 
