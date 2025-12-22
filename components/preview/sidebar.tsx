@@ -47,14 +47,9 @@ interface SidebarProps {
   isOpen: boolean
   onToggle: () => void
   activeChannel: string
-  onChannelSelect: (channelId: string) => void
+  onChannelSelect: (channelId: string | null) => void
   categories: Category[]
 }
-
-const sidebarTabs = [
-  { id: "overview", label: "Overview", icon: ChartBarIcon },
-  { id: "people", label: "People", icon: UsersIcon },
-]
 
 export function Sidebar({
   isOpen,
@@ -86,6 +81,9 @@ export function Sidebar({
 
   // Check if we're on the settings page
   const isSettingsPage = pathname?.endsWith("/settings") || pathname?.endsWith("/settings/")
+  
+  // Check if overview is active (no channel selected and not on settings page)
+  const isOverviewActive = !activeChannel && !isSettingsPage
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -154,19 +152,32 @@ export function Sidebar({
         <div className="p-2">
           {/* Sidebar Tabs */}
           <div className="mb-4 space-y-0.5">
-            {sidebarTabs.map((tab) => {
-              const Icon = tab.icon
-              return (
-                <Button
-                  key={tab.id}
-                  variant="ghost"
-                  className="w-full justify-start gap-2 text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
-                >
-                  <Icon className="size-4" />
-                  {tab.label}
-                </Button>
-              )
-            })}
+            {/* Overview button */}
+            <Button
+              variant={isOverviewActive ? "secondary" : "ghost"}
+              onClick={() => {
+                onChannelSelect(null)
+                if (currentSlug && isSettingsPage) {
+                  router.push(`/${currentSlug}`)
+                }
+              }}
+              className={`w-full justify-start gap-2 ${
+                isOverviewActive
+                  ? "bg-[#26251E]/10 text-[#26251E]"
+                  : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+              }`}
+            >
+              <ChartBarIcon className="size-4" weight={isOverviewActive ? "fill" : "regular"} />
+              Overview
+            </Button>
+            {/* People button */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+            >
+              <UsersIcon className="size-4" />
+              People
+            </Button>
             {/* Settings button for admins */}
             {isAdmin && (
               <Button

@@ -22,7 +22,7 @@ export default function SettingsPage({
   const [slug, setSlug] = React.useState<string>("");
   const [activeTab, setActiveTab] = React.useState("home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
-  const [activeChannel, setActiveChannel] = React.useState("general");
+  const [activeChannel, setActiveChannel] = React.useState<string | null>(null);
 
   // Resolve params if it's a Promise (Next.js 15+)
   React.useEffect(() => {
@@ -126,7 +126,7 @@ export default function SettingsPage({
         <Sidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((prev) => !prev)}
-          activeChannel={activeChannel}
+          activeChannel={activeChannel ?? ""}
           onChannelSelect={setActiveChannel}
           categories={mockCategories}
         />

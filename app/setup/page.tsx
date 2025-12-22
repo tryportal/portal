@@ -4,11 +4,10 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Spinner, X } from "@phosphor-icons/react";
+import { Spinner } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { OrganizationForm } from "@/components/setup/organization-form";
-import { Button } from "@/components/ui/button";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -49,25 +48,36 @@ export default function SetupPage() {
     }
   }, [authLoaded, isSignedIn, router]);
 
-  // Note: We removed the redirect that prevented users from creating new organizations
-  // Users can now create multiple organizations even if they already have one
-
-  // Check if user has other fully set up organizations (for exit button)
-  const otherSetupOrgs = userOrgs?.filter((org: { _id: Id<"organizations">; slug?: string }) => {
+  // Check if user has fully set up organizations (for redirect and exit button)
+  const setupOrgs = userOrgs?.filter((org: { _id: Id<"organizations">; slug?: string; role?: string }) => {
     const isSetup = orgSetupChecks?.[org._id];
     return isSetup && org.slug;
   }) || [];
-  const hasOtherOrganizations = otherSetupOrgs.length > 0;
+  
+  // Prioritize organizations where user is admin, then member organizations
+  const prioritizedSetupOrgs = setupOrgs.sort((a: { role?: string }, b: { role?: string }) => {
+    if (a.role === "admin" && b.role !== "admin") return -1;
+    if (a.role !== "admin" && b.role === "admin") return 1;
+    return 0;
+  });
+  
+  const hasSetupOrganizations = prioritizedSetupOrgs.length > 0;
 
-  // Handle exit - navigate to first existing organization
-  const handleExit = () => {
-    if (hasOtherOrganizations && otherSetupOrgs[0]?.slug) {
-      router.push(`/${otherSetupOrgs[0].slug}`);
+  // Redirect users who are members of set up organizations (even if not owners)
+  useEffect(() => {
+    // Wait for all data to load
+    if (!authLoaded || !isSignedIn || userOrgs === undefined || orgSetupChecks === undefined) {
+      return;
     }
-  };
 
-  // Loading state
-  if (!authLoaded || !isSignedIn || userOrgs === undefined) {
+    // If user has any set up organizations, redirect them to the first one
+    if (hasSetupOrganizations && prioritizedSetupOrgs[0]?.slug) {
+      router.replace(`/${prioritizedSetupOrgs[0].slug}`);
+    }
+  }, [authLoaded, isSignedIn, userOrgs, orgSetupChecks, hasSetupOrganizations, prioritizedSetupOrgs, router]);
+
+  // Loading state - also wait for orgSetupChecks to load
+  if (!authLoaded || !isSignedIn || userOrgs === undefined || orgSetupChecks === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
@@ -77,6 +87,24 @@ export default function SetupPage() {
           <div className="flex flex-col items-center gap-2">
             <Spinner className="size-5 animate-spin text-[#26251E]/40" />
             <p className="text-sm font-medium text-[#26251E]/60">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If user has set up organizations, show nothing while redirecting
+  // (This prevents flash of setup form before redirect)
+  if (hasSetupOrganizations) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <div className="size-12 rounded-xl bg-[#26251E] flex items-center justify-center shadow-lg">
+            <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <Spinner className="size-5 animate-spin text-[#26251E]/40" />
+            <p className="text-sm font-medium text-[#26251E]/60">Redirecting...</p>
           </div>
         </div>
       </div>
@@ -94,18 +122,6 @@ export default function SetupPage() {
           <span className="font-semibold tracking-tight text-lg opacity-90">Portal</span>
         </div>
         <div className="flex items-center gap-4">
-          {hasOtherOrganizations && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleExit}
-              className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 rounded-full"
-              aria-label="Exit setup"
-            >
-              <X className="size-5" weight="bold" />
-            </Button>
-          )}
           <div className="text-xs font-medium text-[#26251E]/40 uppercase tracking-widest">
             Setup
           </div>
@@ -114,7 +130,7 @@ export default function SetupPage() {
 
       {/* Main Content - Centered & Focused */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 md:py-0 w-full max-w-5xl mx-auto">
-        <OrganizationForm onExit={hasOtherOrganizations ? handleExit : undefined} />
+        <OrganizationForm />
       </main>
     </div>
   );

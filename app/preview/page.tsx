@@ -4,6 +4,7 @@ import * as React from "react"
 import { TopNav } from "@/components/preview/top-nav"
 import { Sidebar } from "@/components/preview/sidebar"
 import { ChatInterface } from "@/components/preview/chat-interface"
+import { OverviewPage } from "@/components/preview/overview-page"
 import {
   mockCategories,
   getMessagesForChannel,
@@ -15,7 +16,7 @@ import type { Message } from "@/components/preview/message-list"
 export default function PreviewPage() {
   const [activeTab, setActiveTab] = React.useState("home")
   const [sidebarOpen, setSidebarOpen] = React.useState(true)
-  const [activeChannel, setActiveChannel] = React.useState("general")
+  const [activeChannel, setActiveChannel] = React.useState<string | null>(null)
   const [messages, setMessages] = React.useState<Record<string, Message[]>>(() => {
     // Initialize with mock messages
     const initial: Record<string, Message[]> = {}
@@ -27,10 +28,12 @@ export default function PreviewPage() {
     return initial
   })
 
-  const channelInfo = getChannelInfo(activeChannel)
-  const currentMessages = messages[activeChannel] || []
+  const channelInfo = activeChannel ? getChannelInfo(activeChannel) : null
+  const currentMessages = activeChannel ? messages[activeChannel] || [] : []
 
   const handleSendMessage = (content: string) => {
+    if (!activeChannel) return
+    
     const newMessage: Message = {
       id: `${Date.now()}`,
       content,
@@ -58,19 +61,26 @@ export default function PreviewPage() {
         <Sidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((prev) => !prev)}
-          activeChannel={activeChannel}
+          activeChannel={activeChannel ?? ""}
           onChannelSelect={setActiveChannel}
           categories={mockCategories}
         />
 
-        {/* Chat Interface */}
+        {/* Main Content - Overview or Chat */}
         <main className="flex-1 overflow-hidden">
-          <ChatInterface
-            channelName={channelInfo.name}
-            channelIcon={channelInfo.icon}
-            messages={currentMessages}
-            onSendMessage={handleSendMessage}
-          />
+          {activeChannel && channelInfo ? (
+            <ChatInterface
+              channelName={channelInfo.name}
+              channelIcon={channelInfo.icon}
+              messages={currentMessages}
+              onSendMessage={handleSendMessage}
+            />
+          ) : (
+            <OverviewPage
+              categories={mockCategories}
+              onChannelSelect={setActiveChannel}
+            />
+          )}
         </main>
       </div>
     </div>
