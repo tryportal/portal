@@ -16,9 +16,10 @@ import {
   PencilIcon,
   LinkIcon,
   SidebarIcon,
+  GearIcon,
 } from "@phosphor-icons/react"
 import { useQuery } from "convex/react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter, usePathname } from "next/navigation"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import {
@@ -63,6 +64,8 @@ export function Sidebar({
   categories,
 }: SidebarProps) {
   const params = useParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const currentSlug = params?.slug as string | undefined
 
   // Get current organization by slug
@@ -71,9 +74,18 @@ export function Sidebar({
     currentSlug ? { slug: currentSlug } : "skip"
   )
 
+  // Get user's membership to check if they're an admin
+  const membership = useQuery(
+    api.organizations.getUserMembership,
+    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+  )
+
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     categories.map((c) => c.id)
   )
+
+  // Check if we're on the settings page
+  const isSettingsPage = pathname?.endsWith("/settings") || pathname?.endsWith("/settings/")
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -82,6 +94,8 @@ export function Sidebar({
         : [...prev, categoryId]
     )
   }
+
+  const isAdmin = membership?.role === "admin"
 
   if (!isOpen) {
     return (
@@ -153,6 +167,25 @@ export function Sidebar({
                 </Button>
               )
             })}
+            {/* Settings button for admins */}
+            {isAdmin && (
+              <Button
+                variant={isSettingsPage ? "secondary" : "ghost"}
+                onClick={() => {
+                  if (currentSlug) {
+                    router.push(`/${currentSlug}/settings`)
+                  }
+                }}
+                className={`w-full justify-start gap-2 ${
+                  isSettingsPage
+                    ? "bg-[#26251E]/10 text-[#26251E]"
+                    : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                }`}
+              >
+                <GearIcon className="size-4" weight={isSettingsPage ? "fill" : "regular"} />
+                Settings
+              </Button>
+            )}
           </div>
 
           {/* Categories and Channels */}
@@ -267,6 +300,7 @@ export function Sidebar({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
     </div>
   )
 }
