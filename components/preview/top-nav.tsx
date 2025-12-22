@@ -7,6 +7,7 @@ import {
   TrayIcon,
   CaretDownIcon,
   CheckIcon,
+  PlusIcon,
 } from "@phosphor-icons/react"
 import { useOrganization, useOrganizationList } from "@clerk/nextjs"
 import { UserButton } from "@clerk/nextjs"
@@ -18,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
 interface TopNavProps {
@@ -49,6 +51,10 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
     } catch (error) {
       console.error("Failed to switch organization:", error)
     }
+  }
+
+  const handleCreateOrganization = () => {
+    router.push("/setup")
   }
 
   return (
@@ -135,6 +141,14 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                 <span className="text-sm text-[#26251E]/50">No organizations</span>
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleCreateOrganization}
+              className="gap-2 px-2 py-1.5 cursor-pointer"
+            >
+              <PlusIcon className="size-3.5 text-[#26251E]" />
+              <span className="text-sm">Create Organization</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
