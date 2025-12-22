@@ -131,13 +131,6 @@ export default function SetupPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 md:py-0 w-full max-w-5xl mx-auto">
         <OrganizationForm />
       </main>
-
-      {/* Footer - Subtle */}
-      <footer className="fixed bottom-0 w-full py-6 text-center pointer-events-none">
-        <p className="text-[10px] text-[#26251E]/20 uppercase tracking-widest font-medium">
-          Protected by end-to-end encryption
-        </p>
-      </footer>
     </div>
   );
 }
