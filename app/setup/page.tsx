@@ -82,19 +82,20 @@ export default function SetupPage() {
     createDefaultOrg();
   }, [orgListLoaded, isSignedIn, userMemberships?.data?.length, isCreatingOrg, createOrganization]);
 
-  // Note: We don't auto-redirect here because the user might be in the middle
-  // of the setup flow. The redirect happens when they click "Finish setup" 
-  // in the OrganizationForm component.
-
   // Loading state
   if (!authLoaded || !orgListLoaded || isCreatingOrg || !isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="size-8 animate-spin text-[#26251E]/40" />
-          <p className="text-sm text-[#26251E]/60">
-            {isCreatingOrg ? "Setting up your organization..." : "Loading..."}
-          </p>
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <div className="size-12 rounded-xl bg-[#26251E] flex items-center justify-center shadow-lg">
+             <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <Spinner className="size-5 animate-spin text-[#26251E]/40" />
+            <p className="text-sm font-medium text-[#26251E]/60">
+              {isCreatingOrg ? "Setting up your workspace..." : "Loading..."}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -104,37 +105,39 @@ export default function SetupPage() {
   if (isOrgSetup === undefined && clerkOrgId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
-        <Spinner className="size-8 animate-spin text-[#26251E]/40" />
+         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F7F4]">
-      {/* Header */}
-      <header className="flex items-center justify-center py-8">
-        <div className="flex items-center gap-2 text-[#26251E]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#26251E]">
-            <img src="/portal.svg" alt="Portal" className="size-5 invert" />
+    <div className="min-h-screen flex flex-col bg-[#F7F7F4] text-[#26251E] selection:bg-[#26251E]/10">
+      {/* Header - Minimal & Clean */}
+      <header className="fixed top-0 left-0 w-full p-6 md:p-8 flex justify-between items-center z-50">
+        <div className="flex items-center gap-3 group cursor-default">
+          <div className="size-8 rounded-lg bg-[#26251E] flex items-center justify-center shadow-sm transition-transform group-hover:scale-105 duration-300">
+            <img src="/portal.svg" alt="Portal" className="size-4 invert opacity-90" />
           </div>
-          <span className="text-xl font-semibold tracking-tight">Portal</span>
+          <span className="font-semibold tracking-tight text-lg opacity-90">Portal</span>
+        </div>
+        <div className="text-xs font-medium text-[#26251E]/40 uppercase tracking-widest">
+          Setup
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-start justify-center px-4 py-8">
-        <div className="w-full max-w-xl">
-          <OrganizationForm />
-        </div>
+      {/* Main Content - Centered & Focused */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 md:py-0 w-full max-w-5xl mx-auto">
+        <OrganizationForm />
       </main>
 
-      {/* Footer */}
-      <footer className="py-6 text-center">
-        <p className="text-xs text-[#26251E]/40">
-          By continuing, you agree to our Terms of Service and Privacy Policy
+      {/* Footer - Subtle */}
+      <footer className="fixed bottom-0 w-full py-6 text-center pointer-events-none">
+        <p className="text-[10px] text-[#26251E]/20 uppercase tracking-widest font-medium">
+          Protected by end-to-end encryption
         </p>
       </footer>
     </div>
   );
 }
-

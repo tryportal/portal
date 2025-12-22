@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, X, Spinner } from "@phosphor-icons/react";
+import { Camera, X, Spinner, UploadSimple, Image as ImageIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 interface OrgImageUploadProps {
@@ -19,6 +19,7 @@ export function OrgImageUpload({
 }: OrgImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayUrl = previewUrl || currentImageUrl;
@@ -32,7 +33,10 @@ export function OrgImageUpload({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    processFile(file);
+  };
 
+  const processFile = async (file: File) => {
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -52,7 +56,27 @@ export function OrgImageUpload({
     }
   };
 
-  const handleRemove = async () => {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      processFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsUploading(true);
     try {
       await onImageRemove();
@@ -65,15 +89,17 @@ export function OrgImageUpload({
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative group">
+    <div className="flex items-center gap-6">
+       <div className="relative group shrink-0">
         <div
+          onClick={() => fileInputRef.current?.click()}
           className={cn(
-            "size-28 rounded-2xl overflow-hidden transition-all duration-200",
-            "bg-primary/5",
+            "size-24 rounded-2xl overflow-hidden transition-all duration-300",
+            "bg-gradient-to-br from-white to-[#F7F7F4]",
             "flex items-center justify-center",
-            "ring-2 ring-primary/10 ring-offset-2 ring-offset-background",
-            isUploading && "opacity-60"
+            "border border-[#26251E]/10 shadow-sm",
+            "cursor-pointer hover:border-[#26251E]/20 hover:shadow-md",
+            isUploading && "opacity-60 pointer-events-none"
           )}
         >
           {displayUrl ? (
@@ -83,32 +109,25 @@ export function OrgImageUpload({
               className="size-full object-cover"
             />
           ) : (
-            <span className="text-3xl font-semibold text-primary/70">
-              {initials || "ORG"}
+            <span className="text-2xl font-bold text-[#26251E]/80 tracking-tight">
+              {initials || <ImageIcon className="size-8 text-[#26251E]/20" weight="duotone" />}
             </span>
           )}
 
           {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-              <Spinner className="size-6 animate-spin text-primary" />
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+              <Spinner className="size-6 animate-spin text-[#26251E]" />
             </div>
           )}
         </div>
 
-        {/* Upload overlay */}
-        <button
-          type="button"
+        {/* Hover overlay for upload icon */}
+        <div 
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className={cn(
-            "absolute inset-0 flex items-center justify-center",
-            "bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity",
-            "rounded-2xl cursor-pointer",
-            isUploading && "cursor-not-allowed"
-          )}
+          className="absolute inset-0 flex items-center justify-center rounded-2xl bg-[#26251E]/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer duration-200"
         >
-          <Camera className="size-8 text-white" weight="fill" />
-        </button>
+           <Camera className="size-6 text-white" weight="fill" />
+        </div>
 
         {/* Remove button */}
         {displayUrl && !isUploading && (
@@ -116,16 +135,38 @@ export function OrgImageUpload({
             type="button"
             onClick={handleRemove}
             className={cn(
-              "absolute -top-2 -right-2 size-7 rounded-full",
-              "bg-destructive text-white",
+              "absolute -top-1.5 -right-1.5 size-5 rounded-full",
+              "bg-[#26251E] text-white shadow-sm border border-white",
               "flex items-center justify-center",
-              "opacity-0 group-hover:opacity-100 transition-opacity",
-              "hover:bg-destructive/90"
+              "opacity-0 group-hover:opacity-100 transition-all duration-200",
+              "hover:scale-110 hover:bg-red-600"
             )}
           >
-            <X className="size-4" weight="bold" />
+            <X className="size-3" weight="bold" />
           </button>
         )}
+      </div>
+
+      <div 
+        className={cn(
+          "flex-1 h-24 rounded-xl border-2 border-dashed flex flex-col items-start justify-center px-6 transition-all duration-300 cursor-pointer",
+          isDragOver 
+            ? "border-[#26251E] bg-[#26251E]/5" 
+            : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-white"
+        )}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <div className="flex items-center gap-2 text-[#26251E] font-medium mb-1">
+          <UploadSimple className="size-4" />
+          <span>Upload logo</span>
+        </div>
+        <p className="text-xs text-[#26251E]/40 leading-relaxed">
+          Recommended size: 256x256px.<br/>
+          JPG, PNG or GIF. Max 5MB.
+        </p>
       </div>
 
       <input
@@ -135,11 +176,6 @@ export function OrgImageUpload({
         onChange={handleFileChange}
         className="hidden"
       />
-
-      <p className="text-xs text-primary/60 text-center">
-        Click to upload organization logo
-      </p>
     </div>
   );
 }
-

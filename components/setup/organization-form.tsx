@@ -10,6 +10,8 @@ import {
   Buildings,
   Link as LinkIcon,
   TextAlignLeft,
+  Check,
+  CaretRight,
 } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { useOrganizationManager } from "@/lib/clerk-org";
@@ -59,13 +61,9 @@ export function OrganizationForm() {
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
   const steps = [
-    { id: "basics", title: "Organization Details", icon: Buildings },
-    {
-      id: "description",
-      title: "About Your Organization",
-      icon: TextAlignLeft,
-    },
-    { id: "members", title: "Invite Team Members", icon: LinkIcon },
+    { id: "basics", title: "Identity", description: "Name & Logo", icon: Buildings },
+    { id: "description", title: "About", description: "Mission & Goals", icon: TextAlignLeft },
+    { id: "members", title: "Team", description: "Invite Members", icon: LinkIcon },
   ];
 
   // Initialize form with organization data (only once per organization)
@@ -156,7 +154,6 @@ export function OrganizationForm() {
       try {
         await updateOrganizationMetadata({ description });
       } catch (err) {
-        // Silently fail - metadata update is optional since description is stored in Convex
         console.warn("Failed to update Clerk metadata (non-critical):", err);
       }
 
@@ -169,15 +166,12 @@ export function OrganizationForm() {
         imageUrl: organization.imageUrl || undefined,
       });
 
-      // Reset user edited flag after successful save
       setHasUserEdited(false);
 
       if (currentStep < steps.length - 1) {
         setCurrentStep(currentStep + 1);
-        // Clear error on successful step transition
         setError(null);
       } else {
-        // Final step - redirect to home
         router.replace("/");
       }
     } catch (err) {
@@ -203,7 +197,6 @@ export function OrganizationForm() {
     role: "org:admin" | "org:member"
   ) => {
     await inviteMember(email, role);
-    // Refresh pending invitations and existing members
     const [invitations, members] = await Promise.all([
       getPendingInvitations(),
       getMembers(),
@@ -241,12 +234,12 @@ export function OrganizationForm() {
   };
 
   const isBasicsValid = name.trim().length >= 2 && slug.trim().length >= 2;
-  const isDescriptionValid = description.trim().length >= 10;
+  const isDescriptionValid = true; // Description is optional
 
   if (!clerkLoaded) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Spinner className="size-8 animate-spin text-muted-foreground" />
+        <Spinner className="size-8 animate-spin text-[#26251E]/20" />
       </div>
     );
   }
@@ -254,8 +247,8 @@ export function OrganizationForm() {
   if (!organization) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p className="text-muted-foreground">No organization found.</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[#26251E]/60">No organization found.</p>
+        <p className="text-sm text-[#26251E]/40">
           Please sign out and sign up again to create an organization.
         </p>
       </div>
@@ -263,189 +256,203 @@ export function OrganizationForm() {
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      {/* Step Indicator */}
-      <div className="flex items-center justify-center gap-2 mb-12">
+    <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12 md:gap-24 items-start">
+      {/* Sidebar Stepper - Left Side */}
+      <div className="hidden md:flex flex-col space-y-1 relative sticky top-8">
+        <div className="absolute left-3.5 top-4 bottom-4 w-px bg-[#26251E]/5 -z-10" />
         {steps.map((step, index) => {
-          const Icon = step.icon;
+          const isActive = index === currentStep;
+          const isCompleted = index < currentStep;
+          
           return (
-            <div key={step.id} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => index < currentStep && setCurrentStep(index)}
-                disabled={index > currentStep}
+            <div 
+              key={step.id} 
+              className={cn(
+                "flex items-center gap-4 py-3 px-3 rounded-lg transition-all duration-300",
+                isActive ? "bg-white shadow-sm" : "opacity-60 hover:opacity-100 hover:bg-[#26251E]/5"
+              )}
+            >
+              <div 
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-full transition-all",
-                  index === currentStep
-                    ? "bg-primary text-primary-foreground"
-                    : index < currentStep
-                      ? "bg-primary/10 text-primary hover:bg-primary/20"
-                      : "bg-primary/5 text-primary/40"
+                  "size-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors duration-300 z-10",
+                  isActive 
+                    ? "bg-[#26251E] text-white border-[#26251E]" 
+                    : isCompleted
+                      ? "bg-[#26251E] text-white border-[#26251E]"
+                      : "bg-[#F7F7F4] text-[#26251E]/40 border-[#26251E]/20"
                 )}
               >
-                <Icon
-                  className="size-4"
-                  weight={index <= currentStep ? "fill" : "regular"}
-                />
-                <span className="text-xs font-medium hidden sm:inline">
+                {isCompleted ? <Check weight="bold" /> : index + 1}
+              </div>
+              <div className="flex flex-col">
+                <span className={cn(
+                  "text-sm font-medium transition-colors",
+                  isActive ? "text-[#26251E]" : "text-[#26251E]/80"
+                )}>
                   {step.title}
                 </span>
-              </button>
-              {index < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "w-8 h-0.5 rounded-full",
-                    index < currentStep ? "bg-primary/20" : "bg-primary/5"
-                  )}
-                />
-              )}
+                <span className="text-[10px] text-[#26251E]/40 font-medium tracking-wide uppercase">
+                  {step.description}
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Step Content */}
-      <div className="space-y-8">
+      {/* Main Form Area */}
+      <div className="flex flex-col gap-8 w-full max-w-lg">
+        {/* Mobile Step Indicator */}
+        <div className="flex md:hidden items-center justify-between mb-4 border-b border-[#26251E]/10 pb-4">
+          <span className="text-sm font-medium text-[#26251E]/60">Step {currentStep + 1} of {steps.length}</span>
+          <span className="text-sm font-semibold text-[#26251E]">{steps[currentStep].title}</span>
+        </div>
+
         {currentStep === 0 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight text-primary">
-                Set up your organization
-              </h2>
-              <p className="text-primary/60">
-                Customize your organization&apos;s name, URL, and logo
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500 ease-out">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-[#26251E]">
+                Let's start with the basics
+              </h1>
+              <p className="text-[#26251E]/60 text-lg">
+                Your organization's identity helps your team recognize where they are.
               </p>
             </div>
 
-            {/* Image Upload */}
-            <OrgImageUpload
-              currentImageUrl={organization.imageUrl}
-              organizationName={name}
-              onImageSelect={handleImageSelect}
-              onImageRemove={handleImageRemove}
-            />
+            <div className="flex flex-col gap-8 py-4">
+              <OrgImageUpload
+                currentImageUrl={organization.imageUrl}
+                organizationName={name}
+                onImageSelect={handleImageSelect}
+                onImageRemove={handleImageRemove}
+              />
 
-            {/* Name & Slug */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="flex items-center gap-2 text-primary">
-                  <Buildings className="size-4" />
-                  Organization name
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setHasUserEdited(true);
-                  }}
-                  placeholder="Acme Inc."
-                  className="h-10"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="slug" className="flex items-center gap-2 text-primary">
-                  <LinkIcon className="size-4" />
-                  Organization URL
-                </Label>
-                <div className="flex items-center gap-0">
-                  <span className="h-10 px-3 flex items-center text-sm text-primary/40 bg-primary/5 border border-r-0 border-transparent rounded-l-md">
-                    tryportal.app/
-                  </span>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-[#26251E] font-medium">
+                    Organization Name
+                  </Label>
                   <Input
-                    id="slug"
-                    value={slug}
+                    id="name"
+                    value={name}
                     onChange={(e) => {
-                      setSlug(
-                        e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                      );
+                      setName(e.target.value);
                       setHasUserEdited(true);
                     }}
-                    placeholder="acme"
-                    className="h-10 rounded-l-none"
+                    placeholder="e.g. Acme Inc."
+                    className="h-12 bg-white border-[#26251E]/10 focus:border-[#26251E] focus:ring-0 text-base"
                   />
                 </div>
-                <p className="text-xs text-primary/60">
-                  Only lowercase letters, numbers, and hyphens
-                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="slug" className="text-[#26251E] font-medium">
+                    Workspace URL
+                  </Label>
+                  <div className="flex items-center group focus-within:ring-1 focus-within:ring-[#26251E] rounded-md transition-all">
+                    <span className="h-12 px-4 flex items-center text-sm text-[#26251E]/40 bg-[#26251E]/5 border border-[#26251E]/10 border-r-0 rounded-l-md group-focus-within:border-[#26251E]">
+                      portal.app/
+                    </span>
+                    <Input
+                      id="slug"
+                      value={slug}
+                      onChange={(e) => {
+                        setSlug(
+                          e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                        );
+                        setHasUserEdited(true);
+                      }}
+                      placeholder="acme"
+                      className="h-12 rounded-l-none bg-white border-[#26251E]/10 focus:border-[#26251E] focus-visible:ring-0 text-base"
+                    />
+                  </div>
+                  <p className="text-xs text-[#26251E]/40 pl-1">
+                    Lowercase letters, numbers, and hyphens only
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {currentStep === 1 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight text-primary">
-                Describe your organization
-              </h2>
-              <p className="text-primary/60">
-                Help your team understand what your organization is about
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500 ease-out">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-[#26251E]">
+                What is this team about?
+              </h1>
+              <p className="text-[#26251E]/60 text-lg">
+                A short description helps new members understand the mission.
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description" className="flex items-center gap-2 text-primary">
-                <TextAlignLeft className="size-4" />
-                Description
+            <div className="space-y-2 py-4">
+              <Label htmlFor="description" className="text-[#26251E] font-medium">
+                Description <span className="text-[#26251E]/40 font-normal">(optional)</span>
               </Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="We're a team building amazing products that help people..."
-                className="min-h-32 resize-none"
+                placeholder="We are building the future of..."
+                className="min-h-[200px] resize-none p-4 bg-white border-[#26251E]/10 focus:border-[#26251E] focus:ring-0 text-base leading-relaxed"
               />
-              <p className="text-xs text-primary/60">
-                At least 10 characters. This will be visible to your team
-                members.
-              </p>
+              <div className="flex justify-between pl-1">
+                <p className="text-xs text-[#26251E]/40">
+                  Visible to all members
+                </p>
+                <p className="text-xs text-[#26251E]/40">
+                  {description.length} characters
+                </p>
+              </div>
             </div>
           </div>
         )}
 
         {currentStep === 2 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight text-primary">
-                Invite your team
-              </h2>
-              <p className="text-primary/60">
-                Collaboration is better with your team. You can also do this
-                later.
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500 ease-out">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-[#26251E]">
+                Bring your team together
+              </h1>
+              <p className="text-[#26251E]/60 text-lg">
+                Everything is better with friends. Invite your colleagues now.
               </p>
             </div>
 
-            <MemberInvitation
-              onInvite={handleInvite}
-              pendingInvitations={pendingInvitations}
-              onRevokeInvitation={handleRevokeInvitation}
-              existingMembers={existingMembers}
-            />
+            <div className="py-4">
+              <MemberInvitation
+                onInvite={handleInvite}
+                pendingInvitations={pendingInvitations}
+                onRevokeInvitation={handleRevokeInvitation}
+                existingMembers={existingMembers}
+              />
+            </div>
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+          <div className="p-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+            <div className="size-1.5 rounded-full bg-red-500 shrink-0" />
             {error}
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center justify-between pt-6 border-t border-[#26251E]/5 mt-auto">
           {currentStep === 2 ? (
             <Button
               type="button"
               variant="ghost"
               onClick={handleSkip}
               disabled={isSaving}
+              className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
             >
               Skip for now
             </Button>
           ) : (
-            <div />
+             // Spacer
+             <div />
           )}
 
           <Button
@@ -457,14 +464,14 @@ export function OrganizationForm() {
               (currentStep === 0 && !isBasicsValid) ||
               (currentStep === 1 && !isDescriptionValid)
             }
-            className="gap-2 min-w-32"
+            className="gap-2 min-w-[140px] bg-[#26251E] text-white hover:bg-[#26251E]/90 rounded-full h-12 px-6 shadow-md shadow-[#26251E]/5"
           >
             {isSaving ? (
               <Spinner className="size-4 animate-spin" />
             ) : (
               <>
-                {currentStep === steps.length - 1 ? "Finish setup" : "Continue"}
-                <ArrowRight className="size-4" />
+                {currentStep === steps.length - 1 ? "Finish Setup" : "Continue"}
+                <ArrowRight className="size-4" weight="bold" />
               </>
             )}
           </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User } from "@phosphor-icons/react";
+import { Plus, X, PaperPlaneTilt, Spinner, EnvelopeSimple, User, CheckCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,62 +115,69 @@ export function MemberInvitation({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Existing team members */}
       {existingMembers.length > 0 && (
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-primary">Team members</Label>
-          <div className="space-y-2">
+          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Team members</Label>
+          <div className="grid grid-cols-1 gap-2">
             {existingMembers.map((member) => (
               <div
                 key={member.id}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2",
-                  "bg-primary/5 rounded-lg text-sm"
+                  "flex items-center gap-3 px-4 py-3",
+                  "bg-white border border-[#26251E]/5 rounded-xl text-sm shadow-sm"
                 )}
               >
                 <Avatar className="size-8">
                   <AvatarImage src={member.publicUserData?.imageUrl} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  <AvatarFallback className="bg-[#26251E]/5 text-[#26251E] text-xs font-medium">
                     {getMemberInitials(member)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-primary font-medium truncate">
+                    <span className="text-[#26251E] font-medium truncate">
                       {getMemberDisplayName(member)}
                     </span>
-                    <span className="text-xs text-primary/60 capitalize shrink-0">
-                      ({member.role.replace("org:", "")})
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#26251E]/5 text-[#26251E]/60 capitalize shrink-0 border border-[#26251E]/5">
+                      {member.role.replace("org:", "")}
                     </span>
                   </div>
-                  <p className="text-xs text-primary/60 truncate">{member.emailAddress}</p>
+                  <p className="text-xs text-[#26251E]/40 truncate">{member.emailAddress}</p>
                 </div>
-                <User className="size-4 text-primary/40 shrink-0" />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-primary">Invite team members</Label>
-        <p className="text-xs text-primary/60">
-          Add email addresses of people you want to invite to your organization
-        </p>
+      <div className="space-y-4">
+        <div className="flex items-end justify-between">
+           <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Invite by Email</Label>
+        </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {emails.map((email, index) => (
-            <div key={index} className="flex gap-2">
+            <div key={index} className="flex gap-2 group">
               <div className="relative flex-1">
-                <EnvelopeSimple className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-primary/40" />
+                <EnvelopeSimple className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/30 group-focus-within:text-[#26251E]/60 transition-colors" />
                 <Input
                   type="email"
                   placeholder="colleague@company.com"
                   value={email}
                   onChange={(e) => updateEmail(index, e.target.value)}
-                  className="pl-8 h-9"
+                  className="pl-10 h-11 bg-white border-[#26251E]/10 focus:border-[#26251E] focus:ring-0 text-sm transition-all"
                   disabled={isInviting}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && email.trim()) {
+                      e.preventDefault();
+                      // If it's the last field, add a new one
+                      if (index === emails.length - 1) {
+                        addEmailField();
+                      }
+                    }
+                  }}
                 />
               </div>
               {emails.length > 1 && (
@@ -180,9 +187,9 @@ export function MemberInvitation({
                   size="icon"
                   onClick={() => removeEmailField(index)}
                   disabled={isInviting}
-                  className="shrink-0"
+                  className="shrink-0 size-11 text-[#26251E]/30 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  <X className="size-4" />
+                  <X className="size-4" weight="bold" />
                 </Button>
               )}
             </div>
@@ -190,64 +197,76 @@ export function MemberInvitation({
         </div>
 
         {error && (
-          <p className="text-xs text-destructive">{error}</p>
+          <p className="text-xs text-red-500 pl-1">{error}</p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-3 pt-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={addEmailField}
             disabled={isInviting}
-            className="gap-1"
+            className="gap-2 h-9 border-[#26251E]/10 hover:bg-[#26251E]/5 text-[#26251E]/70"
           >
             <Plus className="size-3.5" />
             Add another
           </Button>
+
+          <div className="flex-1" />
 
           <Button
             type="button"
             size="sm"
             onClick={handleInviteAll}
             disabled={isInviting || emails.every((e) => !e.trim())}
-            className="gap-1"
+            className="gap-2 h-9 bg-[#26251E] text-white hover:bg-[#26251E]/90"
           >
             {isInviting ? (
               <Spinner className="size-3.5 animate-spin" />
             ) : (
               <PaperPlaneTilt className="size-3.5" weight="fill" />
             )}
-            Send invitations
+            Send Invitations
           </Button>
         </div>
       </div>
 
-      {/* Pending invitations */}
-      {pendingInvitations.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-primary">Pending invitations</Label>
-          <div className="space-y-2">
+      {/* Pending & Sent */}
+      {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
+        <div className="space-y-3 pt-4 border-t border-[#26251E]/5">
+          <Label className="text-xs font-semibold text-[#26251E]/40 uppercase tracking-widest">Pending & Sent</Label>
+          <div className="space-y-1">
+             {invitedEmails.map((email, index) => (
+              <div
+                key={`sent-${index}`}
+                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-green-50/50 border border-green-100/50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle className="size-4 text-green-600" weight="fill" />
+                  <span className="text-sm text-[#26251E]/80">{email}</span>
+                </div>
+                <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Sent</span>
+              </div>
+            ))}
+            
             {pendingInvitations.map((invitation) => (
               <div
                 key={invitation.id}
-                className={cn(
-                  "flex items-center justify-between gap-2 px-3 py-2",
-                  "bg-primary/5 rounded-lg text-sm"
-                )}
+                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-[#26251E]/5 transition-colors group"
               >
-                <div className="flex items-center gap-2">
-                  <EnvelopeSimple className="size-4 text-primary/40" />
-                  <span className="text-primary">{invitation.emailAddress}</span>
-                  <span className="text-xs text-primary/60 capitalize">
-                    ({invitation.role.replace("org:", "")})
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="size-4 rounded-full border border-[#26251E]/20 flex items-center justify-center">
+                    <div className="size-2 rounded-full bg-[#26251E]/10" />
+                  </div>
+                  <span className="text-sm text-[#26251E]/70">{invitation.emailAddress}</span>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-xs"
                   onClick={() => handleRevoke(invitation.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity size-6 text-[#26251E]/30 hover:text-red-500 hover:bg-red-50"
                 >
                   <X className="size-3" />
                 </Button>
@@ -256,27 +275,6 @@ export function MemberInvitation({
           </div>
         </div>
       )}
-
-      {/* Recently invited */}
-      {invitedEmails.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-green-600 dark:text-green-400">
-            Invitations sent
-          </Label>
-          <div className="space-y-1">
-            {invitedEmails.map((email, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 text-sm text-primary/60"
-              >
-                <PaperPlaneTilt className="size-4 text-green-600 dark:text-green-400" weight="fill" />
-                <span>{email}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
