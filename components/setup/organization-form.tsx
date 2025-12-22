@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { useOrganization, useOrganizationList } from "@clerk/nextjs";
+import { useMutation, useQuery, useAction } from "convex/react";
 import {
   Spinner,
   ArrowRight,
@@ -11,11 +10,10 @@ import {
   Link as LinkIcon,
   TextAlignLeft,
   Check,
-  CaretRight,
   X,
 } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
-import { useOrganizationManager } from "@/lib/clerk-org";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,55 +22,45 @@ import { OrgImageUpload } from "./org-image-upload";
 import { MemberInvitation } from "./member-invitation";
 import { cn } from "@/lib/utils";
 
-export function OrganizationForm() {
-  const router = useRouter();
-  const { organization, isLoaded: clerkLoaded } = useOrganization();
-  const { userMemberships, isLoaded: orgListLoaded, setActive } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
-  const {
-    updateOrganization,
-    updateOrganizationImage,
-    removeOrganizationImage,
-    updateOrganizationMetadata,
-    inviteMember,
-    getPendingInvitations,
-    revokeInvitation,
-    getMembers,
-  } = useOrganizationManager();
+interface OrganizationFormProps {
+  organizationId?: Id<"organizations">;
+  onExit?: () => void;
+}
 
-  const createOrUpdateOrg = useMutation(
-    api.organizations.createOrUpdateOrganization
-  );
+export function OrganizationForm({ organizationId, onExit }: OrganizationFormProps) {
+  const router = useRouter();
+
+  const createOrg = useMutation(api.organizations.createOrganization);
+  const updateOrg = useMutation(api.organizations.updateOrganization);
+  const sendInvitation = useAction(api.invitations.sendInvitationEmail);
+  const revokeInvitationMutation = useMutation(api.organizations.revokeInvitation);
+
+  // Query organization data if we have an ID
   const existingOrg = useQuery(
     api.organizations.getOrganization,
-    organization?.id ? { clerkOrgId: organization.id } : "skip"
+    organizationId ? { id: organizationId } : "skip"
+  );
+
+  // Get pending invitations
+  const pendingInvitations = useQuery(
+    api.organizations.getOrganizationInvitations,
+    organizationId ? { organizationId } : "skip"
+  );
+
+  // Get existing members
+  const members = useQuery(
+    api.organizations.getOrganizationMembers,
+    organizationId ? { organizationId } : "skip"
   );
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingInvitations, setPendingInvitations] = useState<
-    Array<{ id: string; emailAddress: string; role: string }>
-  >([]);
-  const [existingMembers, setExistingMembers] = useState<
-    Array<{
-      id: string;
-      emailAddress: string;
-      role: string;
-      publicUserData?: {
-        firstName?: string;
-        lastName?: string;
-        imageUrl?: string;
-      };
-    }>
-  >([]);
   const [currentStep, setCurrentStep] = useState(0);
-  const initializedOrgIdRef = useRef<string | null>(null);
+  const [currentOrgId, setCurrentOrgId] = useState<Id<"organizations"> | undefined>(organizationId);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
   const steps = [
@@ -96,79 +84,17 @@ export function OrganizationForm() {
     },
   ];
 
-  // Initialize form with organization data (only once per organization)
+  // Initialize form with organization data
   useEffect(() => {
-    if (organization) {
-      const orgId = organization.id;
-
-      // Only initialize if this is a new organization or first time
-      if (initializedOrgIdRef.current !== orgId) {
-        // Check if this is a newly created organization
-        // New orgs typically have default name "My Organization" or auto-generated slug starting with "org-"
-        // Also check if the organization has been set up in Convex (has a proper slug)
-        const isNewOrg = 
-          organization.name === "My Organization" || 
-          !organization.slug ||
-          organization.slug.startsWith("org-") ||
-          !existingOrg; // If no Convex record exists, it's likely new
-        
-        if (isNewOrg) {
-          // Clear fields for new organization
-          setName("");
-          setSlug("");
-          setDescription("");
-        } else {
-          // Initialize with existing organization data
-          setName(organization.name || "");
-          setSlug(organization.slug || "");
-          setDescription(
-            (organization.publicMetadata?.description as string) ||
-              existingOrg?.description ||
-              ""
-          );
-        }
-        initializedOrgIdRef.current = orgId;
-        setHasUserEdited(false);
-      }
-    } else {
-      // If organization is cleared, reset the ref so form can initialize again
-      initializedOrgIdRef.current = null;
+    if (existingOrg && !hasUserEdited) {
+      setName(existingOrg.name || "");
+      setSlug(existingOrg.slug || "");
+      setDescription(existingOrg.description || "");
+      setImageUrl(existingOrg.imageUrl);
     }
-  }, [organization?.id, organization?.name, organization?.slug, existingOrg]);
-
-  // Load pending invitations and existing members
-  useEffect(() => {
-    const loadData = async () => {
-      if (organization) {
-        const [invitations, members] = await Promise.all([
-          getPendingInvitations(),
-          getMembers(),
-        ]);
-
-        setPendingInvitations(
-          invitations.map((inv) => ({
-            id: inv.id,
-            emailAddress: inv.emailAddress ?? "",
-            role: inv.role ?? "org:member",
-          }))
-        );
-
-        setExistingMembers(
-          members.map((member) => ({
-            id: member.id,
-            emailAddress: member.publicUserData?.identifier ?? "",
-            role: member.role ?? "org:member",
-            publicUserData: member.publicUserData,
-          }))
-        );
-      }
-    };
-    loadData();
-  }, [organization, getPendingInvitations, getMembers]);
+  }, [existingOrg, hasUserEdited]);
 
   const handleSaveAndContinue = async () => {
-    if (!organization) return;
-
     setIsSaving(true);
     setError(null);
 
@@ -186,35 +112,27 @@ export function OrganizationForm() {
         );
       }
 
-      // Update organization in Clerk
-      try {
-        await updateOrganization({ name, slug });
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to update organization";
-        if (errorMessage.includes("slug") || errorMessage.includes("taken")) {
-          throw new Error(
-            "That organization URL is already taken. Please choose a different one."
-          );
-        }
-        throw new Error(errorMessage);
-      }
+      let orgId = currentOrgId;
 
-      // Update description in Clerk metadata (optional - description is stored in Convex)
-      try {
-        await updateOrganizationMetadata({ description });
-      } catch (err) {
-        console.warn("Failed to update Clerk metadata (non-critical):", err);
+      if (!orgId) {
+        // Create new organization
+        orgId = await createOrg({
+          name: name.trim(),
+          slug: slug.trim(),
+          description: description.trim() || undefined,
+          imageUrl,
+        });
+        setCurrentOrgId(orgId);
+      } else {
+        // Update existing organization
+        await updateOrg({
+          id: orgId,
+          name: name.trim(),
+          slug: slug.trim(),
+          description: description.trim() || undefined,
+          imageUrl,
+        });
       }
-
-      // Sync to Convex
-      await createOrUpdateOrg({
-        clerkOrgId: organization.id,
-        name,
-        slug,
-        description,
-        imageUrl: organization.imageUrl || undefined,
-      });
 
       setHasUserEdited(false);
 
@@ -227,8 +145,14 @@ export function OrganizationForm() {
       }
     } catch (err) {
       console.error("Failed to save organization:", err);
-      const errorMessage =
+      let errorMessage =
         err instanceof Error ? err.message : "Failed to save organization";
+      
+      // Provide more helpful error message for authentication errors
+      if (errorMessage.includes("Not authenticated") || errorMessage.includes("authentication")) {
+        errorMessage = "Authentication failed. Please ensure you're signed in and that Clerk JWT template 'convex' is configured in your Clerk dashboard.";
+      }
+      
       setError(errorMessage);
     } finally {
       setIsSaving(false);
@@ -236,44 +160,40 @@ export function OrganizationForm() {
   };
 
   const handleImageSelect = async (file: File) => {
-    await updateOrganizationImage(file);
+    // For now, we'll use a data URL. In production, you'd upload to Convex file storage
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setImageUrl(dataUrl);
+      setHasUserEdited(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleImageRemove = async () => {
-    await removeOrganizationImage();
+    setImageUrl(undefined);
+    setHasUserEdited(true);
   };
 
   const handleInvite = async (
     email: string,
     role: "org:admin" | "org:member"
   ) => {
-    await inviteMember(email, role);
-    const [invitations, members] = await Promise.all([
-      getPendingInvitations(),
-      getMembers(),
-    ]);
-    setPendingInvitations(
-      invitations.map((inv) => ({
-        id: inv.id,
-        emailAddress: inv.emailAddress ?? "",
-        role: inv.role ?? "org:member",
-      }))
-    );
-    setExistingMembers(
-      members.map((member) => ({
-        id: member.id,
-        emailAddress: member.publicUserData?.identifier ?? "",
-        role: member.role ?? "org:member",
-        publicUserData: member.publicUserData,
-      }))
-    );
+    if (!currentOrgId) {
+      throw new Error("Please save the organization first");
+    }
+
+    await sendInvitation({
+      organizationId: currentOrgId,
+      email,
+      role: role === "org:admin" ? "admin" : "member",
+    });
   };
 
   const handleRevokeInvitation = async (invitationId: string) => {
-    await revokeInvitation(invitationId);
-    setPendingInvitations((prev) =>
-      prev.filter((inv) => inv.id !== invitationId)
-    );
+    await revokeInvitationMutation({
+      invitationId: invitationId as Id<"organizationInvitations">,
+    });
   };
 
   const handleSkip = () => {
@@ -288,51 +208,20 @@ export function OrganizationForm() {
   const isBasicsValid = name.trim().length >= 2 && slug.trim().length >= 2;
   const isDescriptionValid = true; // Description is optional
 
-  // Check if user has other organizations (excluding current one)
-  const otherOrganizations = orgListLoaded && userMemberships?.data
-    ? userMemberships.data.filter(
-        (membership) => membership.organization.id !== organization?.id
-      )
-    : [];
-  const hasOtherOrganizations = otherOrganizations.length > 0;
+  // Format members for display
+  const formattedMembers = (members || []).map((member: { _id: string; userId: string; role: string }) => ({
+    id: member._id,
+    emailAddress: member.userId, // We'll need user info from Clerk for proper display
+    role: member.role === "admin" ? "org:admin" : "org:member",
+    publicUserData: undefined,
+  }));
 
-  // Handle exit - navigate to first existing organization
-  const handleExit = async () => {
-    if (hasOtherOrganizations && otherOrganizations[0] && setActive) {
-      const targetOrg = otherOrganizations[0].organization;
-      const orgSlug = targetOrg.slug;
-      if (orgSlug) {
-        try {
-          // Switch to the target organization first
-          await setActive({ organization: targetOrg.id });
-          router.push(`/${orgSlug}`);
-        } catch (error) {
-          console.error("Failed to switch organization:", error);
-          // Still try to navigate even if switch fails
-          router.push(`/${orgSlug}`);
-        }
-      }
-    }
-  };
-
-  if (!clerkLoaded || !orgListLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Spinner className="size-8 animate-spin text-[#26251E]/20" />
-      </div>
-    );
-  }
-
-  if (!organization) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p className="text-[#26251E]/60">No organization found.</p>
-        <p className="text-sm text-[#26251E]/40">
-          Please sign out and sign up again to create an organization.
-        </p>
-      </div>
-    );
-  }
+  // Format invitations for display
+  const formattedInvitations = (pendingInvitations || []).map((inv: { _id: string; email: string; role: string }) => ({
+    id: inv._id,
+    emailAddress: inv.email,
+    role: inv.role === "admin" ? "org:admin" : "org:member",
+  }));
 
   return (
     <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12 md:gap-24 items-start">
@@ -411,7 +300,7 @@ export function OrganizationForm() {
 
             <div className="flex flex-col gap-8 py-4">
               <OrgImageUpload
-                currentImageUrl={organization.imageUrl}
+                currentImageUrl={imageUrl}
                 organizationName={name}
                 onImageSelect={handleImageSelect}
                 onImageRemove={handleImageRemove}
@@ -520,9 +409,9 @@ export function OrganizationForm() {
             <div className="py-4">
               <MemberInvitation
                 onInvite={handleInvite}
-                pendingInvitations={pendingInvitations}
+                pendingInvitations={formattedInvitations}
                 onRevokeInvitation={handleRevokeInvitation}
-                existingMembers={existingMembers}
+                existingMembers={formattedMembers}
               />
             </div>
           </div>
@@ -539,11 +428,11 @@ export function OrganizationForm() {
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-[#26251E]/5 mt-auto">
           <div className="flex items-center gap-2">
-            {hasOtherOrganizations && (
+            {onExit && (
               <Button
                 type="button"
                 variant="ghost"
-                onClick={handleExit}
+                onClick={onExit}
                 disabled={isSaving}
                 className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-2"
               >

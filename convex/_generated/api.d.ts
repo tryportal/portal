@@ -9,6 +9,7 @@
  */
 
 import type * as getCurrentUser from "../getCurrentUser.js";
+import type * as invitations from "../invitations.js";
 import type * as organizations from "../organizations.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   getCurrentUser: typeof getCurrentUser;
+  invitations: typeof invitations;
   organizations: typeof organizations;
 }>;
 

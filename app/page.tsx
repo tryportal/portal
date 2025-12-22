@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrganizationList } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -8,30 +8,34 @@ import { api } from "@/convex/_generated/api";
 
 export default function Page() {
   const router = useRouter();
-  const { userMemberships, isLoaded: orgListLoaded } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
-  // Prioritize organization where user is owner, otherwise use first org
-  const targetMembership = userMemberships?.data?.find(
-    (m) => m.role === "org:admin" || m.role === "org:owner"
-  ) || userMemberships?.data?.[0];
-  
-  const targetOrg = targetMembership?.organization;
-  const clerkOrgId = targetOrg?.id;
+  // Get user's organizations from Convex
+  const userOrgs = useQuery(api.organizations.getUserOrganizations);
 
+  // Prioritize organization where user is admin, otherwise use first org
+  const targetOrg = userOrgs?.find((org: { role: string }) => org.role === "admin") || userOrgs?.[0];
+
+  // Check setup status for the target organization
   const isOrgSetup = useQuery(
     api.organizations.isOrganizationSetup,
-    clerkOrgId ? { clerkOrgId } : "skip"
+    targetOrg?._id ? { organizationId: targetOrg._id } : "skip"
   );
 
   useEffect(() => {
-    if (!orgListLoaded) return;
+    if (!authLoaded) return;
+
+    // If not signed in, redirect to sign-in
+    if (!isSignedIn) {
+      router.replace("/sign-in");
+      return;
+    }
+
+    // Wait for organizations to load
+    if (userOrgs === undefined) return;
 
     // If user has no organization, redirect to setup
-    if (!targetOrg) {
+    if (userOrgs.length === 0) {
       router.replace("/setup");
       return;
     }
@@ -41,18 +45,18 @@ export default function Page() {
       return;
     }
 
-    // If organization setup check is complete and org is not set up, redirect
+    // If organization is not set up, redirect to setup
     if (isOrgSetup === false) {
       router.replace("/setup");
       return;
     }
 
     // If organization is set up, redirect to the org's slug
-    if (isOrgSetup === true && targetOrg.slug) {
+    if (isOrgSetup === true && targetOrg?.slug) {
       router.replace(`/${targetOrg.slug}`);
       return;
     }
-  }, [orgListLoaded, targetOrg, isOrgSetup, router]);
+  }, [authLoaded, isSignedIn, userOrgs, targetOrg, isOrgSetup, router]);
 
   // Show nothing while checking - the page is empty as requested
   return null;

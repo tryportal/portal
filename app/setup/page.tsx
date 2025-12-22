@@ -1,40 +1,46 @@
 "use client";
 
-import { useOrganizationList, useAuth, useOrganization } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Spinner, X } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { OrganizationForm } from "@/components/setup/organization-form";
 import { Button } from "@/components/ui/button";
 
 export default function SetupPage() {
   const router = useRouter();
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  const { organization } = useOrganization();
-  const { userMemberships, isLoaded: orgListLoaded, createOrganization, setActive } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
+  const { isSignedIn, isLoaded: authLoaded, userId } = useAuth();
+  
+  // Debug: Check authentication status in Convex
+  const authStatus = useQuery(api.organizations.checkAuth);
 
-  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
-
-  const firstOrg = userMemberships?.data?.[0]?.organization;
-  const clerkOrgId = firstOrg?.id;
+  // Get user's organizations from Convex
+  const userOrgs = useQuery(api.organizations.getUserOrganizations);
 
   // Check setup status for all organizations the user is a member of
-  const allOrgIds = userMemberships?.data?.map((m) => m.organization.id) || [];
+  const allOrgIds = userOrgs?.map((org: { _id: Id<"organizations"> }) => org._id) || [];
   const orgSetupChecks = useQuery(
     api.organizations.checkMultipleOrganizationsSetup,
-    allOrgIds.length > 0 ? { clerkOrgIds: allOrgIds } : "skip"
+    allOrgIds.length > 0 ? { organizationIds: allOrgIds as Id<"organizations">[] } : "skip"
   );
 
-  const isOrgSetup = useQuery(
-    api.organizations.isOrganizationSetup,
-    clerkOrgId ? { clerkOrgId } : "skip"
-  );
+  // Debug: Log authentication status
+  useEffect(() => {
+    if (authStatus) {
+      console.log("[Setup Page] Convex Auth Status:", authStatus);
+      if (!authStatus.authenticated) {
+        console.error("[Setup Page] ⚠ Convex authentication failed!");
+        console.error("  Clerk signed in:", isSignedIn);
+        console.error("  Clerk user ID:", userId);
+        console.error("  Convex authenticated:", authStatus.authenticated);
+        console.error("  Convex user ID:", authStatus.userId);
+        console.error("  Convex issuer:", authStatus.issuer);
+      }
+    }
+  }, [authStatus, isSignedIn, userId]);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -45,128 +51,44 @@ export default function SetupPage() {
 
   // Redirect if user is already a member of a fully set up organization
   useEffect(() => {
-    if (
-      orgListLoaded &&
-      isSignedIn &&
-      orgSetupChecks &&
-      userMemberships?.data
-    ) {
-      // Find the first organization that is fully set up
-      for (const membership of userMemberships.data) {
-        const orgId = membership.organization.id;
-        const orgSlug = membership.organization.slug;
-        const isSetup = orgSetupChecks[orgId];
+    if (!authLoaded || !isSignedIn || userOrgs === undefined || orgSetupChecks === undefined) return;
 
-        if (isSetup && orgSlug) {
-          // User is already a member of a fully set up organization, redirect them
-          router.replace(`/${orgSlug}`);
-          return;
-        }
+    // Find the first organization that is fully set up
+    for (const org of userOrgs) {
+      const isSetup = orgSetupChecks[org._id];
+      if (isSetup && org.slug) {
+        // User is already a member of a fully set up organization, redirect them
+        router.replace(`/${org.slug}`);
+        return;
       }
     }
-  }, [
-    orgListLoaded,
-    isSignedIn,
-    orgSetupChecks,
-    userMemberships?.data,
-    router,
-  ]);
+  }, [authLoaded, isSignedIn, userOrgs, orgSetupChecks, router]);
 
-  // If user has no organization, create one for them
-  useEffect(() => {
-    const createDefaultOrg = async () => {
-      if (!orgListLoaded || !isSignedIn) return;
-      if (userMemberships?.data?.length === 0 && !isCreatingOrg) {
-        setIsCreatingOrg(true);
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (attempts < maxAttempts) {
-          try {
-            // Generate a more unique slug using timestamp + random string
-            const randomSuffix = Math.random().toString(36).substring(2, 8);
-            const uniqueSlug = `org-${Date.now()}-${randomSuffix}`;
-            
-            await createOrganization({
-              name: "My Organization",
-              slug: uniqueSlug,
-            });
-            break; // Success, exit loop
-          } catch (error: unknown) {
-            attempts++;
-            const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            
-            // If it's a slug conflict and we have attempts left, retry
-            if (errorMessage.includes("slug") || errorMessage.includes("taken")) {
-              if (attempts >= maxAttempts) {
-                console.error("Failed to create organization after multiple attempts:", error);
-                // Don't throw - let the user manually create one
-                break;
-              }
-              // Wait a bit before retrying (exponential backoff)
-              await new Promise((resolve) => setTimeout(resolve, 100 * attempts));
-              continue;
-            }
-            
-            // For other errors, log and break
-            console.error("Failed to create organization:", error);
-            break;
-          }
-        }
-        
-        setIsCreatingOrg(false);
-      }
-    };
-    createDefaultOrg();
-  }, [orgListLoaded, isSignedIn, userMemberships?.data?.length, isCreatingOrg, createOrganization]);
-
-  // Check if user has other organizations (excluding current one being set up)
-  // This determines if they're creating a new org vs onboarding
-  const otherOrganizations = orgListLoaded && userMemberships?.data && organization
-    ? userMemberships.data.filter(
-        (membership) => membership.organization.id !== organization.id
-      )
-    : [];
-  const hasOtherOrganizations = otherOrganizations.length > 0;
+  // Check if user has other fully set up organizations (for exit button)
+  const otherSetupOrgs = userOrgs?.filter((org: { _id: Id<"organizations">; slug?: string }) => {
+    const isSetup = orgSetupChecks?.[org._id];
+    return isSetup && org.slug;
+  }) || [];
+  const hasOtherOrganizations = otherSetupOrgs.length > 0;
 
   // Handle exit - navigate to first existing organization
-  const handleExit = async () => {
-    if (hasOtherOrganizations && otherOrganizations[0] && setActive) {
-      const targetOrg = otherOrganizations[0].organization;
-      const orgSlug = targetOrg.slug;
-      if (orgSlug) {
-        try {
-          // Switch to the target organization first
-          await setActive({ organization: targetOrg.id });
-          router.push(`/${orgSlug}`);
-        } catch (error) {
-          console.error("Failed to switch organization:", error);
-          // Still try to navigate even if switch fails
-          router.push(`/${orgSlug}`);
-        }
-      }
+  const handleExit = () => {
+    if (hasOtherOrganizations && otherSetupOrgs[0]?.slug) {
+      router.push(`/${otherSetupOrgs[0].slug}`);
     }
   };
 
   // Loading state
-  if (
-    !authLoaded ||
-    !orgListLoaded ||
-    isCreatingOrg ||
-    !isSignedIn ||
-    (allOrgIds.length > 0 && orgSetupChecks === undefined)
-  ) {
+  if (!authLoaded || !isSignedIn || userOrgs === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
           <div className="size-12 rounded-xl bg-[#26251E] flex items-center justify-center shadow-lg">
-             <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
+            <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
           </div>
           <div className="flex flex-col items-center gap-2">
             <Spinner className="size-5 animate-spin text-[#26251E]/40" />
-            <p className="text-sm font-medium text-[#26251E]/60">
-              {isCreatingOrg ? "Setting up your workspace..." : "Loading..."}
-            </p>
+            <p className="text-sm font-medium text-[#26251E]/60">Loading...</p>
           </div>
         </div>
       </div>
@@ -204,7 +126,7 @@ export default function SetupPage() {
 
       {/* Main Content - Centered & Focused */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 md:py-0 w-full max-w-5xl mx-auto">
-        <OrganizationForm />
+        <OrganizationForm onExit={hasOtherOrganizations ? handleExit : undefined} />
       </main>
     </div>
   );

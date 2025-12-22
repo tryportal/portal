@@ -9,9 +9,10 @@ import {
   CheckIcon,
   PlusIcon,
 } from "@phosphor-icons/react"
-import { useOrganization, useOrganizationList } from "@clerk/nextjs"
 import { UserButton } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
+import { useQuery } from "convex/react"
+import { useRouter, useParams } from "next/navigation"
+import { api } from "@/convex/_generated/api"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,23 +35,21 @@ const tabs = [
 ]
 
 export function TopNav({ activeTab, onTabChange }: TopNavProps) {
-  const { organization, isLoaded } = useOrganization()
-  const { userMemberships, isLoaded: orgListLoaded, setActive } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  })
   const router = useRouter()
+  const params = useParams()
+  const currentSlug = params?.slug as string | undefined
 
-  const handleOrganizationSwitch = async (orgId: string, orgSlug: string | null) => {
-    if (!setActive || !orgSlug) return
-    
-    try {
-      await setActive({ organization: orgId })
-      router.push(`/${orgSlug}`)
-    } catch (error) {
-      console.error("Failed to switch organization:", error)
-    }
+  // Get user's organizations from Convex
+  const userOrgs = useQuery(api.organizations.getUserOrganizations)
+
+  // Get current organization by slug
+  const currentOrg = useQuery(
+    api.organizations.getOrganizationBySlug,
+    currentSlug ? { slug: currentSlug } : "skip"
+  )
+
+  const handleOrganizationSwitch = (orgSlug: string) => {
+    router.push(`/${orgSlug}`)
   }
 
   const handleCreateOrganization = () => {
@@ -75,10 +74,10 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         {/* Organization Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
-            {organization?.imageUrl ? (
+            {currentOrg?.imageUrl ? (
               <Image
-                src={organization.imageUrl}
-                alt={organization.name || "Organization"}
+                src={currentOrg.imageUrl}
+                alt={currentOrg.name || "Organization"}
                 width={20}
                 height={20}
                 className="rounded"
@@ -95,19 +94,18 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               </div>
             )}
             <span className="text-sm font-medium">
-              {isLoaded ? (organization?.name || "Organization") : "Loading..."}
+              {currentOrg?.name || "Organization"}
             </span>
             <CaretDownIcon className="ml-1 size-3 text-[#26251E]/50" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[200px]">
-            {orgListLoaded && userMemberships?.data && userMemberships.data.length > 0 ? (
-              userMemberships.data.map((membership) => {
-                const org = membership.organization
-                const isActive = organization?.id === org.id
+            {userOrgs && userOrgs.length > 0 ? (
+              userOrgs.map((org: { _id: string; name: string; slug: string; imageUrl?: string }) => {
+                const isActive = currentOrg?._id === org._id
                 return (
                   <DropdownMenuItem
-                    key={org.id}
-                    onClick={() => handleOrganizationSwitch(org.id, org.slug)}
+                    key={org._id}
+                    onClick={() => handleOrganizationSwitch(org.slug)}
                     className="gap-2 px-2 py-1.5 cursor-pointer"
                   >
                     {org.imageUrl ? (
@@ -195,4 +193,3 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
     </header>
   )
 }
-

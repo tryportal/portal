@@ -3,13 +3,38 @@ import { v } from "convex/values";
 
 export default defineSchema({
   organizations: defineTable({
-    clerkOrgId: v.string(),
     name: v.string(),
     slug: v.string(),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    createdBy: v.string(), // Clerk user ID
     createdAt: v.number(),
   })
-    .index("by_clerk_org_id", ["clerkOrgId"])
-    .index("by_slug", ["slug"]),
+    .index("by_slug", ["slug"])
+    .index("by_created_by", ["createdBy"]),
+
+  organizationMembers: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.string(), // Clerk user ID
+    role: v.union(v.literal("admin"), v.literal("member")),
+    joinedAt: v.number(),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_user", ["userId"])
+    .index("by_organization_and_user", ["organizationId", "userId"]),
+
+  organizationInvitations: defineTable({
+    organizationId: v.id("organizations"),
+    email: v.string(),
+    role: v.union(v.literal("admin"), v.literal("member")),
+    invitedBy: v.string(), // Clerk user ID
+    token: v.string(),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("revoked")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"]),
 });

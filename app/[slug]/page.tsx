@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrganization, useOrganizationList } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -24,12 +24,7 @@ export default function WorkspacePage({
   params: Promise<{ slug: string }> | { slug: string };
 }) {
   const router = useRouter();
-  const { organization, isLoaded: clerkLoaded } = useOrganization();
-  const { userMemberships, isLoaded: orgListLoaded, setActive } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const [slug, setSlug] = React.useState<string>("");
   const [activeTab, setActiveTab] = React.useState("home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
@@ -56,73 +51,61 @@ export default function WorkspacePage({
     }
   }, [params]);
 
-  const orgData = useQuery(
-    api.organizations.getOrganization,
-    organization?.id ? { clerkOrgId: organization.id } : "skip"
-  );
-
+  // Get organization by slug from Convex
   const orgBySlug = useQuery(
     api.organizations.getOrganizationBySlug,
     slug ? { slug } : "skip"
   );
 
+  // Check if user is a member of this organization
+  const isMember = useQuery(
+    api.organizations.isUserMember,
+    orgBySlug?._id ? { organizationId: orgBySlug._id } : "skip"
+  );
+
+  // Get user's organizations for fallback redirect
+  const userOrgs = useQuery(api.organizations.getUserOrganizations);
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (authLoaded && !isSignedIn) {
+      router.replace("/sign-in");
+    }
+  }, [authLoaded, isSignedIn, router]);
+
   // Verify user has access to the organization with this slug
   useEffect(() => {
-    if (!clerkLoaded || !orgListLoaded || !slug || orgBySlug === undefined) return;
+    if (!authLoaded || !isSignedIn || !slug) return;
+    if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) return;
 
-    // If no organization found for this slug, redirect to setup
+    // If no organization found for this slug, redirect
     if (orgBySlug === null) {
-      router.replace("/setup");
-      return;
-    }
-
-    // Check if user is a member of the organization with this slug
-    const targetMembership = userMemberships?.data?.find(
-      (membership) => membership.organization.id === orgBySlug.clerkOrgId
-    );
-
-    if (!targetMembership) {
-      // User doesn't have access to this organization
-      // Redirect to their first organization or setup
-      const firstOrg = userMemberships?.data?.[0]?.organization;
-      if (firstOrg?.slug) {
-        router.replace(`/${firstOrg.slug}`);
+      // Try to redirect to user's first org or setup
+      if (userOrgs.length > 0 && userOrgs[0].slug) {
+        router.replace(`/${userOrgs[0].slug}`);
       } else {
         router.replace("/setup");
       }
       return;
     }
 
-    // If user has access but the active organization doesn't match, switch to it
-    if (organization?.id !== orgBySlug.clerkOrgId && setActive) {
-      // Use Clerk's setActive to switch organizations
-      // This will update the organization context
-      setActive({ organization: orgBySlug.clerkOrgId });
+    // If user is not a member, redirect
+    if (!isMember) {
+      if (userOrgs.length > 0 && userOrgs[0].slug) {
+        router.replace(`/${userOrgs[0].slug}`);
+      } else {
+        router.replace("/setup");
+      }
       return;
     }
+  }, [authLoaded, isSignedIn, slug, orgBySlug, isMember, userOrgs, router]);
 
-    // Ensure the slug matches the organization's slug
-    if (organization.slug && organization.slug !== slug) {
-      router.replace(`/${organization.slug}`);
-    }
-  }, [
-    clerkLoaded,
-    orgListLoaded,
-    slug,
-    orgBySlug,
-    userMemberships?.data,
-    organization?.id,
-    organization?.slug,
-    setActive,
-    router,
-  ]);
-
-  // Redirect to setup if no organization is active
+  // Redirect to setup if user has no organizations
   useEffect(() => {
-    if (clerkLoaded && orgListLoaded && !organization && userMemberships?.data?.length === 0) {
+    if (authLoaded && isSignedIn && userOrgs !== undefined && userOrgs.length === 0) {
       router.replace("/setup");
     }
-  }, [clerkLoaded, orgListLoaded, organization, userMemberships?.data?.length, router]);
+  }, [authLoaded, isSignedIn, userOrgs, router]);
 
   const channelInfo = getChannelInfo(activeChannel);
   const currentMessages = messages[activeChannel] || [];
@@ -144,7 +127,7 @@ export default function WorkspacePage({
     }));
   };
 
-  if (!clerkLoaded || !orgListLoaded) {
+  if (!authLoaded || !isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
@@ -155,7 +138,7 @@ export default function WorkspacePage({
   }
 
   // Show loading while checking access
-  if (orgBySlug === undefined) {
+  if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
@@ -165,8 +148,9 @@ export default function WorkspacePage({
     );
   }
 
-  if (!organization) {
-    return null; // Will redirect to setup
+  // Show nothing while redirecting
+  if (!orgBySlug || !isMember) {
+    return null;
   }
 
   return (
@@ -198,4 +182,3 @@ export default function WorkspacePage({
     </div>
   );
 }
-

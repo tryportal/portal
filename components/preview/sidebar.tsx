@@ -17,7 +17,9 @@ import {
   LinkIcon,
   SidebarIcon,
 } from "@phosphor-icons/react"
-import { useOrganization } from "@clerk/nextjs"
+import { useQuery } from "convex/react"
+import { useParams } from "next/navigation"
+import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -60,7 +62,15 @@ export function Sidebar({
   onChannelSelect,
   categories,
 }: SidebarProps) {
-  const { organization, isLoaded } = useOrganization()
+  const params = useParams()
+  const currentSlug = params?.slug as string | undefined
+
+  // Get current organization by slug
+  const currentOrg = useQuery(
+    api.organizations.getOrganizationBySlug,
+    currentSlug ? { slug: currentSlug } : "skip"
+  )
+
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     categories.map((c) => c.id)
   )
@@ -93,10 +103,10 @@ export function Sidebar({
       {/* Header with toggle */}
       <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
         <div className="flex items-center gap-2">
-          {organization?.imageUrl ? (
+          {currentOrg?.imageUrl ? (
             <Image
-              src={organization.imageUrl}
-              alt={organization.name || "Organization"}
+              src={currentOrg.imageUrl}
+              alt={currentOrg.name || "Organization"}
               width={20}
               height={20}
               className="rounded"
@@ -113,7 +123,7 @@ export function Sidebar({
             </div>
           )}
           <span className="text-sm font-medium text-[#26251E]">
-            {isLoaded ? (organization?.name || "Organization") : "Loading..."}
+            {currentOrg?.name || "Organization"}
           </span>
         </div>
         <Button
@@ -260,4 +270,3 @@ export function Sidebar({
     </div>
   )
 }
-

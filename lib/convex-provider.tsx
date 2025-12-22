@@ -1,8 +1,9 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
-import { ReactNode, useMemo } from "react";
+import { ReactNode } from "react";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
 
@@ -10,19 +11,14 @@ if (!convexUrl) {
   throw new Error("Missing NEXT_PUBLIC_CONVEX_URL environment variable");
 }
 
+// Create the Convex client once, outside of the component
+const convex = new ConvexReactClient(convexUrl);
+
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
-  const { getToken } = useAuth();
-
-  const convex = useMemo(() => {
-    return new ConvexReactClient(convexUrl, {
-      // Pass Clerk token to Convex for authentication
-      async fetchToken() {
-        const token = await getToken({ template: "convex" });
-        return token ?? undefined;
-      },
-    });
-  }, [getToken]);
-
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return (
+    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      {children}
+    </ConvexProviderWithClerk>
+  );
 }
 
