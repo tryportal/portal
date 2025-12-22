@@ -718,3 +718,55 @@ export const removeOrganizationImage = mutation({
     return args.organizationId;
   },
 });
+
+/**
+ * Delete an organization
+ */
+export const deleteOrganization = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if user is an admin of this organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only organization admins can delete the organization");
+    }
+
+    // Delete all memberships for this organization
+    const memberships = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    for (const member of memberships) {
+      await ctx.db.delete(member._id);
+    }
+
+    // Delete all invitations for this organization
+    const invitations = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    for (const invitation of invitations) {
+      await ctx.db.delete(invitation._id);
+    }
+
+    // Delete the organization itself
+    await ctx.db.delete(args.organizationId);
+
+    return { success: true };
+  },
+});

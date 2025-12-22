@@ -9,9 +9,21 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { OrgImageUpload } from "@/components/setup/org-image-upload"
-import { CheckIcon, GearIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import { CheckIcon, GearIcon, WarningCircleIcon, TrashIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface WorkspaceSettingsPageProps {
   organizationId: Id<"organizations">
@@ -28,6 +40,7 @@ export function WorkspaceSettingsPage({
     organizationId,
   })
   const updateOrganization = useMutation(api.organizations.updateOrganization)
+  const deleteOrganization = useMutation(api.organizations.deleteOrganization)
 
   const [name, setName] = React.useState("")
   const [slug, setSlug] = React.useState("")
@@ -35,6 +48,9 @@ export function WorkspaceSettingsPage({
   const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = React.useState("")
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 
   // Initialize form with organization data
   React.useEffect(() => {
@@ -100,6 +116,25 @@ export function WorkspaceSettingsPage({
 
   const handleImageRemove = async () => {
     setImageUrl(undefined)
+  }
+
+  const handleDelete = async () => {
+    if (deleteConfirmName !== organization?.name) {
+      setError("Organization name does not match")
+      return
+    }
+
+    setIsDeleting(true)
+    setError(null)
+
+    try {
+      await deleteOrganization({ organizationId })
+      // Redirect to setup page after successful deletion
+      router.push("/setup")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete organization")
+      setIsDeleting(false)
+    }
   }
 
   if (!organization || !membership) {
@@ -273,6 +308,82 @@ export function WorkspaceSettingsPage({
                 {error}
               </div>
             )}
+
+            {/* Danger Zone */}
+            <section className="space-y-6">
+              <div>
+                <h2 className="text-lg font-medium text-red-600">Danger Zone</h2>
+                <p className="text-sm text-[#26251E]/60">Irreversible and destructive actions.</p>
+              </div>
+
+              <div className="rounded-xl border border-red-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-[#26251E]">Delete Workspace</h3>
+                    <p className="text-xs text-[#26251E]/60">
+                      Once you delete a workspace, there is no going back. Please be certain.
+                    </p>
+                  </div>
+                  <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogTrigger
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-red-200 bg-transparent px-2 h-7 text-xs font-medium transition-all hover:bg-red-50 hover:text-red-700 text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      <TrashIcon className="size-4 mr-2" />
+                      Delete Workspace
+                    </AlertDialogTrigger>
+                    <AlertDialogContent size="default" className="max-w-md">
+                      <AlertDialogHeader>
+                        <AlertDialogMedia className="bg-red-50 text-red-600">
+                          <WarningCircleIcon className="size-5" weight="fill" />
+                        </AlertDialogMedia>
+                        <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the workspace
+                          and all of its data. Please type <strong>{organization?.name}</strong> to confirm.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className="space-y-3 py-4">
+                        <Label htmlFor="delete-confirm" className="text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                          Workspace Name
+                        </Label>
+                        <Input
+                          id="delete-confirm"
+                          value={deleteConfirmName}
+                          onChange={(e) => {
+                            setDeleteConfirmName(e.target.value)
+                            setError(null)
+                          }}
+                          placeholder={organization?.name}
+                          className="bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && deleteConfirmName === organization?.name) {
+                              handleDelete()
+                            }
+                          }}
+                        />
+                      </div>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel
+                          onClick={() => {
+                            setDeleteConfirmName("")
+                            setError(null)
+                          }}
+                        >
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          disabled={deleteConfirmName !== organization?.name || isDeleting}
+                          className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete Workspace"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
