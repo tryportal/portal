@@ -83,6 +83,9 @@ export function OrgImageUpload({
       setPreviewUrl(null);
     } catch (error) {
       console.error("Failed to remove image:", error);
+      // If removal fails, it might be because image doesn't exist
+      // Clear the preview anyway to update UI
+      setPreviewUrl(null);
     } finally {
       setIsUploading(false);
     }

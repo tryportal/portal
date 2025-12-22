@@ -45,7 +45,26 @@ export function useOrganizationManager() {
    */
   const removeOrganizationImage = async () => {
     if (!organization) throw new Error("No organization found");
-    await organization.setLogo({ file: null });
+    
+    // Check if organization has an image before trying to remove it
+    if (!organization.imageUrl) {
+      // No image to remove, return early
+      return;
+    }
+    
+    try {
+      await organization.setLogo({ file: null });
+    } catch (error: unknown) {
+      // Handle the case where image doesn't exist or is already removed
+      if (error instanceof Error) {
+        // If the error is about image not found, it's already removed - that's fine
+        if (error.message.includes("not found") || error.message.includes("Image not found")) {
+          return; // Silently succeed if image is already gone
+        }
+        throw error;
+      }
+      throw new Error("Failed to remove organization image");
+    }
   };
 
   /**
@@ -66,10 +85,27 @@ export function useOrganizationManager() {
    */
   const inviteMember = async (emailAddress: string, role: "org:admin" | "org:member" = "org:member") => {
     if (!organization) throw new Error("No organization found");
-    await organization.inviteMember({
-      emailAddress,
-      role,
-    });
+    
+    // Check if user has admin permissions
+    const membership = organization.membership;
+    const userRole = membership?.role;
+    const isAdmin = userRole === "org:admin";
+    
+    if (!membership || !isAdmin) {
+      throw new Error("Only organization admins can invite members");
+    }
+    
+    try {
+      await organization.inviteMember({
+        emailAddress,
+        role,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("permission")) {
+        throw new Error("You don't have permission to invite members");
+      }
+      throw error;
+    }
   };
 
   /**
@@ -77,8 +113,29 @@ export function useOrganizationManager() {
    */
   const getPendingInvitations = async () => {
     if (!organization) return [];
-    const invitations = await organization.getInvitations();
-    return invitations.data?.filter((inv) => inv.status === "pending") ?? [];
+    
+    // Check if user has admin permissions
+    const membership = organization.membership;
+    const userRole = membership?.role;
+    const isAdmin = userRole === "org:admin";
+    
+    // Only admins can view invitations
+    // If membership is not loaded yet or user is not admin, return empty array
+    if (!membership || !isAdmin) {
+      return [];
+    }
+    
+    try {
+      const invitations = await organization.getInvitations();
+      return invitations.data?.filter((inv) => inv.status === "pending") ?? [];
+    } catch (error) {
+      // Handle permission errors gracefully
+      if (error instanceof Error && error.message.includes("permission")) {
+        console.warn("User lacks permission to view invitations:", error.message);
+        return [];
+      }
+      throw error;
+    }
   };
 
   /**
@@ -86,10 +143,27 @@ export function useOrganizationManager() {
    */
   const revokeInvitation = async (invitationId: string) => {
     if (!organization) throw new Error("No organization found");
-    const invitations = await organization.getInvitations();
-    const invitation = invitations.data?.find((inv) => inv.id === invitationId);
-    if (invitation) {
-      await invitation.revoke();
+    
+    // Check if user has admin permissions
+    const membership = organization.membership;
+    const userRole = membership?.role;
+    const isAdmin = userRole === "org:admin";
+    
+    if (!membership || !isAdmin) {
+      throw new Error("Only organization admins can revoke invitations");
+    }
+    
+    try {
+      const invitations = await organization.getInvitations();
+      const invitation = invitations.data?.find((inv) => inv.id === invitationId);
+      if (invitation) {
+        await invitation.revoke();
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("permission")) {
+        throw new Error("You don't have permission to revoke invitations");
+      }
+      throw error;
     }
   };
 
@@ -98,8 +172,18 @@ export function useOrganizationManager() {
    */
   const getMembers = async () => {
     if (!organization) return [];
-    const memberships = await organization.getMemberships();
-    return memberships.data ?? [];
+    
+    try {
+      const memberships = await organization.getMemberships();
+      return memberships.data ?? [];
+    } catch (error) {
+      // Handle permission errors gracefully
+      if (error instanceof Error && error.message.includes("permission")) {
+        console.warn("User lacks permission to view members:", error.message);
+        return [];
+      }
+      throw error;
+    }
   };
 
   return {

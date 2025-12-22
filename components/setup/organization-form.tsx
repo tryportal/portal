@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { useOrganization } from "@clerk/nextjs";
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import {
   Spinner,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   TextAlignLeft,
   Check,
   CaretRight,
+  X,
 } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { useOrganizationManager } from "@/lib/clerk-org";
@@ -26,6 +27,11 @@ import { cn } from "@/lib/utils";
 export function OrganizationForm() {
   const router = useRouter();
   const { organization, isLoaded: clerkLoaded } = useOrganization();
+  const { userMemberships, isLoaded: orgListLoaded, setActive } = useOrganizationList({
+    userMemberships: {
+      infinite: true,
+    },
+  });
   const {
     updateOrganization,
     updateOrganizationImage,
@@ -97,18 +103,38 @@ export function OrganizationForm() {
 
       // Only initialize if this is a new organization or first time
       if (initializedOrgIdRef.current !== orgId) {
-        setName(organization.name || "");
-        setSlug(organization.slug || "");
-        setDescription(
-          (organization.publicMetadata?.description as string) ||
-            existingOrg?.description ||
-            ""
-        );
+        // Check if this is a newly created organization
+        // New orgs typically have default name "My Organization" or auto-generated slug starting with "org-"
+        // Also check if the organization has been set up in Convex (has a proper slug)
+        const isNewOrg = 
+          organization.name === "My Organization" || 
+          !organization.slug ||
+          organization.slug.startsWith("org-") ||
+          !existingOrg; // If no Convex record exists, it's likely new
+        
+        if (isNewOrg) {
+          // Clear fields for new organization
+          setName("");
+          setSlug("");
+          setDescription("");
+        } else {
+          // Initialize with existing organization data
+          setName(organization.name || "");
+          setSlug(organization.slug || "");
+          setDescription(
+            (organization.publicMetadata?.description as string) ||
+              existingOrg?.description ||
+              ""
+          );
+        }
         initializedOrgIdRef.current = orgId;
         setHasUserEdited(false);
       }
+    } else {
+      // If organization is cleared, reset the ref so form can initialize again
+      initializedOrgIdRef.current = null;
     }
-  }, [organization?.id, existingOrg]);
+  }, [organization?.id, organization?.name, organization?.slug, existingOrg]);
 
   // Load pending invitations and existing members
   useEffect(() => {
@@ -262,7 +288,34 @@ export function OrganizationForm() {
   const isBasicsValid = name.trim().length >= 2 && slug.trim().length >= 2;
   const isDescriptionValid = true; // Description is optional
 
-  if (!clerkLoaded) {
+  // Check if user has other organizations (excluding current one)
+  const otherOrganizations = orgListLoaded && userMemberships?.data
+    ? userMemberships.data.filter(
+        (membership) => membership.organization.id !== organization?.id
+      )
+    : [];
+  const hasOtherOrganizations = otherOrganizations.length > 0;
+
+  // Handle exit - navigate to first existing organization
+  const handleExit = async () => {
+    if (hasOtherOrganizations && otherOrganizations[0] && setActive) {
+      const targetOrg = otherOrganizations[0].organization;
+      const orgSlug = targetOrg.slug;
+      if (orgSlug) {
+        try {
+          // Switch to the target organization first
+          await setActive({ organization: targetOrg.id });
+          router.push(`/${orgSlug}`);
+        } catch (error) {
+          console.error("Failed to switch organization:", error);
+          // Still try to navigate even if switch fails
+          router.push(`/${orgSlug}`);
+        }
+      }
+    }
+  };
+
+  if (!clerkLoaded || !orgListLoaded) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Spinner className="size-8 animate-spin text-[#26251E]/20" />
@@ -485,20 +538,31 @@ export function OrganizationForm() {
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-[#26251E]/5 mt-auto">
-          {currentStep === 2 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleSkip}
-              disabled={isSaving}
-              className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
-            >
-              Skip for now
-            </Button>
-          ) : (
-            // Spacer
-            <div />
-          )}
+          <div className="flex items-center gap-2">
+            {hasOtherOrganizations && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleExit}
+                disabled={isSaving}
+                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-2"
+              >
+                <X className="size-4" />
+                Exit
+              </Button>
+            )}
+            {currentStep === 2 && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSkip}
+                disabled={isSaving}
+                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+              >
+                Skip for now
+              </Button>
+            )}
+          </div>
 
           <Button
             type="button"

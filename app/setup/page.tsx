@@ -1,17 +1,19 @@
 "use client";
 
-import { useOrganizationList, useAuth } from "@clerk/nextjs";
+import { useOrganizationList, useAuth, useOrganization } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Spinner } from "@phosphor-icons/react";
+import { Spinner, X } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { OrganizationForm } from "@/components/setup/organization-form";
+import { Button } from "@/components/ui/button";
 
 export default function SetupPage() {
   const router = useRouter();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  const { userMemberships, isLoaded: orgListLoaded, createOrganization } = useOrganizationList({
+  const { organization } = useOrganization();
+  const { userMemberships, isLoaded: orgListLoaded, createOrganization, setActive } = useOrganizationList({
     userMemberships: {
       infinite: true,
     },
@@ -118,6 +120,34 @@ export default function SetupPage() {
     createDefaultOrg();
   }, [orgListLoaded, isSignedIn, userMemberships?.data?.length, isCreatingOrg, createOrganization]);
 
+  // Check if user has other organizations (excluding current one being set up)
+  // This determines if they're creating a new org vs onboarding
+  const otherOrganizations = orgListLoaded && userMemberships?.data && organization
+    ? userMemberships.data.filter(
+        (membership) => membership.organization.id !== organization.id
+      )
+    : [];
+  const hasOtherOrganizations = otherOrganizations.length > 0;
+
+  // Handle exit - navigate to first existing organization
+  const handleExit = async () => {
+    if (hasOtherOrganizations && otherOrganizations[0] && setActive) {
+      const targetOrg = otherOrganizations[0].organization;
+      const orgSlug = targetOrg.slug;
+      if (orgSlug) {
+        try {
+          // Switch to the target organization first
+          await setActive({ organization: targetOrg.id });
+          router.push(`/${orgSlug}`);
+        } catch (error) {
+          console.error("Failed to switch organization:", error);
+          // Still try to navigate even if switch fails
+          router.push(`/${orgSlug}`);
+        }
+      }
+    }
+  };
+
   // Loading state
   if (
     !authLoaded ||
@@ -153,8 +183,22 @@ export default function SetupPage() {
           </div>
           <span className="font-semibold tracking-tight text-lg opacity-90">Portal</span>
         </div>
-        <div className="text-xs font-medium text-[#26251E]/40 uppercase tracking-widest">
-          Setup
+        <div className="flex items-center gap-4">
+          {hasOtherOrganizations && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleExit}
+              className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 rounded-full"
+              aria-label="Exit setup"
+            >
+              <X className="size-5" weight="bold" />
+            </Button>
+          )}
+          <div className="text-xs font-medium text-[#26251E]/40 uppercase tracking-widest">
+            Setup
+          </div>
         </div>
       </header>
 

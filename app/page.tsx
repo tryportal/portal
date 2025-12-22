@@ -14,8 +14,13 @@ export default function Page() {
     },
   });
 
-  const firstOrg = userMemberships?.data?.[0]?.organization;
-  const clerkOrgId = firstOrg?.id;
+  // Prioritize organization where user is owner, otherwise use first org
+  const targetMembership = userMemberships?.data?.find(
+    (m) => m.role === "org:admin" || m.role === "org:owner"
+  ) || userMemberships?.data?.[0];
+  
+  const targetOrg = targetMembership?.organization;
+  const clerkOrgId = targetOrg?.id;
 
   const isOrgSetup = useQuery(
     api.organizations.isOrganizationSetup,
@@ -26,8 +31,13 @@ export default function Page() {
     if (!orgListLoaded) return;
 
     // If user has no organization, redirect to setup
-    if (!firstOrg) {
+    if (!targetOrg) {
       router.replace("/setup");
+      return;
+    }
+
+    // If organization setup check is still loading, wait
+    if (isOrgSetup === undefined) {
       return;
     }
 
@@ -36,7 +46,13 @@ export default function Page() {
       router.replace("/setup");
       return;
     }
-  }, [orgListLoaded, firstOrg, isOrgSetup, router]);
+
+    // If organization is set up, redirect to the org's slug
+    if (isOrgSetup === true && targetOrg.slug) {
+      router.replace(`/${targetOrg.slug}`);
+      return;
+    }
+  }, [orgListLoaded, targetOrg, isOrgSetup, router]);
 
   // Show nothing while checking - the page is empty as requested
   return null;
