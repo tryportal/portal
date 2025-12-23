@@ -2,6 +2,30 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  channelCategories: defineTable({
+    organizationId: v.id("organizations"),
+    name: v.string(),
+    order: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_organization_and_order", ["organizationId", "order"]),
+
+  channels: defineTable({
+    organizationId: v.id("organizations"),
+    categoryId: v.id("channelCategories"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    icon: v.string(), // Phosphor icon name, e.g., "Hash", "ChatCircle"
+    permissions: v.union(v.literal("open"), v.literal("readOnly")), // "open" = everyone can send, "readOnly" = only admins can send
+    order: v.number(),
+    createdAt: v.number(),
+    createdBy: v.string(), // Clerk user ID
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_category", ["categoryId"])
+    .index("by_category_and_order", ["categoryId", "order"]),
+
   organizations: defineTable({
     name: v.string(),
     slug: v.string(),

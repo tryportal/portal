@@ -4,12 +4,11 @@ import * as React from "react";
 import { WorkspaceProvider, useWorkspace } from "@/components/workspace-context";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { TopNav } from "@/components/preview/top-nav";
 import { Sidebar } from "@/components/preview/sidebar";
-import { mockCategories } from "@/components/preview/mock-data";
-import { Spinner } from "@phosphor-icons/react/dist/ssr";
+import { CircleNotchIcon } from "@phosphor-icons/react";
 import { NoAccess } from "@/components/no-access";
 
 function WorkspaceLayoutContent({
@@ -20,15 +19,12 @@ function WorkspaceLayoutContent({
   params: Promise<{ slug: string }> | { slug: string };
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const [slug, setSlug] = React.useState<string>("");
   
   const { 
     sidebarOpen, 
     setSidebarOpen, 
-    activeChannel, 
-    setActiveChannel,
     activeTab,
     setActiveTab
   } = useWorkspace();
@@ -72,18 +68,11 @@ function WorkspaceLayoutContent({
     // Don't automatically redirect - let NoAccess component handle it
   }, [authLoaded, isSignedIn, slug, orgBySlug, isMember, userOrgs]);
 
-  // Clear activeChannel when navigating to People or Settings
-  React.useEffect(() => {
-    if (pathname?.includes("/people") || pathname?.includes("/settings")) {
-      setActiveChannel(null);
-    }
-  }, [pathname, setActiveChannel]);
-
   if (!authLoaded || !isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+          <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
         </div>
       </div>
     );
@@ -94,7 +83,7 @@ function WorkspaceLayoutContent({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+          <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
         </div>
       </div>
     );
@@ -116,9 +105,6 @@ function WorkspaceLayoutContent({
         <Sidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((prev) => !prev)}
-          activeChannel={activeChannel ?? ""}
-          onChannelSelect={setActiveChannel}
-          categories={mockCategories}
         />
 
         {/* Page Content */}

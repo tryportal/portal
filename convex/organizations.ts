@@ -248,6 +248,26 @@ export const createOrganization = mutation({
       joinedAt: Date.now(),
     });
 
+    // Create default category and channel
+    const categoryId = await ctx.db.insert("channelCategories", {
+      organizationId: orgId,
+      name: "General",
+      order: 0,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("channels", {
+      organizationId: orgId,
+      categoryId,
+      name: "general",
+      description: "General discussion for the workspace",
+      icon: "Hash",
+      permissions: "open",
+      order: 0,
+      createdAt: Date.now(),
+      createdBy: userId,
+    });
+
     return orgId;
   },
 });
@@ -390,6 +410,30 @@ export const deleteOrganization = mutation({
 
     for (const invitation of invitations) {
       await ctx.db.delete(invitation._id);
+    }
+
+    // Delete all channels
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    for (const channel of channels) {
+      await ctx.db.delete(channel._id);
+    }
+
+    // Delete all channel categories
+    const categories = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    for (const category of categories) {
+      await ctx.db.delete(category._id);
     }
 
     // Delete the organization
