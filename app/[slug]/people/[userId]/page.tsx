@@ -111,6 +111,7 @@ export default function MemberProfilePage({
   const [roleSaveSuccess, setRoleSaveSuccess] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   // Resolve params
   React.useEffect(() => {
@@ -306,7 +307,7 @@ export default function MemberProfilePage({
     if (!member || !orgBySlug?._id) return;
 
     setIsRemoving(true);
-    setSaveError(null);
+    setRemoveError(null);
 
     try {
       await removeMember({
@@ -317,7 +318,7 @@ export default function MemberProfilePage({
       // Navigate back to people list
       router.push(`/${slug}/people`);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to remove member");
+      setRemoveError(err instanceof Error ? err.message : "Failed to remove member");
       setRemoveDialogOpen(false);
     } finally {
       setIsRemoving(false);
@@ -680,7 +681,15 @@ export default function MemberProfilePage({
                                 </div>
                                 
                                 <div className="pt-4 border-t border-[#26251E]/5">
-                                  <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+                                  <AlertDialog 
+                                    open={removeDialogOpen} 
+                                    onOpenChange={(open) => {
+                                      setRemoveDialogOpen(open);
+                                      if (!open) {
+                                        setRemoveError(null);
+                                      }
+                                    }}
+                                  >
                                     <AlertDialogTrigger 
                                       render={<Button 
                                         variant="outline" 
@@ -697,6 +706,12 @@ export default function MemberProfilePage({
                                           Are you sure you want to remove this member? They will lose access immediately.
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
+                                      {removeError && (
+                                        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2 mx-6">
+                                          <WarningCircleIcon className="size-4" weight="fill" />
+                                          {removeError}
+                                        </div>
+                                      )}
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction
