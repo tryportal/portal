@@ -140,17 +140,17 @@ export function CreateChannelDialog({
           </DialogHeader>
 
           {step === "details" ? (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
               {/* Channel Name */}
               <div className="space-y-2">
-                <Label htmlFor="channel-name">Channel Name</Label>
-                <div className="flex items-center gap-2">
+                <Label htmlFor="channel-name" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Channel Name</Label>
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#26251E]/5 hover:bg-[#26251E]/10 transition-colors"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#26251E]/5 hover:bg-[#26251E]/10 transition-colors border border-[#26251E]/5"
                     onClick={() => {}}
                   >
-                    <SelectedIcon className="size-4 text-[#26251E]/70" />
+                    <SelectedIcon className="size-5 text-[#26251E]/70" />
                   </button>
                   <Input
                     id="channel-name"
@@ -158,66 +158,83 @@ export function CreateChannelDialog({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
+                    className="h-10 text-base"
                   />
                 </div>
               </div>
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="channel-description">
-                  Description <span className="text-[#26251E]/40">(optional)</span>
+                <Label htmlFor="channel-description" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">
+                  Description <span className="font-normal text-[#26251E]/30">(optional)</span>
                 </Label>
                 <Textarea
                   id="channel-description"
                   placeholder="What's this channel about?"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="min-h-[80px]"
+                  className="min-h-[80px] resize-none text-sm"
                 />
               </div>
 
               {/* Icon Picker */}
               <div className="space-y-2">
-                <Label>Icon</Label>
-                <IconPicker value={icon} onChange={setIcon} />
+                <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Icon</Label>
+                <div className="rounded-lg border border-[#26251E]/10 p-3 bg-[#F7F7F4]/50">
+                  <IconPicker value={icon} onChange={setIcon} />
+                </div>
               </div>
 
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {error && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">
+                  {error}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
               {/* Permissions */}
-              <div className="space-y-2">
-                <Label>Permissions</Label>
-                <div className="space-y-2">
-                  <label className="flex items-start gap-3 rounded-md border border-transparent p-3 cursor-pointer hover:bg-[#26251E]/5 has-[:checked]:border-[#26251E]/20 has-[:checked]:bg-[#26251E]/5">
-                    <input
-                      type="radio"
-                      name="permissions"
-                      value="open"
-                      checked={permissions === "open"}
-                      onChange={() => setPermissions("open")}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <div className="text-sm font-medium">Open to everyone</div>
-                      <div className="text-xs text-[#26251E]/60">
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Permissions</Label>
+                <div className="grid gap-3">
+                  <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "open" ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}>
+                    <div className="mt-1">
+                      <input
+                        type="radio"
+                        name="permissions"
+                        value="open"
+                        checked={permissions === "open"}
+                        onChange={() => setPermissions("open")}
+                        className="sr-only"
+                      />
+                      <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "open" ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
+                        {permissions === "open" && <div className="size-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-[#26251E]">Open to everyone</div>
+                      <div className="mt-1 text-sm text-[#26251E]/60">
                         All members can send messages in this channel.
                       </div>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 rounded-md border border-transparent p-3 cursor-pointer hover:bg-[#26251E]/5 has-[:checked]:border-[#26251E]/20 has-[:checked]:bg-[#26251E]/5">
-                    <input
-                      type="radio"
-                      name="permissions"
-                      value="readOnly"
-                      checked={permissions === "readOnly"}
-                      onChange={() => setPermissions("readOnly")}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <div className="text-sm font-medium">Read-only (Announcements)</div>
-                      <div className="text-xs text-[#26251E]/60">
+                  <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "readOnly" ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}>
+                    <div className="mt-1">
+                      <input
+                        type="radio"
+                        name="permissions"
+                        value="readOnly"
+                        checked={permissions === "readOnly"}
+                        onChange={() => setPermissions("readOnly")}
+                        className="sr-only"
+                      />
+                      <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "readOnly" ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
+                        {permissions === "readOnly" && <div className="size-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-[#26251E]">Read-only</div>
+                      <div className="mt-1 text-sm text-[#26251E]/60">
                         Only admins can send messages. Great for announcements.
                       </div>
                     </div>
@@ -226,13 +243,13 @@ export function CreateChannelDialog({
               </div>
 
               {/* Category Selection */}
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <div className="space-y-1">
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Category</Label>
+                <div className="grid grid-cols-2 gap-2">
                   {categoriesData?.map((category) => (
                     <label
                       key={category._id}
-                      className="flex items-center gap-3 rounded-md border border-transparent p-3 cursor-pointer hover:bg-[#26251E]/5 has-[:checked]:border-[#26251E]/20 has-[:checked]:bg-[#26251E]/5"
+                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}
                     >
                       <input
                         type="radio"
@@ -240,14 +257,22 @@ export function CreateChannelDialog({
                         value={category._id}
                         checked={categoryId === category._id}
                         onChange={() => setCategoryId(category._id)}
+                        className="sr-only"
                       />
-                      <span className="text-sm font-medium">{category.name}</span>
+                      <div className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
+                        {categoryId === category._id && <div className="size-1.5 rounded-full bg-white" />}
+                      </div>
+                      <span className="text-sm font-medium truncate">{category.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {error && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">
+                  {error}
+                </div>
+              )}
             </div>
           )}
 

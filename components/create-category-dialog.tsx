@@ -77,18 +77,21 @@ export function CreateCategoryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="category-name">Category Name</Label>
+              <Label htmlFor="category-name" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Category Name</Label>
               <Input
                 id="category-name"
                 placeholder="e.g., Engineering"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
+                className="h-10 text-base"
               />
               {error && (
-                <p className="text-xs text-red-500">{error}</p>
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">
+                  {error}
+                </div>
               )}
             </div>
           </div>

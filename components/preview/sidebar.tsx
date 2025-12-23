@@ -122,7 +122,10 @@ function SortableChannel({
             <DotsSixVerticalIcon className="size-4" />
           </span>
         )}
-        <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
+        {React.createElement(Icon, {
+          className: "size-4",
+          weight: isActive ? "fill" : "regular",
+        })}
         <span className="truncate">{channel.name}</span>
       </Button>
 
@@ -184,6 +187,7 @@ interface SortableCategoryProps {
   isAdmin: boolean
   onEditChannel: (channelId: Id<"channels">) => void
   onDeleteChannel: (channelId: Id<"channels">) => void
+  onDeleteCategory: (categoryId: Id<"channelCategories">) => void
 }
 
 function SortableCategory({
@@ -195,6 +199,7 @@ function SortableCategory({
   isAdmin,
   onEditChannel,
   onDeleteChannel,
+  onDeleteCategory,
 }: SortableCategoryProps) {
   const {
     attributes,
@@ -214,7 +219,7 @@ function SortableCategory({
   return (
     <div ref={setNodeRef} style={style}>
       {/* Category Header */}
-      <div className="group flex items-center">
+      <div className="group flex items-center pr-2">
         {isAdmin && (
           <span
             {...attributes}
@@ -235,6 +240,25 @@ function SortableCategory({
           )}
           <span className="uppercase tracking-wider">{category.name}</span>
         </button>
+        
+        {isAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="opacity-0 group-hover:opacity-100 p-1 text-[#26251E]/40 hover:text-[#26251E] rounded hover:bg-[#26251E]/5">
+                <DotsThreeIcon className="size-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem 
+                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                onClick={() => onDeleteCategory(category._id)}
+              >
+                <TrashIcon className="size-4 mr-2" />
+                Delete Category
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Channels */}
@@ -298,6 +322,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const reorderCategories = useMutation(api.channels.reorderCategories)
   const reorderChannels = useMutation(api.channels.reorderChannels)
   const deleteChannel = useMutation(api.channels.deleteChannel)
+  const deleteCategory = useMutation(api.channels.deleteCategory)
 
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([])
 
@@ -432,6 +457,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       await deleteChannel({ channelId })
     } catch (error) {
       console.error("Failed to delete channel:", error)
+    }
+  }
+
+  const handleDeleteCategory = async (categoryId: Id<"channelCategories">) => {
+    try {
+      await deleteCategory({ categoryId })
+    } catch (error) {
+      // In a real app, we should show a toast or alert here
+      // The backend will throw if the category is not empty
+      console.error("Failed to delete category:", error)
+      alert(error instanceof Error ? error.message : "Failed to delete category")
     }
   }
 
@@ -580,6 +616,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       isAdmin={isAdmin}
                       onEditChannel={handleEditChannel}
                       onDeleteChannel={handleDeleteChannel}
+                      onDeleteCategory={handleDeleteCategory}
                     />
                   ))}
                 </SortableContext>
