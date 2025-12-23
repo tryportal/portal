@@ -270,7 +270,7 @@ export const updateCategory = mutation({
 });
 
 /**
- * Delete a category (must have no channels)
+ * Delete a category and all its channels
  */
 export const deleteCategory = mutation({
   args: { categoryId: v.id("channelCategories") },
@@ -282,16 +282,18 @@ export const deleteCategory = mutation({
 
     await requireAdmin(ctx, category.organizationId);
 
-    // Check if category has channels
+    // Get all channels in this category and delete them
     const channels = await ctx.db
       .query("channels")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
-      .first();
+      .collect();
 
-    if (channels) {
-      throw new Error("Cannot delete category with channels. Move or delete channels first.");
+    // Delete all channels in this category
+    for (const channel of channels) {
+      await ctx.db.delete(channel._id);
     }
 
+    // Delete the category
     await ctx.db.delete(args.categoryId);
     return { success: true };
   },

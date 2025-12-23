@@ -18,6 +18,7 @@ import {
   SidebarIcon,
   GearIcon,
   DotsSixVerticalIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react"
 import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
@@ -32,6 +33,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { CreateCategoryDialog } from "@/components/create-category-dialog"
 import { CreateChannelDialog } from "@/components/create-channel-dialog"
 import { EditChannelDialog } from "@/components/edit-channel-dialog"
@@ -296,6 +308,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false)
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false)
   const [editChannelId, setEditChannelId] = React.useState<Id<"channels"> | null>(null)
+  const [deleteCategoryDialogOpen, setDeleteCategoryDialogOpen] = React.useState(false)
+  const [categoryToDelete, setCategoryToDelete] = React.useState<Id<"channelCategories"> | null>(null)
 
   // Drag and drop state
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -460,14 +474,21 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }
 
-  const handleDeleteCategory = async (categoryId: Id<"channelCategories">) => {
+  const handleDeleteCategory = (categoryId: Id<"channelCategories">) => {
+    setCategoryToDelete(categoryId)
+    setDeleteCategoryDialogOpen(true)
+  }
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return
+
     try {
-      await deleteCategory({ categoryId })
+      await deleteCategory({ categoryId: categoryToDelete })
+      setDeleteCategoryDialogOpen(false)
+      setCategoryToDelete(null)
     } catch (error) {
-      // In a real app, we should show a toast or alert here
-      // The backend will throw if the category is not empty
       console.error("Failed to delete category:", error)
-      alert(error instanceof Error ? error.message : "Failed to delete category")
+      // Error handling can be improved with a toast notification system
     }
   }
 
@@ -683,6 +704,38 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             channelId={editChannelId}
             organizationId={currentOrg._id}
           />
+          <AlertDialog 
+            open={deleteCategoryDialogOpen} 
+            onOpenChange={(open) => {
+              setDeleteCategoryDialogOpen(open)
+              if (!open) {
+                setCategoryToDelete(null)
+              }
+            }}
+          >
+            <AlertDialogContent size="default" className="max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogMedia className="bg-red-50 text-red-600">
+                  <WarningCircleIcon className="size-5" weight="fill" />
+                </AlertDialogMedia>
+                <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this category? This will permanently delete the category and all channels within it. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteCategory}
+                  className="bg-red-600 text-white hover:bg-red-700"
+                >
+                  Delete Category
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </>
