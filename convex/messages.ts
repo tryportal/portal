@@ -198,8 +198,18 @@ export const getMentions = query({
 
     const channelIds = channels.map((c) => c._id);
 
-    // Get all messages from these channels that contain @ mentions
-    // Exclude messages sent by the user themselves
+    // Build possible display name variants for fallback detection
+    const displayNameParts = [
+      identity.name,
+      identity.givenName && identity.familyName
+        ? `${identity.givenName} ${identity.familyName}`
+        : undefined,
+      identity.givenName,
+    ]
+      .filter(Boolean)
+      .map((name) => name!.toLowerCase());
+
+    // Get all messages from these channels that mention the current user
     const allMessages = await Promise.all(
       channelIds.map(async (channelId) => {
         const messages = await ctx.db
@@ -207,10 +217,19 @@ export const getMentions = query({
           .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
           .collect();
         
-        return messages.filter((m) => 
-          m.content.includes("@") &&
-          m.userId !== userId // Exclude messages sent by the user themselves
-        );
+        return messages.filter((m) => {
+          // Structured mentions stored in the message document
+          const hasStructuredMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+          // Fallback for any legacy messages without the mentions array
+          const hasLegacyMention = !m.mentions && m.content.includes(`@${userId}`);
+          // Fallback for manual @name mentions (case-insensitive)
+          const contentLower = m.content.toLowerCase();
+          const hasNameMention = displayNameParts.some((name) =>
+            contentLower.includes(`@${name}`)
+          );
+
+          return hasStructuredMention || hasLegacyMention || hasNameMention;
+        });
       })
     );
 
@@ -371,9 +390,13 @@ export const editMessage = mutation({
       throw new Error("Message content cannot be empty");
     }
 
+    // Parse mentions from content
+    const mentions = parseMentions(args.content);
+
     await ctx.db.patch(args.messageId, {
       content: args.content.trim(),
       editedAt: Date.now(),
+      mentions: mentions.length > 0 ? mentions : undefined,
     });
 
     return args.messageId;
