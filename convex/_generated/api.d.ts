@@ -11,6 +11,7 @@
 import type * as channels from "../channels.js";
 import type * as getCurrentUser from "../getCurrentUser.js";
 import type * as invitations from "../invitations.js";
+import type * as messages from "../messages.js";
 import type * as organizations from "../organizations.js";
 
 import type {
@@ -23,6 +24,7 @@ declare const fullApi: ApiFromModules<{
   channels: typeof channels;
   getCurrentUser: typeof getCurrentUser;
   invitations: typeof invitations;
+  messages: typeof messages;
   organizations: typeof organizations;
 }>;
 

@@ -70,4 +70,28 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_email", ["email"])
     .index("by_status", ["status"]),
+
+  messages: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID
+    content: v.string(),
+    attachments: v.optional(v.array(v.object({
+      storageId: v.id("_storage"),
+      name: v.string(),
+      size: v.number(),
+      type: v.string(),
+    }))),
+    createdAt: v.number(),
+    editedAt: v.optional(v.number()),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_channel_and_created", ["channelId", "createdAt"]),
+
+  typingIndicators: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID
+    lastTypingAt: v.number(),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_channel_and_user", ["channelId", "userId"]),
 });
