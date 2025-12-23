@@ -78,7 +78,12 @@ function WorkspaceLayoutContent({
     );
   }
 
-  // Show loading while checking access
+  // If workspace doesn't exist, show error immediately
+  if (orgBySlug === null) {
+    return <NoAccess slug={slug} organizationExists={false} />;
+  }
+
+  // Show loading while checking access (orgBySlug is undefined or checking membership)
   if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
@@ -89,9 +94,9 @@ function WorkspaceLayoutContent({
     );
   }
 
-  // Show nothing while redirecting
-  if (!orgBySlug || !isMember) {
-    return <NoAccess slug={slug} organizationExists={orgBySlug !== null} />;
+  // User doesn't have access to this workspace
+  if (!isMember) {
+    return <NoAccess slug={slug} organizationExists={true} />;
   }
 
   return (
