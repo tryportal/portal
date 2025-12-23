@@ -112,6 +112,119 @@ export const getMessage = query({
   },
 });
 
+/**
+ * Get recent messages for the current user (last 5)
+ */
+export const getRecentMessages = query({
+  args: { organizationId: v.id("organizations"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 5;
+
+    // Check membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return [];
+
+    // Get all channels in the organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = channels.map((c) => c._id);
+
+    // Get all messages from user in these channels
+    const allMessages = await Promise.all(
+      channelIds.map(async (channelId) => {
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
+          .collect();
+        
+        return messages.filter((m) => m.userId === userId);
+      })
+    );
+
+    // Flatten and sort by createdAt descending
+    const flatMessages = allMessages.flat().sort((a, b) => b.createdAt - a.createdAt);
+
+    // Return the most recent messages
+    return flatMessages.slice(0, limit).map((m) => ({
+      ...m,
+      channelId: m.channelId,
+    }));
+  },
+});
+
+/**
+ * Get messages where the current user was mentioned (last 5)
+ * Mentions are detected by searching for @ symbol in message content
+ * Note: This is a simple implementation. In production, you'd want to parse
+ * actual @username mentions and match them against the user's name/handle
+ */
+export const getMentions = query({
+  args: { organizationId: v.id("organizations"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 5;
+
+    // Check membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return [];
+
+    // Get all channels in the organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = channels.map((c) => c._id);
+
+    // Get all messages from these channels that contain @ mentions
+    // Exclude messages sent by the user themselves
+    const allMessages = await Promise.all(
+      channelIds.map(async (channelId) => {
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
+          .collect();
+        
+        return messages.filter((m) => 
+          m.content.includes("@") &&
+          m.userId !== userId // Exclude messages sent by the user themselves
+        );
+      })
+    );
+
+    // Flatten and sort by createdAt descending
+    const flatMessages = allMessages.flat().sort((a, b) => b.createdAt - a.createdAt);
+
+    // Return the most recent mentions
+    return flatMessages.slice(0, limit).map((m) => ({
+      ...m,
+      channelId: m.channelId,
+    }));
+  },
+});
+
 // ============================================================================
 // Message Mutations
 // ============================================================================
