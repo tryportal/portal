@@ -9,6 +9,7 @@ import {
   ImageIcon,
   XIcon,
   SpinnerIcon,
+  ArrowBendUpLeftIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -28,6 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -43,18 +45,27 @@ export interface PendingAttachment {
   error?: string
 }
 
+export interface ReplyingTo {
+  messageId: string
+  content: string
+  userName: string
+}
+
 interface MessageInputProps {
   onSendMessage: (message: string, attachments?: Array<{
     storageId: string
     name: string
     size: number
     type: string
-  }>) => void
+  }>, parentMessageId?: string) => void
   channelName: string
   disabled?: boolean
   disabledReason?: string
   onTyping?: () => void
   generateUploadUrl?: () => Promise<string>
+  replyingTo?: ReplyingTo | null
+  onCancelReply?: () => void
+  mentionUsers?: MentionUser[]
 }
 
 const EMOJI_LIST = [
@@ -80,6 +91,9 @@ export function MessageInput({
   disabledReason,
   onTyping,
   generateUploadUrl,
+  replyingTo,
+  onCancelReply,
+  mentionUsers = [],
 }: MessageInputProps) {
   const [message, setMessage] = React.useState("")
   const [emojiOpen, setEmojiOpen] = React.useState(false)
@@ -88,6 +102,12 @@ export function MessageInput({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // Mention autocomplete state
+  const [mentionVisible, setMentionVisible] = React.useState(false)
+  const [mentionQuery, setMentionQuery] = React.useState("")
+  const [mentionSelectedIndex, setMentionSelectedIndex] = React.useState(0)
+  const [mentionStartPos, setMentionStartPos] = React.useState<number | null>(null)
 
   // Debounced typing indicator
   const handleTyping = React.useCallback(() => {
@@ -127,14 +147,86 @@ export function MessageInput({
       }))
 
     if (message.trim() || uploadedAttachments.length > 0) {
-      onSendMessage(message.trim(), uploadedAttachments.length > 0 ? uploadedAttachments : undefined)
+      onSendMessage(
+        message.trim(), 
+        uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+        replyingTo?.messageId
+      )
       setMessage("")
       setAttachments([])
+      onCancelReply?.()
       textareaRef.current?.focus()
     }
   }
 
+  // Check for mention trigger
+  const checkMentionTrigger = (value: string, cursorPos: number) => {
+    // Look backwards from cursor to find @
+    let startPos = cursorPos - 1
+    while (startPos >= 0) {
+      const char = value[startPos]
+      if (char === "@") {
+        // Check if @ is at start or preceded by whitespace
+        if (startPos === 0 || /\s/.test(value[startPos - 1])) {
+          const query = value.slice(startPos + 1, cursorPos)
+          // Only show autocomplete if query doesn't contain whitespace
+          if (!/\s/.test(query)) {
+            setMentionVisible(true)
+            setMentionQuery(query)
+            setMentionStartPos(startPos)
+            setMentionSelectedIndex(0)
+            return
+          }
+        }
+        break
+      }
+      if (/\s/.test(char)) {
+        break
+      }
+      startPos--
+    }
+    setMentionVisible(false)
+    setMentionQuery("")
+    setMentionStartPos(null)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle mention autocomplete navigation
+    if (mentionVisible) {
+      const filteredUsers = mentionUsers.filter((user) => {
+        if (!mentionQuery) return true
+        const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase()
+        return fullName.includes(mentionQuery.toLowerCase())
+      })
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setMentionSelectedIndex((prev) => 
+          prev < filteredUsers.length - 1 ? prev + 1 : 0
+        )
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setMentionSelectedIndex((prev) => 
+          prev > 0 ? prev - 1 : filteredUsers.length - 1
+        )
+        return
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (filteredUsers.length > 0) {
+          e.preventDefault()
+          handleMentionSelect(filteredUsers[mentionSelectedIndex])
+          return
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setMentionVisible(false)
+        return
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -142,8 +234,29 @@ export function MessageInput({
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value)
+    const value = e.target.value
+    setMessage(value)
     handleTyping()
+
+    // Check for mention trigger
+    const cursorPos = e.target.selectionStart || 0
+    checkMentionTrigger(value, cursorPos)
+  }
+
+  const handleMentionSelect = (user: MentionUser) => {
+    if (mentionStartPos === null) return
+
+    const beforeMention = message.slice(0, mentionStartPos)
+    const afterMention = message.slice(mentionStartPos + 1 + mentionQuery.length)
+    const newMessage = `${beforeMention}@${user.userId} ${afterMention}`
+    
+    setMessage(newMessage)
+    setMentionVisible(false)
+    setMentionQuery("")
+    setMentionStartPos(null)
+    
+    // Focus back on textarea
+    textareaRef.current?.focus()
   }
 
   const insertEmoji = (emoji: string) => {
@@ -249,6 +362,26 @@ export function MessageInput({
 
   return (
     <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-3 py-2">
+      {/* Reply indicator */}
+      {replyingTo && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#26251E]/10 bg-white px-3 py-2">
+          <ArrowBendUpLeftIcon className="size-4 text-[#26251E]/40" />
+          <div className="flex-1 min-w-0">
+            <span className="text-xs text-[#26251E]/50">Replying to </span>
+            <span className="text-xs font-medium text-[#26251E]">{replyingTo.userName}</span>
+            <p className="text-xs text-[#26251E]/60 truncate">{replyingTo.content}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCancelReply}
+            className="text-[#26251E]/40 hover:text-[#26251E]"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        </div>
+      )}
+
       {/* Pending attachments preview */}
       {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
@@ -292,7 +425,17 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm">
+      <div className="relative flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm">
+        {/* Mention autocomplete */}
+        <MentionAutocomplete
+          users={mentionUsers}
+          searchQuery={mentionQuery}
+          onSelect={handleMentionSelect}
+          visible={mentionVisible}
+          selectedIndex={mentionSelectedIndex}
+          onSelectedIndexChange={setMentionSelectedIndex}
+        />
+
         {/* Attachment button */}
         <DropdownMenu>
           <Tooltip>
@@ -414,4 +557,3 @@ export function MessageInput({
     </div>
   )
 }
-

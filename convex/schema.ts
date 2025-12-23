@@ -83,9 +83,27 @@ export default defineSchema({
     }))),
     createdAt: v.number(),
     editedAt: v.optional(v.number()),
+    // New fields for chat features
+    parentMessageId: v.optional(v.id("messages")), // For reply threading
+    reactions: v.optional(v.array(v.object({
+      userId: v.string(),
+      emoji: v.string(),
+    }))), // User reactions
+    pinned: v.optional(v.boolean()), // Pin status
+    mentions: v.optional(v.array(v.string())), // Array of mentioned user IDs
   })
     .index("by_channel", ["channelId"])
-    .index("by_channel_and_created", ["channelId", "createdAt"]),
+    .index("by_channel_and_created", ["channelId", "createdAt"])
+    .index("by_parent_message", ["parentMessageId"]),
+
+  savedMessages: defineTable({
+    userId: v.string(), // Clerk user ID
+    messageId: v.id("messages"), // Reference to saved message
+    savedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_saved", ["userId", "savedAt"])
+    .index("by_user_and_message", ["userId", "messageId"]),
 
   typingIndicators: defineTable({
     channelId: v.id("channels"),

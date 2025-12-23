@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { ChatInterface } from "@/components/preview/chat-interface"
-import { OverviewPage } from "@/components/preview/overview-page"
 import {
   mockCategories,
   getMessagesForChannel,
@@ -325,10 +324,12 @@ export default function PreviewPage() {
               onSendMessage={handleSendMessage}
             />
           ) : (
-            <OverviewPage
-              categories={mockCategories}
-              onChannelSelect={setActiveChannel}
-            />
+            <div className="flex flex-1 items-center justify-center bg-[#F7F7F4]">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold text-[#26251E]">Welcome to Portal</h2>
+                <p className="mt-1 text-sm text-[#26251E]/60">Select a channel from the sidebar to get started</p>
+              </div>
+            </div>
           )}
         </main>
       </div>

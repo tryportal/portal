@@ -8,7 +8,9 @@ import { api } from "@/convex/_generated/api";
 import { CircleNotchIcon } from "@phosphor-icons/react";
 import { getIconComponent } from "@/components/icon-picker";
 import { ChatInterface } from "@/components/preview/chat-interface";
-import type { Message, Attachment } from "@/components/preview/message-list";
+import type { Message, Attachment, Reaction } from "@/components/preview/message-list";
+import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog";
+import type { MentionUser } from "@/components/preview/mention-autocomplete";
 import type { Id } from "@/convex/_generated/dataModel";
 
 // Polling interval for typing users (in ms)
@@ -65,11 +67,37 @@ export default function ChannelPage({
     channelId ? { channelId } : "skip"
   );
 
+  // Get organization ID for additional queries
+  const organizationId = channelData?.channel?.organizationId;
+
+  // Get pinned messages for the channel
+  const pinnedMessagesRaw = useQuery(
+    api.messages.getPinnedMessages,
+    channelId ? { channelId } : "skip"
+  );
+
+  // Get saved messages for the user
+  const savedMessagesRaw = useQuery(
+    api.messages.getSavedMessages,
+    organizationId ? { organizationId, limit: 100 } : "skip"
+  );
+
+  // Get organization members for mention autocomplete
+  const orgMembersRaw = useQuery(
+    api.messages.getOrganizationMembers,
+    organizationId ? { organizationId } : "skip"
+  );
+
   // Mutations
   const sendMessage = useMutation(api.messages.sendMessage);
   const deleteMessage = useMutation(api.messages.deleteMessage);
   const setTyping = useMutation(api.messages.setTyping);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
+  const toggleReaction = useMutation(api.messages.toggleReaction);
+  const togglePin = useMutation(api.messages.togglePin);
+  const saveMessage = useMutation(api.messages.saveMessage);
+  const unsaveMessage = useMutation(api.messages.unsaveMessage);
+  const forwardMessage = useMutation(api.messages.forwardMessage);
 
   // Actions
   const getTypingUsersAction = useAction(api.messages.getTypingUsers);
@@ -140,6 +168,95 @@ export default function ChannelPage({
     }
   }, [channelData, routeParams, router]);
 
+  // Build a map of message IDs to their data for parent message lookups
+  const messageMap = React.useMemo(() => {
+    const map = new Map<string, { content: string; userId: string }>();
+    (rawMessages || []).forEach((msg) => {
+      map.set(msg._id, { content: msg.content, userId: msg.userId });
+    });
+    return map;
+  }, [rawMessages]);
+
+  // Build user names map for mentions and reactions
+  const userNames: Record<string, string> = React.useMemo(() => {
+    const names: Record<string, string> = {};
+    Object.entries(userDataCache).forEach(([userId, data]) => {
+      const firstName = data.firstName;
+      const lastName = data.lastName;
+      names[userId] = firstName && lastName 
+        ? `${firstName} ${lastName}` 
+        : firstName || userId;
+    });
+    // Add current user
+    if (user?.id) {
+      names[user.id] = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.firstName || user.id;
+    }
+    return names;
+  }, [userDataCache, user]);
+
+  // Build saved message IDs set
+  const savedMessageIds: Set<string> = React.useMemo(() => {
+    const ids = new Set<string>();
+    (savedMessagesRaw || []).forEach((msg) => {
+      ids.add(msg._id);
+    });
+    return ids;
+  }, [savedMessagesRaw]);
+
+  // Build mention users list for autocomplete
+  const mentionUsers: MentionUser[] = React.useMemo(() => {
+    if (!orgMembersRaw) return [];
+    return orgMembersRaw.map((member) => {
+      const cached = userDataCache[member.userId];
+      const firstName = cached?.firstName ?? (user?.id === member.userId ? user?.firstName : null) ?? null;
+      const lastName = cached?.lastName ?? (user?.id === member.userId ? user?.lastName : null) ?? null;
+      const imageUrl = cached?.imageUrl ?? (user?.id === member.userId ? user?.imageUrl : null) ?? null;
+      
+      return {
+        userId: member.userId,
+        firstName,
+        lastName,
+        imageUrl,
+      };
+    });
+  }, [orgMembersRaw, userDataCache, user]);
+
+  // Build pinned messages list for dialog
+  const pinnedMessages: PinnedMessage[] = React.useMemo(() => {
+    if (!pinnedMessagesRaw) return [];
+    return pinnedMessagesRaw.map((msg) => {
+      const cached = userDataCache[msg.userId];
+      const firstName = cached?.firstName ?? (user?.id === msg.userId ? user?.firstName : null);
+      const lastName = cached?.lastName ?? (user?.id === msg.userId ? user?.lastName : null);
+      const imageUrl = cached?.imageUrl ?? (user?.id === msg.userId ? user?.imageUrl : null);
+      
+      const userName = firstName && lastName 
+        ? `${firstName} ${lastName}` 
+        : firstName || "Unknown User";
+      
+      const initials = firstName && lastName
+        ? `${firstName[0]}${lastName[0]}`
+        : firstName?.[0] || "?";
+      
+      return {
+        id: msg._id,
+        content: msg.content,
+        timestamp: new Date(msg.createdAt).toLocaleTimeString([], { 
+          hour: "numeric", 
+          minute: "2-digit" 
+        }),
+        user: {
+          id: msg.userId,
+          name: userName,
+          avatar: imageUrl || undefined,
+          initials,
+        },
+      };
+    });
+  }, [pinnedMessagesRaw, userDataCache, user]);
+
   // Loading state
   if (!routeParams || channelData === undefined) {
     return (
@@ -189,6 +306,24 @@ export default function ChannelPage({
       type: att.type,
     })) || [];
 
+    // Transform reactions
+    const reactions: Reaction[] | undefined = msg.reactions?.map(r => ({
+      userId: r.userId,
+      emoji: r.emoji,
+    }));
+
+    // Get parent message info for replies
+    let parentMessage: { content: string; userName: string } | undefined;
+    if (msg.parentMessageId) {
+      const parent = messageMap.get(msg.parentMessageId);
+      if (parent) {
+        parentMessage = {
+          content: parent.content,
+          userName: userNames[parent.userId] || "Unknown User",
+        };
+      }
+    }
+
     return {
       id: msg._id,
       content: msg.content,
@@ -204,6 +339,11 @@ export default function ChannelPage({
       },
       attachments: attachments.length > 0 ? attachments : undefined,
       editedAt: msg.editedAt,
+      parentMessageId: msg.parentMessageId,
+      parentMessage,
+      reactions: reactions && reactions.length > 0 ? reactions : undefined,
+      pinned: msg.pinned,
+      mentions: msg.mentions,
     };
   });
 
@@ -214,7 +354,8 @@ export default function ChannelPage({
       name: string;
       size: number;
       type: string;
-    }>
+    }>,
+    parentMessageId?: string
   ) => {
     if (!channelId) return;
 
@@ -226,6 +367,7 @@ export default function ChannelPage({
           ...a,
           storageId: a.storageId as Id<"_storage">,
         })),
+        parentMessageId: parentMessageId as Id<"messages"> | undefined,
       });
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -254,20 +396,93 @@ export default function ChannelPage({
     return await generateUploadUrl();
   };
 
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      await toggleReaction({ 
+        messageId: messageId as Id<"messages">, 
+        emoji 
+      });
+    } catch (error) {
+      console.error("Failed to toggle reaction:", error);
+    }
+  };
+
+  const handlePin = async (messageId: string) => {
+    try {
+      await togglePin({ messageId: messageId as Id<"messages"> });
+    } catch (error) {
+      console.error("Failed to toggle pin:", error);
+    }
+  };
+
+  const handleSave = async (messageId: string) => {
+    try {
+      await saveMessage({ messageId: messageId as Id<"messages"> });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  };
+
+  const handleUnsave = async (messageId: string) => {
+    try {
+      await unsaveMessage({ messageId: messageId as Id<"messages"> });
+    } catch (error) {
+      console.error("Failed to unsave message:", error);
+    }
+  };
+
+  const handleForward = async (messageId: string, targetChannelId: string) => {
+    try {
+      await forwardMessage({ 
+        messageId: messageId as Id<"messages">,
+        targetChannelId: targetChannelId as Id<"channels">,
+      });
+    } catch (error) {
+      console.error("Failed to forward message:", error);
+    }
+  };
+
+  const handleAvatarClick = (userId: string) => {
+    // Navigate to user profile
+    if (routeParams) {
+      router.push(`/${routeParams.slug}/people/${userId}`);
+    }
+  };
+
+  const handleNameClick = (userId: string) => {
+    // Navigate to user profile (same as avatar click)
+    if (routeParams) {
+      router.push(`/${routeParams.slug}/people/${userId}`);
+    }
+  };
+
   return (
     <div className="flex flex-1 flex-col bg-white">
       <ChatInterface
         channelName={channel.name}
+        channelDescription={channel.description}
         channelIcon={Icon}
         messages={messages}
         onSendMessage={handleSendMessage}
         onDeleteMessage={handleDeleteMessage}
+        onReaction={handleReaction}
+        onPin={handlePin}
+        onSave={handleSave}
+        onUnsave={handleUnsave}
+        onForward={handleForward}
+        onAvatarClick={handleAvatarClick}
+        onNameClick={handleNameClick}
         currentUserId={currentUserId}
         disabled={!canPost}
         disabledReason={isReadOnly && !isAdmin ? "This channel is read-only" : undefined}
         onTyping={handleTyping}
         generateUploadUrl={handleGenerateUploadUrl}
         typingUsers={typingUsers}
+        pinnedMessages={pinnedMessages}
+        savedMessageIds={savedMessageIds}
+        userNames={userNames}
+        mentionUsers={mentionUsers}
+        isAdmin={isAdmin}
       />
     </div>
   );

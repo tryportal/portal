@@ -7,7 +7,6 @@ import type { Id } from "@/convex/_generated/dataModel"
 import {
   ArrowBendUpLeftIcon,
   ShareIcon,
-  SmileyIcon,
   DotsThreeIcon,
   CopyIcon,
   PushPinIcon,
@@ -17,6 +16,7 @@ import {
   FileIcon,
   DownloadSimpleIcon,
   ImageIcon,
+  BookmarkSimpleIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -33,12 +33,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
+import { EmptyChannelState } from "./empty-channel-state"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export interface Attachment {
   storageId: string
   name: string
   size: number
   type: string
+}
+
+export interface Reaction {
+  userId: string
+  emoji: string
 }
 
 export interface Message {
@@ -53,6 +62,14 @@ export interface Message {
   }
   attachments?: Attachment[]
   editedAt?: number
+  parentMessageId?: string
+  parentMessage?: {
+    content: string
+    userName: string
+  }
+  reactions?: Reaction[]
+  pinned?: boolean
+  mentions?: string[]
 }
 
 interface MessageListProps {
@@ -60,6 +77,20 @@ interface MessageListProps {
   currentUserId?: string
   onDeleteMessage?: (messageId: string) => void
   onEditMessage?: (messageId: string, content: string) => void
+  onReply?: (messageId: string) => void
+  onForward?: (messageId: string) => void
+  onReaction?: (messageId: string, emoji: string) => void
+  onPin?: (messageId: string) => void
+  onSave?: (messageId: string) => void
+  onUnsave?: (messageId: string) => void
+  onAvatarClick?: (userId: string) => void
+  onNameClick?: (userId: string) => void
+  savedMessageIds?: Set<string>
+  userNames?: Record<string, string>
+  channelName?: string
+  channelDescription?: string
+  channelIcon?: React.ElementType
+  isAdmin?: boolean
 }
 
 function formatFileSize(bytes: number): string {
@@ -121,17 +152,110 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
   )
 }
 
+// Markdown renderer components
+const MarkdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-1 last:mb-0">{children}</p>
+  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline"
+    >
+      {children}
+    </a>
+  ),
+  code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => {
+    if (inline) {
+      return (
+        <code className="px-1 py-0.5 bg-[#26251E]/5 rounded text-sm font-mono">
+          {children}
+        </code>
+      )
+    }
+    return (
+      <pre className="p-2 bg-[#26251E]/5 rounded-md overflow-x-auto my-1">
+        <code className="text-sm font-mono">{children}</code>
+      </pre>
+    )
+  },
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="list-disc list-inside my-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="list-decimal list-inside my-1">{children}</ol>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold">{children}</strong>
+  ),
+  em: ({ children }: { children?: React.ReactNode }) => (
+    <em className="italic">{children}</em>
+  ),
+}
+
+// Highlight mentions in content
+function highlightMentions(content: string, mentions?: string[], userNames?: Record<string, string>): string {
+  if (!mentions || mentions.length === 0) return content
+  
+  let highlighted = content
+  for (const userId of mentions) {
+    const userName = userNames?.[userId] || userId
+    const mentionPattern = new RegExp(`@${userId}`, "g")
+    highlighted = highlighted.replace(mentionPattern, `**@${userName}**`)
+  }
+  return highlighted
+}
+
 function MessageItem({ 
   message, 
   currentUserId,
   onDeleteMessage,
+  onReply,
+  onForward,
+  onReaction,
+  onPin,
+  onSave,
+  onUnsave,
+  onAvatarClick,
+  onNameClick,
+  isSaved,
+  userNames,
+  isAdmin,
 }: { 
   message: Message
   currentUserId?: string
   onDeleteMessage?: (messageId: string) => void
+  onReply?: (messageId: string) => void
+  onForward?: (messageId: string) => void
+  onReaction?: (messageId: string, emoji: string) => void
+  onPin?: (messageId: string) => void
+  onSave?: (messageId: string) => void
+  onUnsave?: (messageId: string) => void
+  onAvatarClick?: (userId: string) => void
+  onNameClick?: (userId: string) => void
+  isSaved?: boolean
+  userNames?: Record<string, string>
+  isAdmin?: boolean
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
   const isOwner = currentUserId === message.user.id
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content)
+  }
+
+  const handleSaveToggle = () => {
+    if (isSaved) {
+      onUnsave?.(message.id)
+    } else {
+      onSave?.(message.id)
+    }
+  }
+
+  // Process content to highlight mentions
+  const processedContent = highlightMentions(message.content, message.mentions, userNames)
 
   return (
     <div
@@ -139,9 +263,30 @@ function MessageItem({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Reply indicator */}
+      {message.parentMessage && (
+        <div className="flex items-center gap-2 mb-1 ml-11 text-xs text-[#26251E]/50">
+          <ArrowBendUpLeftIcon className="size-3" />
+          <span>Replying to</span>
+          <span className="font-medium text-[#26251E]/70">{message.parentMessage.userName}</span>
+          <span className="truncate max-w-[200px]">{message.parentMessage.content}</span>
+        </div>
+      )}
+
+      {/* Pin indicator */}
+      {message.pinned && (
+        <div className="flex items-center gap-1.5 mb-1 ml-11 text-xs text-amber-600">
+          <PushPinIcon className="size-3" weight="fill" />
+          <span>Pinned</span>
+        </div>
+      )}
+
       <div className="flex gap-3">
         {/* Avatar */}
-        <Avatar>
+        <Avatar 
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => onAvatarClick?.(message.user.id)}
+        >
           {message.user.avatar ? (
             <AvatarImage src={message.user.avatar} alt={message.user.name} />
           ) : null}
@@ -153,9 +298,12 @@ function MessageItem({
         {/* Message content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-sm text-[#26251E]">
+            <button
+              onClick={() => onNameClick?.(message.user.id)}
+              className="font-semibold text-sm text-[#26251E] hover:underline"
+            >
               {message.user.name}
-            </span>
+            </button>
             <span className="text-xs text-[#26251E]/40">
               {message.timestamp}
             </span>
@@ -164,9 +312,14 @@ function MessageItem({
             )}
           </div>
           {message.content && (
-            <p className="text-sm text-[#26251E]/80 mt-0.5 leading-relaxed whitespace-pre-wrap">
-              {message.content}
-            </p>
+            <div className="text-sm text-[#26251E]/80 mt-0.5 leading-relaxed prose prose-sm max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={MarkdownComponents}
+              >
+                {processedContent}
+              </ReactMarkdown>
+            </div>
           )}
           
           {/* Attachments */}
@@ -176,6 +329,16 @@ function MessageItem({
                 <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
               ))}
             </div>
+          )}
+
+          {/* Reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <ReactionDisplay
+              reactions={message.reactions}
+              currentUserId={currentUserId}
+              onToggleReaction={(emoji) => onReaction?.(message.id, emoji)}
+              userNames={userNames}
+            />
           )}
         </div>
       </div>
@@ -189,6 +352,7 @@ function MessageItem({
                 variant="ghost"
                 size="icon-xs"
                 className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                onClick={() => onReply?.(message.id)}
               />}
             >
               <ArrowBendUpLeftIcon className="size-3.5" />
@@ -202,6 +366,7 @@ function MessageItem({
                 variant="ghost"
                 size="icon-xs"
                 className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                onClick={() => onForward?.(message.id)}
               />}
             >
               <ShareIcon className="size-3.5" />
@@ -209,18 +374,21 @@ function MessageItem({
             <TooltipContent>Forward</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button
-                variant="ghost"
-                size="icon-xs"
-                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
-              />}
-            >
-              <SmileyIcon className="size-3.5" />
-            </TooltipTrigger>
-            <TooltipContent>Add reaction</TooltipContent>
-          </Tooltip>
+          <ReactionPicker
+            onSelectReaction={(emoji) => onReaction?.(message.id, emoji)}
+            existingReactions={
+              message.reactions
+                ? Object.entries(
+                    message.reactions.reduce((acc, r) => {
+                      acc[r.emoji] = acc[r.emoji] || { count: 0, hasReacted: false }
+                      acc[r.emoji].count++
+                      if (r.userId === currentUserId) acc[r.emoji].hasReacted = true
+                      return acc
+                    }, {} as Record<string, { count: number; hasReacted: boolean }>)
+                  ).map(([emoji, data]) => ({ emoji, ...data }))
+                : []
+            }
+          />
 
           <DropdownMenu>
             <Tooltip>
@@ -238,17 +406,28 @@ function MessageItem({
               <TooltipContent>More options</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopy}>
                 <CopyIcon className="size-4" />
                 Copy text
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <PushPinIcon className="size-4" />
-                Pin message
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BookmarkIcon className="size-4" />
-                Save message
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => onPin?.(message.id)}>
+                  <PushPinIcon className="size-4" />
+                  {message.pinned ? "Unpin message" : "Pin message"}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleSaveToggle}>
+                {isSaved ? (
+                  <>
+                    <BookmarkSimpleIcon className="size-4" />
+                    Unsave message
+                  </>
+                ) : (
+                  <>
+                    <BookmarkIcon className="size-4" />
+                    Save message
+                  </>
+                )}
               </DropdownMenuItem>
               {isOwner && (
                 <DropdownMenuItem>
@@ -257,7 +436,7 @@ function MessageItem({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {(isOwner || true) && ( // TODO: Add admin check
+              {isOwner && (
                 <DropdownMenuItem 
                   variant="destructive"
                   onClick={() => onDeleteMessage?.(message.id)}
@@ -274,7 +453,25 @@ function MessageItem({
   )
 }
 
-export function MessageList({ messages, currentUserId, onDeleteMessage }: MessageListProps) {
+export function MessageList({ 
+  messages, 
+  currentUserId, 
+  onDeleteMessage,
+  onReply,
+  onForward,
+  onReaction,
+  onPin,
+  onSave,
+  onUnsave,
+  onAvatarClick,
+  onNameClick,
+  savedMessageIds = new Set(),
+  userNames = {},
+  channelName,
+  channelDescription,
+  channelIcon,
+  isAdmin,
+}: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
@@ -287,6 +484,21 @@ export function MessageList({ messages, currentUserId, onDeleteMessage }: Messag
     }
   }, [messages])
 
+  // Show empty state if no messages
+  if (messages.length === 0 && channelName) {
+    return (
+      <div ref={scrollRef} className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <EmptyChannelState
+            channelName={channelName}
+            channelDescription={channelDescription}
+            channelIcon={channelIcon}
+          />
+        </ScrollArea>
+      </div>
+    )
+  }
+
   return (
     <div ref={scrollRef} className="flex-1 overflow-hidden">
       <ScrollArea className="h-full">
@@ -298,6 +510,17 @@ export function MessageList({ messages, currentUserId, onDeleteMessage }: Messag
                 message={message} 
                 currentUserId={currentUserId}
                 onDeleteMessage={onDeleteMessage}
+                onReply={onReply}
+                onForward={onForward}
+                onReaction={onReaction}
+                onPin={onPin}
+                onSave={onSave}
+                onUnsave={onUnsave}
+                onAvatarClick={onAvatarClick}
+                onNameClick={onNameClick}
+                isSaved={savedMessageIds.has(message.id)}
+                userNames={userNames}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
@@ -306,4 +529,3 @@ export function MessageList({ messages, currentUserId, onDeleteMessage }: Messag
     </div>
   )
 }
-

@@ -4,7 +4,7 @@ import * as React from "react"
 import { useQuery, useAction } from "convex/react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
-import { HashIcon, ChatCircleIcon, AtIcon } from "@phosphor-icons/react"
+import { HashIcon, BookmarkIcon, AtIcon, ArrowRightIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardHeader,
@@ -12,6 +12,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { api } from "@/convex/_generated/api"
@@ -35,9 +36,9 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     organizationId ? { organizationId } : "skip"
   )
 
-  // Fetch recent messages and mentions
-  const recentMessagesRaw = useQuery(
-    api.messages.getRecentMessages,
+  // Fetch saved messages instead of recent messages
+  const savedMessagesRaw = useQuery(
+    api.messages.getSavedMessages,
     organizationId ? { organizationId, limit: 5 } : "skip"
   )
 
@@ -56,10 +57,10 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
 
   // Fetch user data for messages
   React.useEffect(() => {
-    if (!recentMessagesRaw && !mentionsRaw) return
+    if (!savedMessagesRaw && !mentionsRaw) return
 
     const allMessages = [
-      ...(recentMessagesRaw || []),
+      ...(savedMessagesRaw || []),
       ...(mentionsRaw || [])
     ]
 
@@ -72,11 +73,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
       try {
         const usersData = await getUserDataAction({ userIds: missingUserIds })
         const newCache: typeof userDataCache = {}
-        usersData.forEach(user => {
-          newCache[user.userId] = {
-            firstName: user.firstName,
-            lastName: user.lastName,
-            imageUrl: user.imageUrl,
+        usersData.forEach(userData => {
+          newCache[userData.userId] = {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            imageUrl: userData.imageUrl,
           }
         })
         setUserDataCache(prev => ({ ...prev, ...newCache }))
@@ -86,7 +87,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     }
 
     fetchUserData()
-  }, [recentMessagesRaw, mentionsRaw, getUserDataAction, userDataCache])
+  }, [savedMessagesRaw, mentionsRaw, getUserDataAction, userDataCache])
 
   // Format messages
   const formatMessage = (msg: { _id: Id<"messages">; channelId: Id<"channels">; userId: string; content: string; createdAt: number; editedAt?: number; attachments?: Array<{ storageId: Id<"_storage">; name: string; size: number; type: string }> }): Message | null => {
@@ -126,7 +127,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     }
   }
 
-  const recentMessages = (recentMessagesRaw || []).map(formatMessage).filter((m): m is Message => m !== null)
+  const savedMessages = (savedMessagesRaw || []).map(formatMessage).filter((m): m is Message => m !== null)
   const mentions = (mentionsRaw || []).map(formatMessage).filter((m): m is Message => m !== null)
 
   // Create a map of channelId to channel info for quick lookup
@@ -161,6 +162,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     }
   }
 
+  const handleViewAllSaved = () => {
+    if (orgSlug) {
+      router.push(`/${orgSlug}/saved`)
+    }
+  }
+
   return (
     <ScrollArea className="h-full">
       <div className="p-6">
@@ -168,30 +175,30 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
         <div className="mb-6">
           <h1 className="text-xl font-semibold text-[#26251E]">Overview</h1>
           <p className="text-sm text-[#26251E]/60">
-            Your recent activity and quick access to channels
+            Your saved messages and quick access to channels
           </p>
         </div>
 
         {/* Cards Grid */}
         <div className="mb-8 grid gap-4 md:grid-cols-2">
-          {/* Recent Messages Card */}
+          {/* Saved Messages Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ChatCircleIcon className="size-4" />
-                Recent Messages
+                <BookmarkIcon className="size-4" weight="fill" />
+                Saved Messages
               </CardTitle>
-              <CardDescription>Messages you've sent recently</CardDescription>
+              <CardDescription>Messages you've saved for later</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentMessages.length === 0 ? (
+              {savedMessages.length === 0 ? (
                 <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
-                  <p className="text-sm text-[#26251E]/40">No recent messages</p>
+                  <p className="text-sm text-[#26251E]/40">No saved messages</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentMessages.map((message) => {
-                    const channel = recentMessagesRaw?.find(m => m._id === message.id)
+                  {savedMessages.map((message) => {
+                    const channel = savedMessagesRaw?.find(m => m._id === message.id)
                     const channelInfo = channel ? channelMap.get(channel.channelId) : null
                     return (
                       <div
@@ -220,6 +227,17 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       </div>
                     )
                   })}
+                  {savedMessages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-[#26251E]/60 hover:text-[#26251E]"
+                      onClick={handleViewAllSaved}
+                    >
+                      View all saved messages
+                      <ArrowRightIcon className="size-4 ml-1" />
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

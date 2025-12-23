@@ -9,7 +9,6 @@ import {
   PushPinIcon,
   UserPlusIcon,
   GearIcon,
-  TrashIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,11 +23,15 @@ import {
 interface ChannelHeaderProps {
   channelName: string
   channelIcon?: React.ElementType
+  pinnedCount?: number
+  onViewPinnedMessages?: () => void
 }
 
 export function ChannelHeader({
   channelName,
   channelIcon: Icon = HashIcon,
+  pinnedCount = 0,
+  onViewPinnedMessages,
 }: ChannelHeaderProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
 
@@ -38,6 +41,15 @@ export function ChannelHeader({
       <div className="flex items-center gap-2">
         <Icon className="size-5 text-[#26251E]" weight="fill" />
         <h1 className="text-base font-semibold text-[#26251E]">{channelName}</h1>
+        {pinnedCount > 0 && (
+          <button
+            onClick={onViewPinnedMessages}
+            className="flex items-center gap-1 text-xs text-[#26251E]/50 hover:text-[#26251E] transition-colors"
+          >
+            <PushPinIcon className="size-3.5" />
+            <span>{pinnedCount}</span>
+          </button>
+        )}
       </div>
 
       {/* Right: Search + Options */}
@@ -70,7 +82,7 @@ export function ChannelHeader({
               <BellIcon className="size-4" />
               Notification settings
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onViewPinnedMessages}>
               <PushPinIcon className="size-4" />
               View pinned messages
             </DropdownMenuItem>
@@ -83,15 +95,9 @@ export function ChannelHeader({
               <GearIcon className="size-4" />
               Channel settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
-              <TrashIcon className="size-4" />
-              Leave channel
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
   )
 }
-
