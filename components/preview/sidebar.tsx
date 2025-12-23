@@ -82,8 +82,11 @@ export function Sidebar({
   // Check if we're on the settings page
   const isSettingsPage = pathname?.endsWith("/settings") || pathname?.endsWith("/settings/")
   
-  // Check if overview is active (no channel selected and not on settings page)
-  const isOverviewActive = !activeChannel && !isSettingsPage
+  // Check if we're on the people page
+  const isPeoplePage = pathname?.includes("/people")
+  
+  // Check if overview is active (no channel selected and not on settings or people page)
+  const isOverviewActive = !activeChannel && !isSettingsPage && !isPeoplePage
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -157,7 +160,7 @@ export function Sidebar({
               variant={isOverviewActive ? "secondary" : "ghost"}
               onClick={() => {
                 onChannelSelect(null)
-                if (currentSlug && isSettingsPage) {
+                if (currentSlug && (isSettingsPage || isPeoplePage)) {
                   router.push(`/${currentSlug}`)
                 }
               }}
@@ -172,10 +175,19 @@ export function Sidebar({
             </Button>
             {/* People button */}
             <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+              variant={isPeoplePage ? "secondary" : "ghost"}
+              onClick={() => {
+                if (currentSlug) {
+                  router.push(`/${currentSlug}/people`)
+                }
+              }}
+              className={`w-full justify-start gap-2 ${
+                isPeoplePage
+                  ? "bg-[#26251E]/10 text-[#26251E]"
+                  : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+              }`}
             >
-              <UsersIcon className="size-4" />
+              <UsersIcon className="size-4" weight={isPeoplePage ? "fill" : "regular"} />
               People
             </Button>
             {/* Settings button for admins */}

@@ -9,6 +9,7 @@ type MemberWithUserData = {
   organizationId: Id<"organizations">;
   userId: string;
   role: "admin" | "member";
+  joinedAt?: number;
   emailAddress: string | null;
   publicUserData: {
     firstName: string | null;
@@ -890,6 +891,263 @@ export const createInviteLink = mutation({
     });
 
     return { token, expiresAt };
+  },
+});
+
+/**
+ * Get a single member of an organization with user data (query for internal use)
+ */
+export const getOrganizationMemberQuery = query({
+  args: {
+    organizationId: v.id("organizations"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { member: null, isAuthorized: false };
+
+    const currentUserId = identity.subject;
+
+    // Check if current user is a member
+    const currentMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", currentUserId)
+      )
+      .first();
+
+    if (!currentMembership) return { member: null, isAuthorized: false };
+
+    // Get the requested member
+    const member = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", args.userId)
+      )
+      .first();
+
+    return { member, isAuthorized: true, isAdmin: currentMembership.role === "admin" };
+  },
+});
+
+/**
+ * Get a single member of an organization with enriched user data
+ */
+export const getOrganizationMember = action({
+  args: {
+    organizationId: v.id("organizations"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args): Promise<{
+    member: MemberWithUserData | null;
+    isAdmin: boolean;
+  }> => {
+    const result = await ctx.runQuery(api.organizations.getOrganizationMemberQuery, {
+      organizationId: args.organizationId,
+      userId: args.userId,
+    });
+
+    if (!result.isAuthorized || !result.member) {
+      return { member: null, isAdmin: false };
+    }
+
+    const member = result.member;
+
+    // Fetch user data from Clerk
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      return {
+        member: {
+          _id: member._id,
+          organizationId: member.organizationId,
+          userId: member.userId,
+          role: member.role,
+          joinedAt: member.joinedAt,
+          emailAddress: null,
+          publicUserData: undefined,
+        },
+        isAdmin: result.isAdmin ?? false,
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.clerk.com/v1/users/${member.userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${clerkSecretKey}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        return {
+          member: {
+            _id: member._id,
+            organizationId: member.organizationId,
+            userId: member.userId,
+            role: member.role,
+            joinedAt: member.joinedAt,
+            emailAddress: null,
+            publicUserData: undefined,
+          },
+          isAdmin: result.isAdmin ?? false,
+        };
+      }
+
+      const userData = await response.json();
+      return {
+        member: {
+          _id: member._id,
+          organizationId: member.organizationId,
+          userId: member.userId,
+          role: member.role,
+          joinedAt: member.joinedAt,
+          emailAddress: userData.email_addresses?.[0]?.email_address || null,
+          publicUserData: {
+            firstName: userData.first_name || null,
+            lastName: userData.last_name || null,
+            imageUrl: userData.image_url || null,
+          },
+        },
+        isAdmin: result.isAdmin ?? false,
+      };
+    } catch {
+      return {
+        member: {
+          _id: member._id,
+          organizationId: member.organizationId,
+          userId: member.userId,
+          role: member.role,
+          joinedAt: member.joinedAt,
+          emailAddress: null,
+          publicUserData: undefined,
+        },
+        isAdmin: result.isAdmin ?? false,
+      };
+    }
+  },
+});
+
+/**
+ * Update a member's role in an organization
+ */
+export const updateOrganizationMemberRole = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    membershipId: v.id("organizationMembers"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if current user is an admin
+    const currentMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!currentMembership || currentMembership.role !== "admin") {
+      throw new Error("Only organization admins can update member roles");
+    }
+
+    // Get the target membership
+    const targetMembership = await ctx.db.get(args.membershipId);
+    if (!targetMembership) {
+      throw new Error("Member not found");
+    }
+
+    if (targetMembership.organizationId !== args.organizationId) {
+      throw new Error("Member does not belong to this organization");
+    }
+
+    // Prevent removing the last admin
+    if (targetMembership.role === "admin" && args.role === "member") {
+      const admins = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization", (q) =>
+          q.eq("organizationId", args.organizationId)
+        )
+        .filter((q) => q.eq(q.field("role"), "admin"))
+        .collect();
+
+      if (admins.length <= 1) {
+        throw new Error("Cannot remove the last admin. Promote another member to admin first.");
+      }
+    }
+
+    await ctx.db.patch(args.membershipId, { role: args.role });
+    return args.membershipId;
+  },
+});
+
+/**
+ * Remove a member from an organization
+ */
+export const removeOrganizationMember = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    membershipId: v.id("organizationMembers"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if current user is an admin
+    const currentMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!currentMembership || currentMembership.role !== "admin") {
+      throw new Error("Only organization admins can remove members");
+    }
+
+    // Get the target membership
+    const targetMembership = await ctx.db.get(args.membershipId);
+    if (!targetMembership) {
+      throw new Error("Member not found");
+    }
+
+    if (targetMembership.organizationId !== args.organizationId) {
+      throw new Error("Member does not belong to this organization");
+    }
+
+    // Prevent removing the last admin
+    if (targetMembership.role === "admin") {
+      const admins = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization", (q) =>
+          q.eq("organizationId", args.organizationId)
+        )
+        .filter((q) => q.eq(q.field("role"), "admin"))
+        .collect();
+
+      if (admins.length <= 1) {
+        throw new Error("Cannot remove the last admin. Promote another member to admin first.");
+      }
+    }
+
+    // Prevent self-removal (admins should leave via a different flow)
+    if (targetMembership.userId === userId) {
+      throw new Error("You cannot remove yourself. Use the leave workspace option instead.");
+    }
+
+    await ctx.db.delete(args.membershipId);
+    return { success: true };
   },
 });
 
