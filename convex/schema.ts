@@ -20,6 +20,12 @@ export default defineSchema({
     userId: v.string(), // Clerk user ID
     role: v.union(v.literal("admin"), v.literal("member")),
     joinedAt: v.number(),
+    // Profile fields
+    jobTitle: v.optional(v.string()),
+    department: v.optional(v.string()),
+    location: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    bio: v.optional(v.string()),
   })
     .index("by_organization", ["organizationId"])
     .index("by_user", ["userId"])

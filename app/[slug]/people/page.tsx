@@ -14,7 +14,6 @@ import {
   Spinner,
   UsersIcon,
   MagnifyingGlassIcon,
-  CaretRightIcon,
   ShieldIcon,
   UserIcon,
 } from "@phosphor-icons/react";
@@ -31,6 +30,11 @@ type MemberWithUserData = {
   userId: string;
   role: "admin" | "member";
   joinedAt?: number;
+  jobTitle?: string;
+  department?: string;
+  location?: string;
+  timezone?: string;
+  bio?: string;
   emailAddress: string | null;
   publicUserData: {
     firstName: string | null;
@@ -270,61 +274,60 @@ export default function PeoplePage({
                     </div>
 
                     {/* Members List */}
-                    <div className="rounded-xl border border-[#26251E]/10 bg-white shadow-sm overflow-hidden">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {filteredMembers.length === 0 ? (
-                        <div className="py-12 text-center">
+                        <div className="col-span-full py-12 text-center">
                           <UserIcon className="mx-auto size-8 text-[#26251E]/20 mb-2" />
                           <p className="text-sm text-[#26251E]/60">
                             {searchQuery ? "No members found matching your search" : "No members yet"}
                           </p>
                         </div>
                       ) : (
-                        <ul className="divide-y divide-[#26251E]/5">
-                          {filteredMembers.map((member) => (
-                            <li key={member._id}>
-                              <button
-                                onClick={() => handleMemberClick(member)}
-                                className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[#F7F7F4] transition-colors text-left group"
-                              >
-                                <Avatar size="default">
-                                  {member.publicUserData?.imageUrl ? (
-                                    <AvatarImage src={member.publicUserData.imageUrl} alt={getDisplayName(member)} />
-                                  ) : null}
-                                  <AvatarFallback>{getInitials(member)}</AvatarFallback>
-                                </Avatar>
+                        filteredMembers.map((member) => (
+                          <button
+                            key={member._id}
+                            onClick={() => handleMemberClick(member)}
+                            className="flex flex-col items-center p-6 bg-white rounded-xl border border-[#26251E]/10 hover:border-[#26251E]/20 hover:shadow-sm transition-all text-center group"
+                          >
+                            <Avatar className="size-20 mb-4">
+                              {member.publicUserData?.imageUrl ? (
+                                <AvatarImage src={member.publicUserData.imageUrl} alt={getDisplayName(member)} />
+                              ) : null}
+                              <AvatarFallback className="text-xl">{getInitials(member)}</AvatarFallback>
+                            </Avatar>
 
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-[#26251E] truncate">
-                                      {getDisplayName(member)}
-                                    </span>
-                                    <Badge 
-                                      variant={member.role === "admin" ? "default" : "secondary"}
-                                      className={cn(
-                                        "text-[10px] uppercase tracking-wider",
-                                        member.role === "admin" 
-                                          ? "bg-[#26251E] text-white" 
-                                          : "bg-[#26251E]/5 text-[#26251E]/60"
-                                      )}
-                                    >
-                                      {member.role === "admin" && (
-                                        <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
-                                      )}
-                                      {member.role}
-                                    </Badge>
-                                  </div>
-                                  {member.emailAddress && (
-                                    <p className="text-xs text-[#26251E]/50 truncate">
-                                      {member.emailAddress}
-                                    </p>
-                                  )}
-                                </div>
+                            <div className="space-y-1 mb-4">
+                              <h3 className="font-medium text-[#26251E] truncate max-w-[200px]">
+                                {getDisplayName(member)}
+                              </h3>
+                              {member.jobTitle && (
+                                <p className="text-xs font-medium text-[#26251E]/60 truncate max-w-[200px]">
+                                  {member.jobTitle}
+                                </p>
+                              )}
+                              {!member.jobTitle && member.emailAddress && (
+                                <p className="text-xs text-[#26251E]/40 truncate max-w-[200px]">
+                                  {member.emailAddress}
+                                </p>
+                              )}
+                            </div>
 
-                                <CaretRightIcon className="size-4 text-[#26251E]/20 group-hover:text-[#26251E]/40 transition-colors" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+                            <Badge 
+                              variant={member.role === "admin" ? "default" : "secondary"}
+                              className={cn(
+                                "text-[10px] uppercase tracking-wider",
+                                member.role === "admin" 
+                                  ? "bg-[#26251E] text-white" 
+                                  : "bg-[#26251E]/5 text-[#26251E]/60"
+                              )}
+                            >
+                              {member.role === "admin" && (
+                                <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
+                              )}
+                              {member.role}
+                            </Badge>
+                          </button>
+                        ))
                       )}
                     </div>
                   </div>

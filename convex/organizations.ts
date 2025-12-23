@@ -10,6 +10,11 @@ type MemberWithUserData = {
   userId: string;
   role: "admin" | "member";
   joinedAt?: number;
+  jobTitle?: string;
+  department?: string;
+  location?: string;
+  timezone?: string;
+  bio?: string;
   emailAddress: string | null;
   publicUserData: {
     firstName: string | null;
@@ -492,6 +497,12 @@ export const getOrganizationMembers = action({
         organizationId: member.organizationId,
         userId: member.userId,
         role: member.role,
+        joinedAt: member.joinedAt,
+        jobTitle: member.jobTitle,
+        department: member.department,
+        location: member.location,
+        timezone: member.timezone,
+        bio: member.bio,
         emailAddress: null,
         publicUserData: undefined,
       }));
@@ -515,6 +526,12 @@ export const getOrganizationMembers = action({
               organizationId: member.organizationId,
               userId: member.userId,
               role: member.role,
+              joinedAt: member.joinedAt,
+              jobTitle: member.jobTitle,
+              department: member.department,
+              location: member.location,
+              timezone: member.timezone,
+              bio: member.bio,
               emailAddress: null,
               publicUserData: undefined,
             };
@@ -526,6 +543,12 @@ export const getOrganizationMembers = action({
             organizationId: member.organizationId,
             userId: member.userId,
             role: member.role,
+            joinedAt: member.joinedAt,
+            jobTitle: member.jobTitle,
+            department: member.department,
+            location: member.location,
+            timezone: member.timezone,
+            bio: member.bio,
             emailAddress: userData.email_addresses?.[0]?.email_address || null,
             publicUserData: {
               firstName: userData.first_name || null,
@@ -539,6 +562,12 @@ export const getOrganizationMembers = action({
             organizationId: member.organizationId,
             userId: member.userId,
             role: member.role,
+            joinedAt: member.joinedAt,
+            jobTitle: member.jobTitle,
+            department: member.department,
+            location: member.location,
+            timezone: member.timezone,
+            bio: member.bio,
             emailAddress: null,
             publicUserData: undefined,
           };
@@ -963,6 +992,11 @@ export const getOrganizationMember = action({
           userId: member.userId,
           role: member.role,
           joinedAt: member.joinedAt,
+          jobTitle: member.jobTitle,
+          department: member.department,
+          location: member.location,
+          timezone: member.timezone,
+          bio: member.bio,
           emailAddress: null,
           publicUserData: undefined,
         },
@@ -988,6 +1022,11 @@ export const getOrganizationMember = action({
             userId: member.userId,
             role: member.role,
             joinedAt: member.joinedAt,
+            jobTitle: member.jobTitle,
+            department: member.department,
+            location: member.location,
+            timezone: member.timezone,
+            bio: member.bio,
             emailAddress: null,
             publicUserData: undefined,
           },
@@ -1003,6 +1042,11 @@ export const getOrganizationMember = action({
           userId: member.userId,
           role: member.role,
           joinedAt: member.joinedAt,
+          jobTitle: member.jobTitle,
+          department: member.department,
+          location: member.location,
+          timezone: member.timezone,
+          bio: member.bio,
           emailAddress: userData.email_addresses?.[0]?.email_address || null,
           publicUserData: {
             firstName: userData.first_name || null,
@@ -1020,6 +1064,11 @@ export const getOrganizationMember = action({
           userId: member.userId,
           role: member.role,
           joinedAt: member.joinedAt,
+          jobTitle: member.jobTitle,
+          department: member.department,
+          location: member.location,
+          timezone: member.timezone,
+          bio: member.bio,
           emailAddress: null,
           publicUserData: undefined,
         },
@@ -1197,5 +1246,67 @@ export const revokeInviteLink = mutation({
     }
 
     return { revokedCount: activeLinks.length };
+  },
+});
+
+/**
+ * Update a member's profile information
+ */
+export const updateMemberProfile = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    membershipId: v.id("organizationMembers"),
+    jobTitle: v.optional(v.string()),
+    department: v.optional(v.string()),
+    location: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    bio: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Get the target membership
+    const targetMembership = await ctx.db.get(args.membershipId);
+    if (!targetMembership) {
+      throw new Error("Member not found");
+    }
+
+    if (targetMembership.organizationId !== args.organizationId) {
+      throw new Error("Member does not belong to this organization");
+    }
+
+    // Check if user is updating their own profile or is an admin
+    const currentMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!currentMembership) {
+      throw new Error("You are not a member of this organization");
+    }
+
+    const isSelf = targetMembership.userId === userId;
+    const isAdmin = currentMembership.role === "admin";
+
+    if (!isSelf && !isAdmin) {
+      throw new Error("You can only update your own profile or you must be an admin");
+    }
+
+    await ctx.db.patch(args.membershipId, {
+      jobTitle: args.jobTitle,
+      department: args.department,
+      location: args.location,
+      timezone: args.timezone,
+      bio: args.bio,
+    });
+
+    return args.membershipId;
   },
 });
