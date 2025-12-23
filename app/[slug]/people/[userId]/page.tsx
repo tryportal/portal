@@ -681,14 +681,14 @@ export default function MemberProfilePage({
                                 
                                 <div className="pt-4 border-t border-[#26251E]/5">
                                   <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-                                    <AlertDialogTrigger asChild>
-                                      <Button 
+                                    <AlertDialogTrigger 
+                                      render={<Button 
                                         variant="outline" 
                                         className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                      >
-                                        <TrashIcon className="size-4 mr-2" />
-                                        Remove Member
-                                      </Button>
+                                      />}
+                                    >
+                                      <TrashIcon className="size-4 mr-2" />
+                                      Remove Member
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                       <AlertDialogHeader>
