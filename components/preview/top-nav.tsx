@@ -10,9 +10,8 @@ import {
   PlusIcon,
 } from "@phosphor-icons/react"
 import { UserButton } from "@clerk/nextjs"
-import { useQuery } from "convex/react"
 import { useRouter, useParams } from "next/navigation"
-import { api } from "@/convex/_generated/api"
+import { useWorkspaceData } from "@/components/workspace-context"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import {
@@ -39,14 +38,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const params = useParams()
   const currentSlug = params?.slug as string | undefined
 
-  // Get user's organizations from Convex
-  const userOrgs = useQuery(api.organizations.getUserOrganizations)
-
-  // Get current organization by slug
-  const currentOrg = useQuery(
-    api.organizations.getOrganizationBySlug,
-    currentSlug ? { slug: currentSlug } : "skip"
-  )
+  // Use shared workspace data from context
+  const { organization: currentOrg, userOrganizations: userOrgs } = useWorkspaceData()
 
   const handleOrganizationSwitch = (orgSlug: string) => {
     router.push(`/${orgSlug}`)
@@ -74,9 +67,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         {/* Organization Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
-            {currentOrg?.imageUrl ? (
+            {currentOrg?.logoUrl ? (
               <Image
-                src={currentOrg.imageUrl}
+                src={currentOrg.logoUrl}
                 alt={currentOrg.name || "Organization"}
                 width={20}
                 height={20}
@@ -100,7 +93,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[200px]">
             {userOrgs && userOrgs.length > 0 ? (
-              userOrgs.map((org: { _id: string; name: string; slug: string; imageUrl?: string }) => {
+              userOrgs.map((org) => {
                 const isActive = currentOrg?._id === org._id
                 return (
                   <DropdownMenuItem
@@ -108,9 +101,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                     onClick={() => handleOrganizationSwitch(org.slug)}
                     className="gap-2 px-2 py-1.5 cursor-pointer"
                   >
-                    {org.imageUrl ? (
+                    {org.logoUrl ? (
                       <Image
-                        src={org.imageUrl}
+                        src={org.logoUrl}
                         alt={org.name || "Organization"}
                         width={16}
                         height={16}

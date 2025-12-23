@@ -24,6 +24,7 @@ import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { useWorkspaceData } from "@/components/workspace-context"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -306,6 +307,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const currentSlug = params?.slug as string | undefined
 
+  // Use shared workspace data from context
+  const { organization: currentOrg, membership } = useWorkspaceData()
+
   // Dialog states
   const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false)
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false)
@@ -316,19 +320,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // Drag and drop state
   const [activeId, setActiveId] = React.useState<string | null>(null)
 
-  // Get current organization by slug
-  const currentOrg = useQuery(
-    api.organizations.getOrganizationBySlug,
-    currentSlug ? { slug: currentSlug } : "skip"
-  )
-
-  // Get user's membership to check if they're an admin
-  const membership = useQuery(
-    api.organizations.getUserMembership,
-    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
-  )
-
-  // Get categories and channels from Convex
+  // Get categories and channels from Convex (this is still needed per-sidebar)
   const categoriesData = useQuery(
     api.channels.getCategoriesAndChannels,
     currentOrg?._id ? { organizationId: currentOrg._id } : "skip"

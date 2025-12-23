@@ -1,14 +1,15 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as React from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useWorkspaceData } from "@/components/workspace-context";
+import { MemberProfileSkeleton } from "@/components/skeletons";
 import { 
-  Spinner, 
   ArrowLeftIcon, 
   ShieldIcon, 
   UserIcon,
@@ -22,6 +23,7 @@ import {
   BuildingsIcon,
   MapPinIcon,
   ClockIcon,
+  CircleNotchIcon,
 } from "@phosphor-icons/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -75,9 +77,9 @@ export default function MemberProfilePage({
   params: Promise<{ slug: string; userId: string }> | { slug: string; userId: string };
 }) {
   const router = useRouter();
-  const { isSignedIn, isLoaded: authLoaded, userId: currentUserId } = useAuth();
-  const [slug, setSlug] = useState<string>("");
+  const { userId: currentUserId } = useAuth();
   const [userId, setUserId] = useState<string>("");
+  const { organization, membership: contextMembership, slug, isLoading: contextLoading } = useWorkspaceData();
 
   // Member data state
   const [member, setMember] = useState<MemberWithUserData | null>(null);
@@ -111,26 +113,12 @@ export default function MemberProfilePage({
   React.useEffect(() => {
     if (params instanceof Promise) {
       params.then((resolved) => {
-        setSlug(resolved.slug);
         setUserId(resolved.userId);
       });
     } else {
-      setSlug(params.slug);
       setUserId(params.userId);
     }
   }, [params]);
-
-  // Get organization by slug
-  const orgBySlug = useQuery(
-    api.organizations.getOrganizationBySlug,
-    slug ? { slug } : "skip"
-  );
-
-  // Check if user is a member
-  const isMember = useQuery(
-    api.organizations.isUserMember,
-    orgBySlug?._id ? { organizationId: orgBySlug._id } : "skip"
-  );
 
   // Actions and mutations
   const getMember = useAction(api.organizations.getOrganizationMember);
@@ -141,14 +129,14 @@ export default function MemberProfilePage({
   // Fetch member data
   React.useEffect(() => {
     const fetchMember = async () => {
-      if (!orgBySlug?._id || !userId) return;
+      if (!organization?._id || !userId) return;
       
       setIsLoading(true);
       setError(null);
       
       try {
         const result = await getMember({
-          organizationId: orgBySlug._id,
+          organizationId: organization._id,
           userId: userId,
         });
         
@@ -175,10 +163,10 @@ export default function MemberProfilePage({
       }
     };
 
-    if (orgBySlug?._id && userId && isMember) {
+    if (organization?._id && userId && contextMembership) {
       fetchMember();
     }
-  }, [orgBySlug?._id, userId, isMember, getMember]);
+  }, [organization?._id, userId, contextMembership, getMember]);
 
   const getDisplayName = (m: MemberWithUserData) => {
     if (m.publicUserData?.firstName || m.publicUserData?.lastName) {
@@ -197,7 +185,7 @@ export default function MemberProfilePage({
   };
 
   const handleProfileUpdate = async () => {
-    if (!member || !orgBySlug?._id) return;
+    if (!member || !organization?._id) return;
 
     setIsSavingProfile(true);
     setProfileSaveError(null);
@@ -205,7 +193,7 @@ export default function MemberProfilePage({
 
     try {
       await updateProfile({
-        organizationId: orgBySlug._id,
+        organizationId: organization._id,
         membershipId: member._id,
         jobTitle: profileForm.jobTitle,
         department: profileForm.department,
@@ -236,7 +224,7 @@ export default function MemberProfilePage({
   };
 
   const handleRoleChange = async (newRole: "admin" | "member") => {
-    if (!member || !orgBySlug?._id) return;
+    if (!member || !organization?._id) return;
     
     setSelectedRole(newRole);
     setIsSavingRole(true);
@@ -245,7 +233,7 @@ export default function MemberProfilePage({
 
     try {
       await updateRole({
-        organizationId: orgBySlug._id,
+        organizationId: organization._id,
         membershipId: member._id,
         role: newRole,
       });
@@ -264,14 +252,14 @@ export default function MemberProfilePage({
   };
 
   const handleRemoveMember = async () => {
-    if (!member || !orgBySlug?._id) return;
+    if (!member || !organization?._id) return;
 
     setIsRemoving(true);
     setRemoveError(null);
 
     try {
       await removeMember({
-        organizationId: orgBySlug._id,
+        organizationId: organization._id,
         membershipId: member._id,
       });
       
@@ -286,6 +274,11 @@ export default function MemberProfilePage({
   };
 
   const canEdit = isAdmin || (member && member.userId === currentUserId);
+
+  // Show skeleton while context is loading
+  if (contextLoading) {
+    return <MemberProfileSkeleton />;
+  }
 
   return (
     <main className="flex-1 overflow-hidden">
@@ -306,7 +299,7 @@ export default function MemberProfilePage({
           {isLoading ? (
             <div className="flex h-full items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
-                <Spinner className="size-6 animate-spin text-[#26251E]/40" />
+                <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/40" />
                 <p className="text-sm text-[#26251E]/60">Loading member...</p>
               </div>
             </div>
@@ -429,7 +422,7 @@ export default function MemberProfilePage({
                         className="min-w-[120px]"
                       >
                         {isSavingProfile ? (
-                          <Spinner className="size-4 animate-spin mr-1.5" />
+                          <CircleNotchIcon className="size-4 animate-spin mr-1.5" />
                         ) : (
                           <FloppyDiskIcon className="size-4 mr-1.5" />
                         )}

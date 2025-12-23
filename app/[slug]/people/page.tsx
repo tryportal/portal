@@ -1,14 +1,13 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
-import { useQuery, useAction } from "convex/react";
+import { useAction } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as React from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useWorkspaceData } from "@/components/workspace-context";
 import { 
-  Spinner,
   UsersIcon,
   MagnifyingGlassIcon,
   ShieldIcon,
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { InvitePeopleDialog } from "@/components/invite-people-dialog";
+import { PeoplePageSkeleton, MemberCardSkeleton } from "@/components/skeletons";
 
 // Type for member data
 type MemberWithUserData = {
@@ -41,13 +41,9 @@ type MemberWithUserData = {
   } | undefined;
 };
 
-export default function PeoplePage({
-  params,
-}: {
-  params: Promise<{ slug: string }> | { slug: string };
-}) {
+export default function PeoplePage() {
   const router = useRouter();
-  const [slug, setSlug] = useState<string>("");
+  const { organization, slug, isLoading: contextLoading } = useWorkspaceData();
 
   // Members state
   const [members, setMembers] = useState<MemberWithUserData[]>([]);
@@ -56,40 +52,19 @@ export default function PeoplePage({
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
-  // Resolve params
-  React.useEffect(() => {
-    if (params instanceof Promise) {
-      params.then((resolved) => setSlug(resolved.slug));
-    } else {
-      setSlug(params.slug);
-    }
-  }, [params]);
-
-  // Get organization by slug
-  const orgBySlug = useQuery(
-    api.organizations.getOrganizationBySlug,
-    slug ? { slug } : "skip"
-  );
-
-  // Check if user is a member
-  const isMember = useQuery(
-    api.organizations.isUserMember,
-    orgBySlug?._id ? { organizationId: orgBySlug._id } : "skip"
-  );
-
   // Get members action
   const getMembers = useAction(api.organizations.getOrganizationMembers);
 
-  // Fetch members
+  // Fetch members when organization is available
   React.useEffect(() => {
     const fetchMembers = async () => {
-      if (!orgBySlug?._id || !isMember) return;
+      if (!organization?._id) return;
       
       setIsLoading(true);
       setError(null);
       
       try {
-        const result = await getMembers({ organizationId: orgBySlug._id });
+        const result = await getMembers({ organizationId: organization._id });
         setMembers(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load members");
@@ -98,10 +73,10 @@ export default function PeoplePage({
       }
     };
 
-    if (orgBySlug?._id && isMember) {
+    if (organization?._id) {
       fetchMembers();
     }
-  }, [orgBySlug?._id, isMember, getMembers]);
+  }, [organization?._id, getMembers]);
 
   const getDisplayName = (member: MemberWithUserData) => {
     if (member.publicUserData?.firstName || member.publicUserData?.lastName) {
@@ -133,6 +108,11 @@ export default function PeoplePage({
     router.push(`/${slug}/people/${member.userId}`);
   };
 
+  // Show skeleton while context is loading
+  if (contextLoading) {
+    return <PeoplePageSkeleton />;
+  }
+
   return (
     <main className="flex-1 overflow-hidden">
       <div className="flex h-full flex-col bg-[#F7F7F4]">
@@ -155,10 +135,15 @@ export default function PeoplePage({
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex h-full items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <Spinner className="size-6 animate-spin text-[#26251E]/40" />
-                <p className="text-sm text-[#26251E]/60">Loading members...</p>
+            <div className="mx-auto max-w-3xl py-12 px-6">
+              <div className="space-y-6">
+                <div className="h-4 w-48 bg-[#26251E]/5 rounded animate-pulse" />
+                <div className="h-10 w-full bg-[#26251E]/5 rounded-md animate-pulse" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <MemberCardSkeleton key={i} />
+                  ))}
+                </div>
               </div>
             </div>
           ) : error ? (
@@ -261,11 +246,11 @@ export default function PeoplePage({
       </div>
 
       {/* Invite Dialog */}
-      {orgBySlug?._id && (
+      {organization?._id && (
         <InvitePeopleDialog
           open={inviteDialogOpen}
           onOpenChange={setInviteDialogOpen}
-          organizationId={orgBySlug._id}
+          organizationId={organization._id}
         />
       )}
     </main>

@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
+import Image from "next/image";
 
 export default function Page() {
   const router = useRouter();
@@ -58,6 +59,20 @@ export default function Page() {
     }
   }, [authLoaded, isSignedIn, userOrgs, targetOrg, isOrgSetup, router]);
 
-  // Show nothing while checking - the page is empty as requested
-  return null;
+  // Show branded loading while redirecting
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F7F4]">
+      <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
+        <Image
+          src="/portal-full.svg"
+          alt="Portal"
+          width={120}
+          height={32}
+          className="h-8 w-auto"
+          priority
+        />
+        <div className="size-5 animate-spin rounded-full border-2 border-[#26251E]/10 border-t-[#26251E]/40" />
+      </div>
+    </div>
+  );
 }
