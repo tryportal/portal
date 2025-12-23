@@ -7,9 +7,6 @@ import { useEffect, useState } from "react";
 import * as React from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { TopNav } from "@/components/preview/top-nav";
-import { Sidebar } from "@/components/preview/sidebar";
-import { mockCategories } from "@/components/preview/mock-data";
 import { 
   Spinner, 
   ArrowLeftIcon, 
@@ -81,9 +78,6 @@ export default function MemberProfilePage({
   const { isSignedIn, isLoaded: authLoaded, userId: currentUserId } = useAuth();
   const [slug, setSlug] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("home");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
   // Member data state
   const [member, setMember] = useState<MemberWithUserData | null>(null);
@@ -138,9 +132,6 @@ export default function MemberProfilePage({
     orgBySlug?._id ? { organizationId: orgBySlug._id } : "skip"
   );
 
-  // Get user's organizations for fallback
-  const userOrgs = useQuery(api.organizations.getUserOrganizations);
-
   // Actions and mutations
   const getMember = useAction(api.organizations.getOrganizationMember);
   const updateRole = useMutation(api.organizations.updateOrganizationMemberRole);
@@ -188,37 +179,6 @@ export default function MemberProfilePage({
       fetchMember();
     }
   }, [orgBySlug?._id, userId, isMember, getMember]);
-
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (authLoaded && !isSignedIn) {
-      router.replace("/sign-in");
-    }
-  }, [authLoaded, isSignedIn, router]);
-
-  // Verify user has access
-  useEffect(() => {
-    if (!authLoaded || !isSignedIn || !slug) return;
-    if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) return;
-
-    if (orgBySlug === null) {
-      if (userOrgs.length > 0 && userOrgs[0].slug) {
-        router.replace(`/${userOrgs[0].slug}`);
-      } else {
-        router.replace("/setup");
-      }
-      return;
-    }
-
-    if (!isMember) {
-      if (userOrgs.length > 0 && userOrgs[0].slug) {
-        router.replace(`/${userOrgs[0].slug}`);
-      } else {
-        router.replace("/setup");
-      }
-      return;
-    }
-  }, [authLoaded, isSignedIn, slug, orgBySlug, isMember, userOrgs, router]);
 
   const getDisplayName = (m: MemberWithUserData) => {
     if (m.publicUserData?.firstName || m.publicUserData?.lastName) {
@@ -327,474 +287,432 @@ export default function MemberProfilePage({
 
   const canEdit = isAdmin || (member && member.userId === currentUserId);
 
-  if (!authLoaded || !isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
-        </div>
-      </div>
-    );
-  }
-
-  if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <Spinner className="size-6 animate-spin text-[#26251E]/20" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!orgBySlug || !isMember) {
-    return null;
-  }
-
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
-      {/* Top Navigation */}
-      <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
+    <main className="flex-1 overflow-hidden">
+      <div className="flex h-full flex-col bg-[#F7F7F4]">
+        {/* Header */}
+        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+          <button
+            onClick={() => router.push(`/${slug}/people`)}
+            className="flex items-center gap-1.5 text-sm text-[#26251E]/60 hover:text-[#26251E] transition-colors"
+          >
+            <ArrowLeftIcon className="size-4" />
+            <span>Back to People</span>
+          </button>
+        </header>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen((prev) => !prev)}
-          activeChannel={activeChannel ?? ""}
-          onChannelSelect={setActiveChannel}
-          categories={mockCategories}
-        />
-
-        {/* Profile Content */}
-        <main className="flex-1 overflow-hidden">
-          <div className="flex h-full flex-col bg-[#F7F7F4]">
-            {/* Header */}
-            <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
-              <button
-                onClick={() => router.push(`/${slug}/people`)}
-                className="flex items-center gap-1.5 text-sm text-[#26251E]/60 hover:text-[#26251E] transition-colors"
-              >
-                <ArrowLeftIcon className="size-4" />
-                <span>Back to People</span>
-              </button>
-            </header>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto bg-white/50">
-              {isLoading ? (
-                <div className="flex h-full items-center justify-center py-12">
-                  <div className="flex flex-col items-center gap-3">
-                    <Spinner className="size-6 animate-spin text-[#26251E]/40" />
-                    <p className="text-sm text-[#26251E]/60">Loading member...</p>
-                  </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto bg-white/50">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <Spinner className="size-6 animate-spin text-[#26251E]/40" />
+                <p className="text-sm text-[#26251E]/60">Loading member...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex h-full items-center justify-center py-12">
+              <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm border border-[#26251E]/5 text-center">
+                <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+                  <WarningCircleIcon className="size-6" weight="fill" />
                 </div>
-              ) : error ? (
-                <div className="flex h-full items-center justify-center py-12">
-                  <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm border border-[#26251E]/5 text-center">
-                    <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
-                      <WarningCircleIcon className="size-6" weight="fill" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-[#26251E] mb-2">
-                      Member Not Found
-                    </h2>
-                    <p className="text-sm text-[#26251E]/60 mb-4">{error}</p>
-                    <Button 
-                      variant="outline"
-                      onClick={() => router.push(`/${slug}/people`)}
+                <h2 className="text-lg font-semibold text-[#26251E] mb-2">
+                  Member Not Found
+                </h2>
+                <p className="text-sm text-[#26251E]/60 mb-4">{error}</p>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push(`/${slug}/people`)}
+                >
+                  Back to People
+                </Button>
+              </div>
+            </div>
+          ) : member ? (
+            <div className="mx-auto max-w-5xl py-8 px-6">
+              {isEditing ? (
+                <div className="max-w-2xl mx-auto">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-[#26251E]">Edit Profile</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setProfileForm({
+                          jobTitle: member.jobTitle || "",
+                          department: member.department || "",
+                          location: member.location || "",
+                          timezone: member.timezone || "",
+                          bio: member.bio || "",
+                        });
+                      }}
+                      disabled={isSavingProfile}
                     >
-                      Back to People
+                      <XIcon className="size-4 mr-1.5" />
+                      Cancel
                     </Button>
                   </div>
+
+                  <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="jobTitle">Job Title</Label>
+                        <Input
+                          id="jobTitle"
+                          value={profileForm.jobTitle}
+                          onChange={(e) => setProfileForm({ ...profileForm, jobTitle: e.target.value })}
+                          placeholder="e.g. Senior Designer"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Input
+                          id="department"
+                          value={profileForm.department}
+                          onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                          placeholder="e.g. Design"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={profileForm.location}
+                          onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
+                          placeholder="e.g. San Francisco, CA"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="timezone">Timezone</Label>
+                        <Input
+                          id="timezone"
+                          value={profileForm.timezone}
+                          onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
+                          placeholder="e.g. PST (UTC-8)"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={profileForm.bio}
+                        onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                        placeholder="Tell us a bit about yourself..."
+                        className="min-h-[120px] resize-none"
+                      />
+                      <p className="text-xs text-[#26251E]/40">
+                        Brief description for your profile.
+                      </p>
+                    </div>
+
+                    {profileSaveError && (
+                      <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2">
+                        <WarningCircleIcon className="size-4" weight="fill" />
+                        {profileSaveError}
+                      </div>
+                    )}
+
+                    {profileSaveSuccess && (
+                      <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600 border border-green-100 flex items-center gap-2">
+                        <CheckIcon className="size-4" weight="bold" />
+                        Profile updated successfully
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end pt-2">
+                      <Button
+                        onClick={handleProfileUpdate}
+                        disabled={isSavingProfile}
+                        className="min-w-[120px]"
+                      >
+                        {isSavingProfile ? (
+                          <Spinner className="size-4 animate-spin mr-1.5" />
+                        ) : (
+                          <FloppyDiskIcon className="size-4 mr-1.5" />
+                        )}
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              ) : member ? (
-                <div className="mx-auto max-w-5xl py-8 px-6">
-                  {isEditing ? (
-                    <div className="max-w-2xl mx-auto">
-                      <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-semibold text-[#26251E]">Edit Profile</h2>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setIsEditing(false);
-                            setProfileForm({
-                              jobTitle: member.jobTitle || "",
-                              department: member.department || "",
-                              location: member.location || "",
-                              timezone: member.timezone || "",
-                              bio: member.bio || "",
-                            });
-                          }}
-                          disabled={isSavingProfile}
+              ) : (
+                <div className="space-y-8">
+                  {/* Profile Header Card */}
+                  <div className="bg-white rounded-2xl border border-[#26251E]/10 shadow-sm overflow-hidden">
+                    <div className="h-32 bg-gradient-to-r from-[#F7F7F4] to-[#E8E8E5] border-b border-[#26251E]/5 relative">
+                      {canEdit && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => setIsEditing(true)}
+                          className="absolute top-4 right-4 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
                         >
-                          <XIcon className="size-4 mr-1.5" />
-                          Cancel
+                          <PencilSimpleIcon className="size-4 mr-1.5" />
+                          Edit Profile
                         </Button>
+                      )}
+                    </div>
+                    <div className="px-8 pb-8">
+                      <div className="relative -mt-12 mb-4 flex justify-between items-end">
+                        <Avatar className="size-32 border-4 border-white shadow-sm">
+                          {member.publicUserData?.imageUrl ? (
+                            <AvatarImage 
+                              src={member.publicUserData.imageUrl} 
+                              alt={getDisplayName(member)} 
+                            />
+                          ) : null}
+                          <AvatarFallback className="text-4xl bg-[#F7F7F4] text-[#26251E]/40">
+                            {getInitials(member)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex gap-2 mb-1">
+                          {/* Placeholder for future actions like Message */}
+                        </div>
                       </div>
-
-                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="jobTitle">Job Title</Label>
-                            <Input
-                              id="jobTitle"
-                              value={profileForm.jobTitle}
-                              onChange={(e) => setProfileForm({ ...profileForm, jobTitle: e.target.value })}
-                              placeholder="e.g. Senior Designer"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="department">Department</Label>
-                            <Input
-                              id="department"
-                              value={profileForm.department}
-                              onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
-                              placeholder="e.g. Design"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                              id="location"
-                              value={profileForm.location}
-                              onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
-                              placeholder="e.g. San Francisco, CA"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="timezone">Timezone</Label>
-                            <Input
-                              id="timezone"
-                              value={profileForm.timezone}
-                              onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
-                              placeholder="e.g. PST (UTC-8)"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="bio">Bio</Label>
-                          <Textarea
-                            id="bio"
-                            value={profileForm.bio}
-                            onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                            placeholder="Tell us a bit about yourself..."
-                            className="min-h-[120px] resize-none"
-                          />
-                          <p className="text-xs text-[#26251E]/40">
-                            Brief description for your profile.
-                          </p>
-                        </div>
-
-                        {profileSaveError && (
-                          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2">
-                            <WarningCircleIcon className="size-4" weight="fill" />
-                            {profileSaveError}
-                          </div>
-                        )}
-
-                        {profileSaveSuccess && (
-                          <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600 border border-green-100 flex items-center gap-2">
-                            <CheckIcon className="size-4" weight="bold" />
-                            Profile updated successfully
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-end pt-2">
-                          <Button
-                            onClick={handleProfileUpdate}
-                            disabled={isSavingProfile}
-                            className="min-w-[120px]"
+                      
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <h1 className="text-2xl font-bold text-[#26251E]">
+                            {getDisplayName(member)}
+                          </h1>
+                          <Badge 
+                            variant={member.role === "admin" ? "default" : "secondary"}
+                            className={cn(
+                              "text-[10px] uppercase tracking-wider h-5",
+                              member.role === "admin" 
+                                ? "bg-[#26251E] text-white" 
+                                : "bg-[#26251E]/5 text-[#26251E]/60"
+                            )}
                           >
-                            {isSavingProfile ? (
-                              <Spinner className="size-4 animate-spin mr-1.5" />
-                            ) : (
-                              <FloppyDiskIcon className="size-4 mr-1.5" />
+                            {member.role === "admin" && (
+                              <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
                             )}
-                            Save Changes
-                          </Button>
+                            {member.role}
+                          </Badge>
                         </div>
+                        <p className="text-base text-[#26251E]/60 font-medium">
+                          {member.jobTitle || "No job title"}
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-8">
-                      {/* Profile Header Card */}
-                      <div className="bg-white rounded-2xl border border-[#26251E]/10 shadow-sm overflow-hidden">
-                        <div className="h-32 bg-gradient-to-r from-[#F7F7F4] to-[#E8E8E5] border-b border-[#26251E]/5 relative">
-                          {canEdit && (
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              onClick={() => setIsEditing(true)}
-                              className="absolute top-4 right-4 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
-                            >
-                              <PencilSimpleIcon className="size-4 mr-1.5" />
-                              Edit Profile
-                            </Button>
-                          )}
-                        </div>
-                        <div className="px-8 pb-8">
-                          <div className="relative -mt-12 mb-4 flex justify-between items-end">
-                            <Avatar className="size-32 border-4 border-white shadow-sm">
-                              {member.publicUserData?.imageUrl ? (
-                                <AvatarImage 
-                                  src={member.publicUserData.imageUrl} 
-                                  alt={getDisplayName(member)} 
-                                />
-                              ) : null}
-                              <AvatarFallback className="text-4xl bg-[#F7F7F4] text-[#26251E]/40">
-                                {getInitials(member)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex gap-2 mb-1">
-                              {/* Placeholder for future actions like Message */}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Info */}
+                    <div className="space-y-6">
+                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
+                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                          Contact & Info
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-3">
+                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
+                              <UserIcon className="size-4 text-[#26251E]/60" />
                             </div>
-                          </div>
-                          
-                          <div>
-                            <div className="flex items-center gap-3 mb-1">
-                              <h1 className="text-2xl font-bold text-[#26251E]">
-                                {getDisplayName(member)}
-                              </h1>
-                              <Badge 
-                                variant={member.role === "admin" ? "default" : "secondary"}
-                                className={cn(
-                                  "text-[10px] uppercase tracking-wider h-5",
-                                  member.role === "admin" 
-                                    ? "bg-[#26251E] text-white" 
-                                    : "bg-[#26251E]/5 text-[#26251E]/60"
-                                )}
-                              >
-                                {member.role === "admin" && (
-                                  <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
-                                )}
-                                {member.role}
-                              </Badge>
-                            </div>
-                            <p className="text-base text-[#26251E]/60 font-medium">
-                              {member.jobTitle || "No job title"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column: Info */}
-                        <div className="space-y-6">
-                          <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                            <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
-                              Contact & Info
-                            </h3>
-                            <div className="space-y-4">
-                              <div className="flex items-start gap-3">
-                                <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                                  <UserIcon className="size-4 text-[#26251E]/60" />
-                                </div>
-                                <div className="overflow-hidden">
-                                  <p className="text-xs text-[#26251E]/40 mb-0.5">Email</p>
-                                  <p className="text-sm text-[#26251E] truncate" title={member.emailAddress || ""}>
-                                    {member.emailAddress}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-3">
-                                <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                                  <MapPinIcon className="size-4 text-[#26251E]/60" />
-                                </div>
-                                <div>
-                                  <p className="text-xs text-[#26251E]/40 mb-0.5">Location</p>
-                                  <p className="text-sm text-[#26251E]">
-                                    {member.location || "Not specified"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-3">
-                                <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                                  <ClockIcon className="size-4 text-[#26251E]/60" />
-                                </div>
-                                <div>
-                                  <p className="text-xs text-[#26251E]/40 mb-0.5">Timezone</p>
-                                  <p className="text-sm text-[#26251E]">
-                                    {member.timezone || "Not specified"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-3">
-                                <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                                  <BuildingsIcon className="size-4 text-[#26251E]/60" />
-                                </div>
-                                <div>
-                                  <p className="text-xs text-[#26251E]/40 mb-0.5">Joined</p>
-                                  <p className="text-sm text-[#26251E]">
-                                    {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-US", {
-                                      month: "long",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    }) : "Unknown"}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Admin Controls (Left Col) */}
-                          {isAdmin && (
-                            <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                              <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
-                                Admin Controls
-                              </h3>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label className="mb-2 block text-xs font-medium text-[#26251E]/60">
-                                    Role
-                                  </Label>
-                                  <Select 
-                                    value={selectedRole} 
-                                    onValueChange={(value) => handleRoleChange(value as "admin" | "member")}
-                                    disabled={isSavingRole}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                      <SelectItem value="member">Member</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  {roleSaveSuccess && (
-                                    <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                                      <CheckIcon className="size-3" weight="bold" />
-                                      Role updated
-                                    </p>
-                                  )}
-                                  {roleSaveError && (
-                                    <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
-                                      <WarningCircleIcon className="size-3" weight="fill" />
-                                      {roleSaveError}
-                                    </p>
-                                  )}
-                                </div>
-                                
-                                <div className="pt-4 border-t border-[#26251E]/5">
-                                  <AlertDialog 
-                                    open={removeDialogOpen} 
-                                    onOpenChange={(open) => {
-                                      setRemoveDialogOpen(open);
-                                      if (!open) {
-                                        setRemoveError(null);
-                                      }
-                                    }}
-                                  >
-                                    <AlertDialogTrigger 
-                                      render={<Button 
-                                        variant="outline" 
-                                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                      />}
-                                    >
-                                      <TrashIcon className="size-4 mr-2" />
-                                      Remove Member
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Remove Member</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to remove this member? They will lose access immediately.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      {removeError && (
-                                        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2 mx-6">
-                                          <WarningCircleIcon className="size-4" weight="fill" />
-                                          {removeError}
-                                        </div>
-                                      )}
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={handleRemoveMember}
-                                          disabled={isRemoving}
-                                          className="bg-red-600 hover:bg-red-700"
-                                        >
-                                          {isRemoving ? "Removing..." : "Remove"}
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Right Column: Bio & Details */}
-                        <div className="lg:col-span-2 space-y-6">
-                          <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-8 min-h-[200px]">
-                            <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
-                              About
-                            </h3>
-                            {member.bio ? (
-                              <p className="text-base text-[#26251E]/80 leading-relaxed whitespace-pre-wrap">
-                                {member.bio}
+                            <div className="overflow-hidden">
+                              <p className="text-xs text-[#26251E]/40 mb-0.5">Email</p>
+                              <p className="text-sm text-[#26251E] truncate" title={member.emailAddress || ""}>
+                                {member.emailAddress}
                               </p>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <p className="text-sm text-[#26251E]/40 italic">
-                                  No bio provided yet.
-                                </p>
-                                {canEdit && (
-                                  <Button 
-                                    variant="link" 
-                                    size="sm" 
-                                    onClick={() => setIsEditing(true)}
-                                    className="mt-2 text-[#26251E]/60"
-                                  >
-                                    Add a bio
-                                  </Button>
-                                )}
-                              </div>
-                            )}
+                            </div>
                           </div>
 
-                          <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                            <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
-                              Organization
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                              <div>
-                                <p className="text-xs text-[#26251E]/40 mb-1">Department</p>
-                                <div className="flex items-center gap-2">
-                                  <BriefcaseIcon className="size-4 text-[#26251E]/40" />
-                                  <p className="text-sm font-medium text-[#26251E]">
-                                    {member.department || "Not specified"}
-                                  </p>
-                                </div>
-                              </div>
-                              {/* Placeholder for Manager or Team */}
-                              <div>
-                                <p className="text-xs text-[#26251E]/40 mb-1">Role Type</p>
-                                <div className="flex items-center gap-2">
-                                  <ShieldIcon className="size-4 text-[#26251E]/40" />
-                                  <p className="text-sm font-medium text-[#26251E] capitalize">
-                                    {member.role}
-                                  </p>
-                                </div>
-                              </div>
+                          <div className="flex items-start gap-3">
+                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
+                              <MapPinIcon className="size-4 text-[#26251E]/60" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-[#26251E]/40 mb-0.5">Location</p>
+                              <p className="text-sm text-[#26251E]">
+                                {member.location || "Not specified"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3">
+                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
+                              <ClockIcon className="size-4 text-[#26251E]/60" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-[#26251E]/40 mb-0.5">Timezone</p>
+                              <p className="text-sm text-[#26251E]">
+                                {member.timezone || "Not specified"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3">
+                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
+                              <BuildingsIcon className="size-4 text-[#26251E]/60" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-[#26251E]/40 mb-0.5">Joined</p>
+                              <p className="text-sm text-[#26251E]">
+                                {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-US", {
+                                  month: "long",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }) : "Unknown"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Admin Controls (Left Col) */}
+                      {isAdmin && (
+                        <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
+                          <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                            Admin Controls
+                          </h3>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="mb-2 block text-xs font-medium text-[#26251E]/60">
+                                Role
+                              </Label>
+                              <Select 
+                                value={selectedRole} 
+                                onValueChange={(value) => handleRoleChange(value as "admin" | "member")}
+                                disabled={isSavingRole}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="member">Member</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {roleSaveSuccess && (
+                                <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                                  <CheckIcon className="size-3" weight="bold" />
+                                  Role updated
+                                </p>
+                              )}
+                              {roleSaveError && (
+                                <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                                  <WarningCircleIcon className="size-3" weight="fill" />
+                                  {roleSaveError}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="pt-4 border-t border-[#26251E]/5">
+                              <AlertDialog 
+                                open={removeDialogOpen} 
+                                onOpenChange={(open) => {
+                                  setRemoveDialogOpen(open);
+                                  if (!open) {
+                                    setRemoveError(null);
+                                  }
+                                }}
+                              >
+                                <AlertDialogTrigger 
+                                  render={<Button 
+                                    variant="outline" 
+                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                  />}
+                                >
+                                  <TrashIcon className="size-4 mr-2" />
+                                  Remove Member
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to remove this member? They will lose access immediately.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  {removeError && (
+                                    <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2 mx-6">
+                                      <WarningCircleIcon className="size-4" weight="fill" />
+                                      {removeError}
+                                    </div>
+                                  )}
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleRemoveMember}
+                                      disabled={isRemoving}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      {isRemoving ? "Removing..." : "Remove"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column: Bio & Details */}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-8 min-h-[200px]">
+                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                          About
+                        </h3>
+                        {member.bio ? (
+                          <p className="text-base text-[#26251E]/80 leading-relaxed whitespace-pre-wrap">
+                            {member.bio}
+                          </p>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <p className="text-sm text-[#26251E]/40 italic">
+                              No bio provided yet.
+                            </p>
+                            {canEdit && (
+                              <Button 
+                                variant="link" 
+                                size="sm" 
+                                onClick={() => setIsEditing(true)}
+                                className="mt-2 text-[#26251E]/60"
+                              >
+                                Add a bio
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
+                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                          Organization
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div>
+                            <p className="text-xs text-[#26251E]/40 mb-1">Department</p>
+                            <div className="flex items-center gap-2">
+                              <BriefcaseIcon className="size-4 text-[#26251E]/40" />
+                              <p className="text-sm font-medium text-[#26251E]">
+                                {member.department || "Not specified"}
+                              </p>
+                            </div>
+                          </div>
+                          {/* Placeholder for Manager or Team */}
+                          <div>
+                            <p className="text-xs text-[#26251E]/40 mb-1">Role Type</p>
+                            <div className="flex items-center gap-2">
+                              <ShieldIcon className="size-4 text-[#26251E]/40" />
+                              <p className="text-sm font-medium text-[#26251E] capitalize">
+                                {member.role}
+                              </p>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              ) : null}
+              )}
             </div>
-          </div>
-        </main>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
