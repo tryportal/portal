@@ -65,7 +65,7 @@ function SetupContent() {
       !authLoaded ||
       !isSignedIn ||
       userOrgs === undefined ||
-      orgSetupChecks === undefined
+      (userOrgs.length > 0 && orgSetupChecks === undefined)
     ) {
       return;
     }
@@ -93,7 +93,15 @@ function SetupContent() {
     );
   }
 
-  if (userOrgs === undefined || orgSetupChecks === undefined) {
+  // Show loading only if:
+  // 1. userOrgs is still loading (undefined), OR
+  // 2. We have organizations but their setup status is still loading
+  // If userOrgs is an empty array and orgSetupChecks is undefined (query was skipped),
+  // that means the user has no orgs and we should proceed to show the setup wizard
+  if (
+    userOrgs === undefined ||
+    (userOrgs.length > 0 && orgSetupChecks === undefined)
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Spinner className="size-5 animate-spin text-muted-foreground" />

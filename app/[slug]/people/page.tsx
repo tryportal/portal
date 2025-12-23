@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { InvitePeopleDialog } from "@/components/invite-people-dialog";
 
 // Type for member data
 type MemberWithUserData = {
@@ -60,6 +61,7 @@ export default function PeoplePage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Resolve params
   React.useEffect(() => {
@@ -226,6 +228,16 @@ export default function PeoplePage({
             <header className="flex h-12 shrink-0 items-center gap-2 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
               <UsersIcon className="size-5 text-[#26251E]" weight="fill" />
               <h1 className="text-base font-semibold text-[#26251E]">People</h1>
+              <div className="ml-auto">
+                <Button
+                  onClick={() => setInviteDialogOpen(true)}
+                  size="sm"
+                  className="bg-[#26251E] hover:bg-[#26251E]/90 text-white"
+                >
+                  <UserIcon className="size-4 mr-2" weight="bold" />
+                  Invite
+                </Button>
+              </div>
             </header>
 
             {/* Content */}
@@ -337,6 +349,15 @@ export default function PeoplePage({
           </div>
         </main>
       </div>
+
+      {/* Invite Dialog */}
+      {orgBySlug?._id && (
+        <InvitePeopleDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          organizationId={orgBySlug._id}
+        />
+      )}
     </div>
   );
 }
