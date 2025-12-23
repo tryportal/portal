@@ -34,6 +34,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CreateCategoryDialog } from "@/components/create-category-dialog"
 import { CreateChannelDialog } from "@/components/create-channel-dialog"
+import { EditChannelDialog } from "@/components/edit-channel-dialog"
 import { getIconComponent } from "@/components/icon-picker"
 import {
   DndContext,
@@ -68,6 +69,7 @@ interface SortableChannelProps {
   isActive: boolean
   onSelect: () => void
   isAdmin: boolean
+  onEdit: () => void
   onDelete: () => void
 }
 
@@ -76,6 +78,7 @@ function SortableChannel({
   isActive,
   onSelect,
   isAdmin,
+  onEdit,
   onDelete,
 }: SortableChannelProps) {
   const {
@@ -147,7 +150,7 @@ function SortableChannel({
           </DropdownMenuItem>
           {isAdmin && (
             <>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>
                 <PencilIcon className="size-4" />
                 Edit channel
               </DropdownMenuItem>
@@ -179,6 +182,7 @@ interface SortableCategoryProps {
   activeChannelId: string | null
   onChannelSelect: (channelId: string, categoryName: string, channelName: string) => void
   isAdmin: boolean
+  onEditChannel: (channelId: Id<"channels">) => void
   onDeleteChannel: (channelId: Id<"channels">) => void
 }
 
@@ -189,6 +193,7 @@ function SortableCategory({
   activeChannelId,
   onChannelSelect,
   isAdmin,
+  onEditChannel,
   onDeleteChannel,
 }: SortableCategoryProps) {
   const {
@@ -246,6 +251,7 @@ function SortableCategory({
                 isActive={activeChannelId === channel._id}
                 onSelect={() => onChannelSelect(channel._id, category.name, channel.name)}
                 isAdmin={isAdmin}
+                onEdit={() => onEditChannel(channel._id)}
                 onDelete={() => onDeleteChannel(channel._id)}
               />
             ))}
@@ -265,6 +271,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // Dialog states
   const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false)
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false)
+  const [editChannelId, setEditChannelId] = React.useState<Id<"channels"> | null>(null)
 
   // Drag and drop state
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -414,6 +421,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       const encodedChannel = encodeURIComponent(channelName.toLowerCase())
       router.push(`/${currentSlug}/${encodedCategory}/${encodedChannel}`)
     }
+  }
+
+  const handleEditChannel = (channelId: Id<"channels">) => {
+    setEditChannelId(channelId)
   }
 
   const handleDeleteChannel = async (channelId: Id<"channels">) => {
@@ -567,6 +578,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       activeChannelId={activeChannelFromUrl}
                       onChannelSelect={handleChannelSelect}
                       isAdmin={isAdmin}
+                      onEditChannel={handleEditChannel}
                       onDeleteChannel={handleDeleteChannel}
                     />
                   ))}
@@ -624,6 +636,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <CreateChannelDialog
             open={createChannelOpen}
             onOpenChange={setCreateChannelOpen}
+            organizationId={currentOrg._id}
+          />
+          <EditChannelDialog
+            open={editChannelId !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditChannelId(null)
+            }}
+            channelId={editChannelId}
             organizationId={currentOrg._id}
           />
         </>
