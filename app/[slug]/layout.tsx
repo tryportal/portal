@@ -9,7 +9,8 @@ import { api } from "@/convex/_generated/api";
 import { TopNav } from "@/components/preview/top-nav";
 import { Sidebar } from "@/components/preview/sidebar";
 import { mockCategories } from "@/components/preview/mock-data";
-import { Spinner } from "@phosphor-icons/react";
+import { Spinner } from "@phosphor-icons/react/dist/ssr";
+import { NoAccess } from "@/components/no-access";
 
 function WorkspaceLayoutContent({
   children,
@@ -68,34 +69,8 @@ function WorkspaceLayoutContent({
     if (!authLoaded || !isSignedIn || !slug) return;
     if (orgBySlug === undefined || isMember === undefined || userOrgs === undefined) return;
 
-    // If no organization found for this slug, redirect
-    if (orgBySlug === null) {
-      // Try to redirect to user's first org or setup
-      if (userOrgs.length > 0 && userOrgs[0].slug) {
-        router.replace(`/${userOrgs[0].slug}`);
-      } else {
-        router.replace("/setup");
-      }
-      return;
-    }
-
-    // If user is not a member, redirect
-    if (!isMember) {
-      if (userOrgs.length > 0 && userOrgs[0].slug) {
-        router.replace(`/${userOrgs[0].slug}`);
-      } else {
-        router.replace("/setup");
-      }
-      return;
-    }
-  }, [authLoaded, isSignedIn, slug, orgBySlug, isMember, userOrgs, router]);
-
-  // Redirect to setup if user has no organizations
-  React.useEffect(() => {
-    if (authLoaded && isSignedIn && userOrgs !== undefined && userOrgs.length === 0) {
-      router.replace("/setup");
-    }
-  }, [authLoaded, isSignedIn, userOrgs, router]);
+    // Don't automatically redirect - let NoAccess component handle it
+  }, [authLoaded, isSignedIn, slug, orgBySlug, isMember, userOrgs]);
 
   // Clear activeChannel when navigating to People or Settings
   React.useEffect(() => {
@@ -127,7 +102,7 @@ function WorkspaceLayoutContent({
 
   // Show nothing while redirecting
   if (!orgBySlug || !isMember) {
-    return null;
+    return <NoAccess slug={slug} organizationExists={orgBySlug !== null} />;
   }
 
   return (
