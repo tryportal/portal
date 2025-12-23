@@ -255,10 +255,12 @@ function SortableCategory({
         
         {isAdmin && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="opacity-0 group-hover:opacity-100 p-1 text-[#26251E]/40 hover:text-[#26251E] rounded hover:bg-[#26251E]/5">
-                <DotsThreeIcon className="size-3" />
-              </button>
+            <DropdownMenuTrigger
+              render={
+                <button className="opacity-0 group-hover:opacity-100 p-1 text-[#26251E]/40 hover:text-[#26251E] rounded hover:bg-[#26251E]/5" />
+              }
+            >
+              <DotsThreeIcon className="size-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem 
