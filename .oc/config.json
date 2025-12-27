@@ -2,12 +2,12 @@
   "commit": {
     "autoAccept": false,
     "autoStageAll": false,
-    "model": "glm-4.7-free"
+    "model": "grok-code"
   },
   "changelog": {
     "autoSave": false,
     "outputFile": "CHANGELOG.md",
-    "model": "glm-4.7-free"
+    "model": "grok-code"
   },
   "release": {
     "autoTag": false,
