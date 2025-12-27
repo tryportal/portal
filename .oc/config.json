@@ -2,12 +2,12 @@
   "commit": {
     "autoAccept": false,
     "autoStageAll": false,
-    "model": "gpt-5-nano"
+    "model": "glm-4.7-free"
   },
   "changelog": {
     "autoSave": false,
     "outputFile": "CHANGELOG.md",
-    "model": "gpt-5-nano"
+    "model": "glm-4.7-free"
   },
   "release": {
     "autoTag": false,
