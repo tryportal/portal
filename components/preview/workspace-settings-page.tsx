@@ -101,7 +101,7 @@ export function WorkspaceSettingsPage({
 
       // If slug changed, redirect to new URL
       if (organization && slug.trim().toLowerCase() !== organization.slug) {
-        router.push(`/${slug.trim().toLowerCase()}/settings`)
+        router.push(`/w/${slug.trim().toLowerCase()}/settings`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update workspace")
@@ -142,7 +142,7 @@ export function WorkspaceSettingsPage({
       
       if (targetOrg?.slug) {
         // Redirect to another workspace
-        router.push(`/${targetOrg.slug}`)
+        router.push(`/w/${targetOrg.slug}`)
       } else {
         // Fallback to setup if no other workspaces exist
         router.push("/setup")

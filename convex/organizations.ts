@@ -25,6 +25,7 @@ type MemberWithUserData = {
 
 // Reserved routes that cannot be used as workspace slugs
 const RESERVED_ROUTES = [
+  "w",
   "invite",
   "preview",
   "setup",

@@ -107,7 +107,7 @@ export function WorkspaceSettings({
 
       // If slug changed, redirect to new URL
       if (slug.trim().toLowerCase() !== organization.slug) {
-        router.push(`/${slug.trim().toLowerCase()}`)
+        router.push(`/w/${slug.trim().toLowerCase()}`)
       }
 
       onClose()

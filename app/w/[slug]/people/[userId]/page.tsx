@@ -264,7 +264,7 @@ export default function MemberProfilePage({
       });
       
       // Navigate back to people list
-      router.push(`/${slug}/people`);
+      router.push(`/w/${slug}/people`);
     } catch (err) {
       setRemoveError(err instanceof Error ? err.message : "Failed to remove member");
       setRemoveDialogOpen(false);
@@ -286,7 +286,7 @@ export default function MemberProfilePage({
         {/* Header */}
         <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
           <button
-            onClick={() => router.push(`/${slug}/people`)}
+            onClick={() => router.push(`/w/${slug}/people`)}
             className="flex items-center gap-1.5 text-sm text-[#26251E]/60 hover:text-[#26251E] transition-colors"
           >
             <ArrowLeftIcon className="size-4" />
@@ -315,7 +315,7 @@ export default function MemberProfilePage({
                 <p className="text-sm text-[#26251E]/60 mb-4">{error}</p>
                 <Button 
                   variant="outline"
-                  onClick={() => router.push(`/${slug}/people`)}
+                  onClick={() => router.push(`/w/${slug}/people`)}
                 >
                   Back to People
                 </Button>

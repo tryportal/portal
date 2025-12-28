@@ -158,13 +158,13 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   const handleChannelClick = (channelId: Id<"channels">, categoryName: string, channelName: string) => {
     // Navigate to the channel page
     if (orgSlug) {
-      router.push(`/${orgSlug}/${encodeURIComponent(categoryName)}/${encodeURIComponent(channelName)}`)
+      router.push(`/w/${orgSlug}/${encodeURIComponent(categoryName)}/${encodeURIComponent(channelName)}`)
     }
   }
 
   const handleViewAllSaved = () => {
     if (orgSlug) {
-      router.push(`/${orgSlug}/saved`)
+      router.push(`/w/${orgSlug}/saved`)
     }
   }
 

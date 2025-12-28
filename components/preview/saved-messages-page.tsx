@@ -88,7 +88,7 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
   const handleMessageClick = (channelId: string) => {
     const channelInfo = channelMap.get(channelId)
     if (channelInfo && orgSlug) {
-      router.push(`/${orgSlug}/${encodeURIComponent(channelInfo.categoryName)}/${encodeURIComponent(channelInfo.name)}`)
+      router.push(`/w/${orgSlug}/${encodeURIComponent(channelInfo.categoryName)}/${encodeURIComponent(channelInfo.name)}`)
     }
   }
 

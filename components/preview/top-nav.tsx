@@ -42,7 +42,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const { organization: currentOrg, userOrganizations: userOrgs } = useWorkspaceData()
 
   const handleOrganizationSwitch = (orgSlug: string) => {
-    router.push(`/${orgSlug}`)
+    router.push(`/w/${orgSlug}`)
   }
 
   const handleCreateOrganization = () => {

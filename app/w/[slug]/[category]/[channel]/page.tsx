@@ -140,7 +140,7 @@ export default function ChannelPage({
   // Redirect if channel not found (after data is loaded)
   React.useEffect(() => {
     if (channelData === null && routeParams) {
-      router.replace(`/${routeParams.slug}`);
+      router.replace(`/w/${routeParams.slug}`);
     }
   }, [channelData, routeParams, router]);
 
@@ -422,14 +422,14 @@ export default function ChannelPage({
   const handleAvatarClick = (userId: string) => {
     // Navigate to user profile
     if (routeParams) {
-      router.push(`/${routeParams.slug}/people/${userId}`);
+      router.push(`/w/${routeParams.slug}/people/${userId}`);
     }
   };
 
   const handleNameClick = (userId: string) => {
     // Navigate to user profile (same as avatar click)
     if (routeParams) {
-      router.push(`/${routeParams.slug}/people/${userId}`);
+      router.push(`/w/${routeParams.slug}/people/${userId}`);
     }
   };
 

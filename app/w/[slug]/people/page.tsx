@@ -105,7 +105,7 @@ export default function PeoplePage() {
   }, [members, searchQuery]);
 
   const handleMemberClick = (member: MemberWithUserData) => {
-    router.push(`/${slug}/people/${member.userId}`);
+    router.push(`/w/${slug}/people/${member.userId}`);
   };
 
   // Show skeleton while context is loading

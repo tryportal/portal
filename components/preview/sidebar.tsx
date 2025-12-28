@@ -356,10 +356,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const activeChannelFromUrl = React.useMemo(() => {
     if (!pathname || !currentSlug) return null
     const parts = pathname.split("/").filter(Boolean)
-    if (parts.length >= 3 && parts[0] === currentSlug) {
-      // URL format: /slug/category/channel
-      const categoryName = decodeURIComponent(parts[1])
-      const channelName = decodeURIComponent(parts[2])
+    if (parts.length >= 4 && parts[0] === "w" && parts[1] === currentSlug) {
+      // URL format: /w/slug/category/channel
+      const categoryName = decodeURIComponent(parts[2])
+      const channelName = decodeURIComponent(parts[3])
       // Find matching channel
       for (const category of categoriesData || []) {
         if (category.name.toLowerCase() === categoryName.toLowerCase()) {
@@ -458,7 +458,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (currentSlug) {
       const encodedCategory = encodeURIComponent(categoryName.toLowerCase())
       const encodedChannel = encodeURIComponent(channelName.toLowerCase())
-      router.push(`/${currentSlug}/${encodedCategory}/${encodedChannel}`)
+      router.push(`/w/${currentSlug}/${encodedCategory}/${encodedChannel}`)
     }
   }
 
@@ -467,7 +467,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (currentSlug) {
       const encodedCategory = encodeURIComponent(categoryName.toLowerCase())
       const encodedChannel = encodeURIComponent(channelName.toLowerCase())
-      router.prefetch(`/${currentSlug}/${encodedCategory}/${encodedChannel}`)
+      router.prefetch(`/w/${currentSlug}/${encodedCategory}/${encodedChannel}`)
     }
   }
 
@@ -564,7 +564,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 variant={isOverviewActive ? "secondary" : "ghost"}
                 onClick={() => {
                   if (currentSlug) {
-                    router.push(`/${currentSlug}`)
+                    router.push(`/w/${currentSlug}`)
                   }
                 }}
                 className={`w-full justify-start gap-2 ${
@@ -584,7 +584,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 variant={isPeoplePage ? "secondary" : "ghost"}
                 onClick={() => {
                   if (currentSlug) {
-                    router.push(`/${currentSlug}/people`)
+                    router.push(`/w/${currentSlug}/people`)
                   }
                 }}
                 className={`w-full justify-start gap-2 ${
@@ -605,7 +605,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   variant={isSettingsPage ? "secondary" : "ghost"}
                   onClick={() => {
                     if (currentSlug) {
-                      router.push(`/${currentSlug}/settings`)
+                      router.push(`/w/${currentSlug}/settings`)
                     }
                   }}
                   className={`w-full justify-start gap-2 ${

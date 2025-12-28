@@ -54,7 +54,7 @@ export default function Page() {
 
     // If organization is set up, redirect to the org's slug
     if (isOrgSetup === true && targetOrg?.slug) {
-      router.replace(`/${targetOrg.slug}`);
+      router.replace(`/w/${targetOrg.slug}`);
       return;
     }
   }, [authLoaded, isSignedIn, userOrgs, targetOrg, isOrgSetup, router]);

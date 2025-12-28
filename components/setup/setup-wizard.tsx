@@ -29,6 +29,7 @@ type MemberWithUserData = {
 
 // Reserved routes that cannot be used as workspace slugs
 const RESERVED_ROUTES = [
+  "w",
   "invite",
   "preview",
   "setup",
@@ -188,7 +189,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
         await setStep(step + 1);
       } else {
         // Finish setup
-        router.replace(`/${slug}`);
+        router.replace(`/w/${slug}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to save";
@@ -202,7 +203,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     if (step < STEPS.length - 1) {
       setStep(step + 1);
     } else {
-      router.replace(`/${slug}`);
+      router.replace(`/w/${slug}`);
     }
   };
 

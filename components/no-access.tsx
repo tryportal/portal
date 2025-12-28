@@ -17,7 +17,7 @@ export function NoAccess({ slug, organizationExists }: NoAccessProps) {
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
 
   const handleGoToOrganization = (orgSlug: string) => {
-    router.push(`/${orgSlug}`);
+    router.push(`/w/${orgSlug}`);
   };
 
   const handleSetup = () => {

@@ -71,7 +71,7 @@ function SetupContent() {
     }
 
     if (hasSetupOrganizations && !isInSetupFlow && defaultRedirectSlug) {
-      router.replace(`/${defaultRedirectSlug}`);
+      router.replace(`/w/${defaultRedirectSlug}`);
     }
   }, [
     authLoaded,
@@ -141,7 +141,7 @@ function SetupContent() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.replace(`/${defaultRedirectSlug}`)}
+              onClick={() => router.replace(`/w/${defaultRedirectSlug}`)}
               className="gap-1.5 text-muted-foreground"
             >
               <X className="size-4" weight="bold" />

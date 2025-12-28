@@ -52,7 +52,7 @@ export default function InvitePage({
       // Redirect to the organization workspace after a short delay
       setTimeout(() => {
         if (result.slug) {
-          router.replace(`/${result.slug}`);
+          router.replace(`/w/${result.slug}`);
         } else {
           router.replace("/setup");
         }
@@ -142,7 +142,7 @@ export default function InvitePage({
                 : "This invitation has been revoked. Please request a new invitation from your team admin."}
             </p>
             <Button
-              onClick={() => router.push(`/${organization.slug}`)}
+              onClick={() => router.push(`/w/${organization.slug}`)}
               className="mt-4 bg-[#26251E] text-white hover:bg-[#26251E]/90"
             >
               Go to {organization.name}
