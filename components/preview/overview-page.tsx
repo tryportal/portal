@@ -90,7 +90,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   }, [savedMessagesRaw, mentionsRaw, getUserDataAction, userDataCache])
 
   // Format messages
-  const formatMessage = (msg: { _id: Id<"messages">; channelId: Id<"channels">; userId: string; content: string; createdAt: number; editedAt?: number; attachments?: Array<{ storageId: Id<"_storage">; name: string; size: number; type: string }> }): Message | null => {
+  const formatMessage = (msg: { _id: Id<"messages">; channelId?: Id<"channels">; userId: string; content: string; createdAt: number; editedAt?: number; attachments?: Array<{ storageId: Id<"_storage">; name: string; size: number; type: string }> }): Message | null => {
     const cachedUserData = userDataCache[msg.userId]
     const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null)
     const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null)
@@ -127,8 +127,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     }
   }
 
-  const savedMessages = (savedMessagesRaw || []).map(formatMessage).filter((m): m is Message => m !== null)
-  const mentions = (mentionsRaw || []).map(formatMessage).filter((m): m is Message => m !== null)
+  const savedMessages = (savedMessagesRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null)
+  const mentions = (mentionsRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null)
 
   // Create a map of channelId to channel info for quick lookup
   const channelMap = React.useMemo(() => {
@@ -199,13 +199,13 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                 <div className="space-y-3">
                   {savedMessages.map((message) => {
                     const channel = savedMessagesRaw?.find(m => m._id === message.id)
-                    const channelInfo = channel ? channelMap.get(channel.channelId) : null
+                    const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
                     return (
                       <div
                         key={message.id}
                         className="flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-3 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
                         onClick={() => {
-                          if (channel && channelInfo) {
+                          if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
                           }
                         }}
@@ -261,13 +261,13 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                 <div className="space-y-3">
                   {mentions.map((message) => {
                     const channel = mentionsRaw?.find(m => m._id === message.id)
-                    const channelInfo = channel ? channelMap.get(channel.channelId) : null
+                    const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
                     return (
                       <div
                         key={message.id}
                         className="flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-3 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
                         onClick={() => {
-                          if (channel && channelInfo) {
+                          if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
                           }
                         }}

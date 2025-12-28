@@ -4,7 +4,7 @@ import * as React from "react";
 import { WorkspaceProvider, useWorkspace, useWorkspaceData } from "@/components/workspace-context";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { TopNav } from "@/components/preview/top-nav";
 import { Sidebar } from "@/components/preview/sidebar";
 import { NoAccess } from "@/components/no-access";
@@ -16,6 +16,7 @@ function WorkspaceLayoutContent({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   
   const { 
@@ -26,6 +27,23 @@ function WorkspaceLayoutContent({
   } = useWorkspace();
 
   const { membership, isLoading, isError, slug } = useWorkspaceData();
+
+  // Sync activeTab with current route
+  React.useEffect(() => {
+    if (!pathname || !slug) return;
+    
+    if (pathname.includes(`/w/${slug}/messages`)) {
+      setActiveTab("messages");
+    } else if (pathname === `/w/${slug}` || pathname.includes(`/w/${slug}/`)) {
+      // Check if it's a channel route (has category/channel) or just the home page
+      const pathParts = pathname.split("/").filter(Boolean);
+      // If we're at /w/[slug] or /w/[slug]/people etc., it's "home"
+      // If it's /w/[slug]/messages, we already handled it above
+      if (!pathname.includes("/messages")) {
+        setActiveTab("home");
+      }
+    }
+  }, [pathname, slug, setActiveTab]);
 
   // Redirect to sign-in if not authenticated
   React.useEffect(() => {
@@ -72,6 +90,9 @@ function WorkspaceLayoutContent({
     return <NoAccess slug={slug} organizationExists={true} />;
   }
 
+  // Hide sidebar on messages tab
+  const showSidebar = activeTab !== "messages";
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
       {/* Top Navigation */}
@@ -79,11 +100,13 @@ function WorkspaceLayoutContent({
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen((prev) => !prev)}
-        />
+        {/* Sidebar - hidden on messages tab */}
+        {showSidebar && (
+          <Sidebar
+            isOpen={sidebarOpen}
+            onToggle={() => setSidebarOpen((prev) => !prev)}
+          />
+        )}
 
         {/* Page Content - wrapped in React.Suspense for per-page loading states */}
         <React.Suspense fallback={children}>

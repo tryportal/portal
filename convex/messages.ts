@@ -127,18 +127,32 @@ export const getMessage = query({
     const message = await ctx.db.get(args.messageId);
     if (!message) return null;
 
-    // Verify membership through channel
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) return null;
+    // Verify access based on message type
+    if (message.channelId) {
+      // Channel message - verify membership through channel
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) return null;
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+        )
+        .first();
 
-    if (!membership) return null;
+      if (!membership) return null;
+    } else if (message.conversationId) {
+      // DM message - verify participant access
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) return null;
+
+      const userId = identity.subject;
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        return null;
+      }
+    } else {
+      return null; // Invalid message - no channelId or conversationId
+    }
 
     return message;
   },
@@ -401,25 +415,41 @@ export const editMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Check ownership or admin status
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
+    // Verify access based on message type
+    let isAdmin = false;
+    if (message.channelId) {
+      // Channel message - check membership
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) {
+        throw new Error("Channel not found");
+      }
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
 
-    if (!membership) {
-      throw new Error("Not a member of this organization");
+      if (!membership) {
+        throw new Error("Not a member of this organization");
+      }
+      isAdmin = membership.role === "admin";
+    } else if (message.conversationId) {
+      // DM message - verify participant access
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in this conversation");
+      }
+    } else {
+      throw new Error("Invalid message");
     }
 
     const isOwner = message.userId === userId;
-    const isAdmin = membership.role === "admin";
 
     if (!isOwner && !isAdmin) {
       throw new Error("Only message owner or admins can edit messages");
@@ -460,21 +490,36 @@ export const deleteMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Check ownership - only message owner can delete
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
+    // Verify access based on message type
+    if (message.channelId) {
+      // Channel message - check membership
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) {
+        throw new Error("Channel not found");
+      }
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
 
-    if (!membership) {
-      throw new Error("Not a member of this organization");
+      if (!membership) {
+        throw new Error("Not a member of this organization");
+      }
+    } else if (message.conversationId) {
+      // DM message - verify participant access
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in this conversation");
+      }
+    } else {
+      throw new Error("Invalid message");
     }
 
     const isOwner = message.userId === userId;
@@ -890,21 +935,36 @@ export const toggleReaction = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify membership
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
+    // Verify access based on message type
+    if (message.channelId) {
+      // Channel message
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) {
+        throw new Error("Channel not found");
+      }
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
 
-    if (!membership) {
-      throw new Error("Not a member of this organization");
+      if (!membership) {
+        throw new Error("Not a member of this organization");
+      }
+    } else if (message.conversationId) {
+      // DM message
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in this conversation");
+      }
+    } else {
+      throw new Error("Invalid message");
     }
 
     const currentReactions = message.reactions || [];
@@ -930,7 +990,7 @@ export const toggleReaction = mutation({
 });
 
 /**
- * Pin or unpin a message
+ * Pin or unpin a message (only for channel messages)
  */
 export const togglePin = mutation({
   args: { messageId: v.id("messages") },
@@ -944,6 +1004,11 @@ export const togglePin = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) {
       throw new Error("Message not found");
+    }
+
+    // Pinning is only for channel messages
+    if (!message.channelId) {
+      throw new Error("Can only pin channel messages");
     }
 
     // Verify membership and admin status
@@ -993,21 +1058,36 @@ export const saveMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify membership
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
+    // Verify access based on message type
+    if (message.channelId) {
+      // Channel message
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) {
+        throw new Error("Channel not found");
+      }
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
 
-    if (!membership) {
-      throw new Error("Not a member of this organization");
+      if (!membership) {
+        throw new Error("Not a member of this organization");
+      }
+    } else if (message.conversationId) {
+      // DM message
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in this conversation");
+      }
+    } else {
+      throw new Error("Invalid message");
     }
 
     // Check if already saved
@@ -1136,7 +1216,9 @@ export const getSavedMessages = query({
         const message = await ctx.db.get(ref.messageId);
         if (!message) return null;
 
-        // Verify the message is in a channel belonging to this organization
+        // Only include channel messages (not DMs) and verify org membership
+        if (!message.channelId) return null;
+
         const channel = await ctx.db.get(message.channelId);
         if (!channel || channel.organizationId !== args.organizationId) return null;
 
@@ -1183,18 +1265,31 @@ export const getMessageReplies = query({
     const message = await ctx.db.get(args.messageId);
     if (!message) return [];
 
-    // Verify membership
-    const channel = await ctx.db.get(message.channelId);
-    if (!channel) return [];
+    // Verify access based on message type
+    if (message.channelId) {
+      // Channel message
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) return [];
 
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
-      )
-      .first();
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+        )
+        .first();
 
-    if (!membership) return [];
+      if (!membership) return [];
+    } else if (message.conversationId) {
+      // DM message
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) return [];
+
+      if (conversation.participant1Id !== identity.subject && conversation.participant2Id !== identity.subject) {
+        return [];
+      }
+    } else {
+      return [];
+    }
 
     // Get all replies to this message
     const replies = await ctx.db
@@ -1235,5 +1330,676 @@ export const getOrganizationMembers = query({
       userId: m.userId,
       role: m.role,
     }));
+  },
+});
+
+// ============================================================================
+// Direct Message Functions
+// ============================================================================
+
+/**
+ * Helper function to verify conversation access
+ */
+async function checkConversationAccess(
+  ctx: { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: { get: Function } },
+  conversationId: Id<"conversations">
+): Promise<{
+  userId: string;
+  conversation: Doc<"conversations">;
+  otherParticipantId: string;
+}> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const userId = identity.subject;
+  const conversation = await ctx.db.get(conversationId);
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+
+  // Verify user is a participant
+  if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+    throw new Error("Not a participant in this conversation");
+  }
+
+  const otherParticipantId = conversation.participant1Id === userId
+    ? conversation.participant2Id
+    : conversation.participant1Id;
+
+  return { userId, conversation, otherParticipantId };
+}
+
+/**
+ * Get messages for a conversation with pagination
+ */
+export const getConversationMessages = query({
+  args: {
+    conversationId: v.id("conversations"),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.number()), // createdAt timestamp for cursor-based pagination
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { messages: [], nextCursor: null, hasMore: false };
+
+    const userId = identity.subject;
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation) return { messages: [], nextCursor: null, hasMore: false };
+
+    // Verify user is a participant
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      return { messages: [], nextCursor: null, hasMore: false };
+    }
+
+    const limit = args.limit ?? 50;
+
+    // Get messages ordered by creation time
+    let messagesQuery = ctx.db
+      .query("messages")
+      .withIndex("by_conversation_and_created", (q) => q.eq("conversationId", args.conversationId));
+
+    // If we have a cursor, filter to get older messages
+    if (args.cursor) {
+      messagesQuery = messagesQuery.filter((q) =>
+        q.lt(q.field("createdAt"), args.cursor!)
+      );
+    }
+
+    // Get one extra to check if there are more
+    const messages = await messagesQuery
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = messages.length > limit;
+    const resultMessages = hasMore ? messages.slice(0, limit) : messages;
+
+    // Reverse to get chronological order for display
+    const chronologicalMessages = resultMessages.reverse();
+
+    // Next cursor is the oldest message's createdAt
+    const nextCursor = hasMore && resultMessages.length > 0
+      ? resultMessages[resultMessages.length - 1].createdAt
+      : null;
+
+    return {
+      messages: chronologicalMessages,
+      nextCursor,
+      hasMore
+    };
+  },
+});
+
+/**
+ * Send a direct message to a conversation
+ */
+export const sendDirectMessage = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    content: v.string(),
+    attachments: v.optional(v.array(v.object({
+      storageId: v.id("_storage"),
+      name: v.string(),
+      size: v.number(),
+      type: v.string(),
+    }))),
+    parentMessageId: v.optional(v.id("messages")),
+  },
+  handler: async (ctx, args) => {
+    const { userId, conversation } = await checkConversationAccess(ctx, args.conversationId);
+
+    // Validate content
+    if (!args.content.trim() && (!args.attachments || args.attachments.length === 0)) {
+      throw new Error("Message must have content or attachments");
+    }
+
+    // Validate attachment sizes
+    if (args.attachments) {
+      for (const attachment of args.attachments) {
+        if (attachment.size > MAX_FILE_SIZE) {
+          throw new Error(`File "${attachment.name}" exceeds the 5MB limit`);
+        }
+      }
+    }
+
+    // If replying, verify parent message exists and is in the same conversation
+    let parentMessage: Doc<"messages"> | null = null;
+    if (args.parentMessageId) {
+      parentMessage = await ctx.db.get(args.parentMessageId);
+      if (!parentMessage) {
+        throw new Error("Parent message not found");
+      }
+      if (parentMessage.conversationId !== args.conversationId) {
+        throw new Error("Cannot reply to a message in a different conversation");
+      }
+    }
+
+    // Parse mentions from content
+    const mentions = parseMentions(args.content);
+
+    // If replying, add the parent message author to mentions
+    if (parentMessage && parentMessage.userId !== userId) {
+      if (!mentions.includes(parentMessage.userId)) {
+        mentions.push(parentMessage.userId);
+      }
+    }
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      userId,
+      content: args.content.trim(),
+      attachments: args.attachments,
+      createdAt: Date.now(),
+      parentMessageId: args.parentMessageId,
+      mentions: mentions.length > 0 ? mentions : undefined,
+    });
+
+    // Update conversation's lastMessageAt
+    await ctx.db.patch(args.conversationId, {
+      lastMessageAt: Date.now(),
+    });
+
+    // Clear typing indicator for this user in this conversation
+    const typingIndicator = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation_and_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", userId)
+      )
+      .first();
+
+    if (typingIndicator) {
+      await ctx.db.delete(typingIndicator._id);
+    }
+
+    return messageId;
+  },
+});
+
+/**
+ * Edit a direct message
+ */
+export const editDirectMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    // Ensure this is a DM message
+    if (!message.conversationId) {
+      throw new Error("Not a direct message");
+    }
+
+    // Verify conversation access
+    const conversation = await ctx.db.get(message.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      throw new Error("Not a participant in this conversation");
+    }
+
+    // Only message owner can edit
+    if (message.userId !== userId) {
+      throw new Error("Only message owner can edit messages");
+    }
+
+    // Validate content
+    if (!args.content.trim()) {
+      throw new Error("Message content cannot be empty");
+    }
+
+    // Parse mentions from content
+    const mentions = parseMentions(args.content);
+
+    await ctx.db.patch(args.messageId, {
+      content: args.content.trim(),
+      editedAt: Date.now(),
+      mentions: mentions.length > 0 ? mentions : undefined,
+    });
+
+    return args.messageId;
+  },
+});
+
+/**
+ * Delete a direct message
+ */
+export const deleteDirectMessage = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    // Ensure this is a DM message
+    if (!message.conversationId) {
+      throw new Error("Not a direct message");
+    }
+
+    // Verify conversation access
+    const conversation = await ctx.db.get(message.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      throw new Error("Not a participant in this conversation");
+    }
+
+    // Only message owner can delete
+    if (message.userId !== userId) {
+      throw new Error("Only the message owner can delete messages");
+    }
+
+    // Delete attachments from storage
+    if (message.attachments) {
+      for (const attachment of message.attachments) {
+        try {
+          await ctx.storage.delete(attachment.storageId);
+        } catch {
+          // Ignore deletion errors for attachments
+        }
+      }
+    }
+
+    // Delete any saved message references
+    const savedRefs = await ctx.db
+      .query("savedMessages")
+      .filter((q) => q.eq(q.field("messageId"), args.messageId))
+      .collect();
+
+    for (const savedRef of savedRefs) {
+      await ctx.db.delete(savedRef._id);
+    }
+
+    await ctx.db.delete(args.messageId);
+    return { success: true };
+  },
+});
+
+/**
+ * Toggle reaction on a direct message
+ */
+export const toggleDirectMessageReaction = mutation({
+  args: {
+    messageId: v.id("messages"),
+    emoji: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    // Ensure this is a DM message
+    if (!message.conversationId) {
+      throw new Error("Not a direct message");
+    }
+
+    // Verify conversation access
+    const conversation = await ctx.db.get(message.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      throw new Error("Not a participant in this conversation");
+    }
+
+    const currentReactions = message.reactions || [];
+    const existingReactionIndex = currentReactions.findIndex(
+      (r) => r.userId === userId && r.emoji === args.emoji
+    );
+
+    let newReactions;
+    if (existingReactionIndex >= 0) {
+      // Remove the reaction
+      newReactions = currentReactions.filter((_, i) => i !== existingReactionIndex);
+    } else {
+      // Add the reaction
+      newReactions = [...currentReactions, { userId, emoji: args.emoji }];
+    }
+
+    await ctx.db.patch(args.messageId, {
+      reactions: newReactions.length > 0 ? newReactions : undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
+// Direct Message Typing Indicators
+// ============================================================================
+
+/**
+ * Set typing status for a user in a conversation
+ */
+export const setTypingInConversation = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const { userId } = await checkConversationAccess(ctx, args.conversationId);
+
+    // Upsert typing indicator
+    const existingIndicator = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation_and_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", userId)
+      )
+      .first();
+
+    if (existingIndicator) {
+      await ctx.db.patch(existingIndicator._id, {
+        lastTypingAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("typingIndicators", {
+        conversationId: args.conversationId,
+        userId,
+        lastTypingAt: Date.now(),
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Clear typing status for a user in a conversation
+ */
+export const clearTypingInConversation = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    const typingIndicator = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation_and_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", userId)
+      )
+      .first();
+
+    if (typingIndicator) {
+      await ctx.db.delete(typingIndicator._id);
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Get users currently typing in a conversation (query for internal use)
+ */
+export const getTypingUsersInConversationQuery = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { typingUsers: [], isAuthorized: false };
+
+    const userId = identity.subject;
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation) return { typingUsers: [], isAuthorized: false };
+
+    // Verify user is a participant
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      return { typingUsers: [], isAuthorized: false };
+    }
+
+    const now = Date.now();
+    const typingIndicators = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .collect();
+
+    // Filter out expired indicators and exclude current user
+    const activeTypingUsers: string[] = typingIndicators
+      .filter((indicator) =>
+        now - indicator.lastTypingAt < TYPING_EXPIRY_MS &&
+        indicator.userId !== userId
+      )
+      .map((indicator) => indicator.userId);
+
+    return { typingUsers: activeTypingUsers, isAuthorized: true };
+  },
+});
+
+/**
+ * Get users currently typing in a conversation with user data
+ */
+export const getTypingUsersInConversation = action({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args): Promise<Array<{
+    userId: string;
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+  }>> => {
+    const result = await ctx.runQuery(api.messages.getTypingUsersInConversationQuery, {
+      conversationId: args.conversationId,
+    });
+
+    if (!result.isAuthorized || result.typingUsers.length === 0) {
+      return [];
+    }
+
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      return result.typingUsers.map((userId: string) => ({
+        userId,
+        firstName: null,
+        lastName: null,
+        imageUrl: null,
+      }));
+    }
+
+    // Fetch user data from Clerk for each typing user
+    const typingUsersWithData = await Promise.all(
+      result.typingUsers.map(async (userId: string) => {
+        try {
+          const response = await fetch(
+            `https://api.clerk.com/v1/users/${userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${clerkSecretKey}`,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            return {
+              userId,
+              firstName: null,
+              lastName: null,
+              imageUrl: null,
+            };
+          }
+
+          const userData = await response.json();
+          return {
+            userId,
+            firstName: userData.first_name || null,
+            lastName: userData.last_name || null,
+            imageUrl: userData.image_url || null,
+          };
+        } catch {
+          return {
+            userId,
+            firstName: null,
+            lastName: null,
+            imageUrl: null,
+          };
+        }
+      })
+    );
+
+    return typingUsersWithData;
+  },
+});
+
+// ============================================================================
+// User Search for DMs
+// ============================================================================
+
+/**
+ * Search for users to start a DM with
+ * - For organization members: search by name
+ * - For external users: search by email via Clerk API
+ */
+export const searchUsersForDM = action({
+  args: {
+    organizationId: v.id("organizations"),
+    query: v.string(),
+  },
+  handler: async (ctx, args): Promise<Array<{
+    userId: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+    isOrgMember: boolean;
+  }>> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const currentUserId = identity.subject;
+    const query = args.query.trim().toLowerCase();
+
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      return [];
+    }
+
+    const results: Array<{
+      userId: string;
+      email: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      imageUrl: string | null;
+      isOrgMember: boolean;
+    }> = [];
+
+    // Check if query looks like an email
+    const isEmailQuery = query.includes("@");
+
+    if (isEmailQuery) {
+      // Search Clerk for user by email
+      try {
+        const response = await fetch(
+          `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${clerkSecretKey}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const users = await response.json();
+          for (const user of users) {
+            if (user.id !== currentUserId) {
+              // Check if this user is an org member
+              const membership = await ctx.runQuery(api.organizations.checkUserMembership, {
+                organizationId: args.organizationId,
+                userId: user.id,
+              });
+
+              results.push({
+                userId: user.id,
+                email: user.email_addresses?.[0]?.email_address || null,
+                firstName: user.first_name || null,
+                lastName: user.last_name || null,
+                imageUrl: user.image_url || null,
+                isOrgMember: membership?.isMember ?? false,
+              });
+            }
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+    } else {
+      // Search organization members by name
+      const members = await ctx.runQuery(api.messages.getOrganizationMembers, {
+        organizationId: args.organizationId,
+      });
+
+      // Get user data for each member
+      const memberUserIds = members.map((m) => m.userId).filter((id) => id !== currentUserId);
+
+      for (const memberId of memberUserIds) {
+        try {
+          const response = await fetch(
+            `https://api.clerk.com/v1/users/${memberId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${clerkSecretKey}`,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const userData = await response.json();
+            const fullName = `${userData.first_name || ""} ${userData.last_name || ""}`.toLowerCase();
+            const email = userData.email_addresses?.[0]?.email_address || "";
+
+            // Match against name or email
+            if (fullName.includes(query) || email.toLowerCase().includes(query)) {
+              results.push({
+                userId: memberId,
+                email: email || null,
+                firstName: userData.first_name || null,
+                lastName: userData.last_name || null,
+                imageUrl: userData.image_url || null,
+                isOrgMember: true,
+              });
+            }
+          }
+        } catch {
+          // Ignore individual user fetch errors
+        }
+      }
+    }
+
+    // Limit results
+    return results.slice(0, 10);
   },
 });

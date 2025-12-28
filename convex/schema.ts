@@ -2,6 +2,18 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Direct message conversations between two users
+  conversations: defineTable({
+    participant1Id: v.string(), // Clerk user ID (always the lower ID alphabetically for consistency)
+    participant2Id: v.string(), // Clerk user ID (always the higher ID alphabetically)
+    createdAt: v.number(),
+    lastMessageAt: v.number(), // For sorting conversations by recent activity
+  })
+    .index("by_participant1", ["participant1Id"])
+    .index("by_participant2", ["participant2Id"])
+    .index("by_participants", ["participant1Id", "participant2Id"])
+    .index("by_last_message", ["lastMessageAt"]),
+
   channelCategories: defineTable({
     organizationId: v.id("organizations"),
     name: v.string(),
@@ -72,7 +84,9 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   messages: defineTable({
-    channelId: v.id("channels"),
+    // Either channelId OR conversationId must be present (not both)
+    channelId: v.optional(v.id("channels")), // For channel messages
+    conversationId: v.optional(v.id("conversations")), // For direct messages
     userId: v.string(), // Clerk user ID
     content: v.string(),
     attachments: v.optional(v.array(v.object({
@@ -94,6 +108,8 @@ export default defineSchema({
   })
     .index("by_channel", ["channelId"])
     .index("by_channel_and_created", ["channelId", "createdAt"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_conversation_and_created", ["conversationId", "createdAt"])
     .index("by_parent_message", ["parentMessageId"]),
 
   savedMessages: defineTable({
@@ -106,10 +122,14 @@ export default defineSchema({
     .index("by_user_and_message", ["userId", "messageId"]),
 
   typingIndicators: defineTable({
-    channelId: v.id("channels"),
+    // Either channelId OR conversationId must be present (not both)
+    channelId: v.optional(v.id("channels")), // For channel typing
+    conversationId: v.optional(v.id("conversations")), // For DM typing
     userId: v.string(), // Clerk user ID
     lastTypingAt: v.number(),
   })
     .index("by_channel", ["channelId"])
-    .index("by_channel_and_user", ["channelId", "userId"]),
+    .index("by_channel_and_user", ["channelId", "userId"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_conversation_and_user", ["conversationId", "userId"]),
 });

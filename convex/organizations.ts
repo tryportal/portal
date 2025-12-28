@@ -489,6 +489,41 @@ export const getUserMembership = query({
 });
 
 /**
+ * Check if a specific user is a member of an organization
+ * Used internally for DM user search
+ */
+export const checkUserMembership = query({
+  args: { 
+    organizationId: v.id("organizations"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    // Verify the caller is a member of this organization
+    const callerMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .first();
+
+    if (!callerMembership) return null;
+
+    // Check if the target user is a member
+    const targetMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", args.userId)
+      )
+      .first();
+
+    return { isMember: !!targetMembership };
+  },
+});
+
+/**
  * Get members of an organization (query for internal use)
  */
 export const getOrganizationMembersQuery = query({

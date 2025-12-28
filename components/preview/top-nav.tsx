@@ -49,6 +49,20 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
     router.push("/setup?new=true")
   }
 
+  const handleTabChange = (tabId: string) => {
+    onTabChange(tabId)
+    
+    // Navigate based on tab
+    if (currentSlug) {
+      if (tabId === "home") {
+        router.push(`/w/${currentSlug}`)
+      } else if (tabId === "messages") {
+        router.push(`/w/${currentSlug}/messages`)
+      }
+      // Inbox tab can be implemented later
+    }
+  }
+
   return (
     <header className="grid h-14 grid-cols-3 items-center border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
       {/* Left: Portal Logo */}
@@ -155,7 +169,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                 key={tab.id}
                 variant={isActive ? "secondary" : "ghost"}
                 size="default"
-                onClick={() => onTabChange(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`gap-1.5 ${
                   isActive
                     ? "bg-[#26251E]/10 text-[#26251E]"

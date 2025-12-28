@@ -85,8 +85,9 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
     return map
   }, [categoriesData])
 
-  const handleMessageClick = (channelId: string) => {
-    const channelInfo = channelMap.get(channelId)
+  const handleMessageClick = (channelId: string | undefined) => {
+    if (!channelId) return
+    const channelInfo = channelMap.get(channelId as Id<"channels">)
     if (channelInfo && orgSlug) {
       router.push(`/w/${orgSlug}/${encodeURIComponent(channelInfo.categoryName)}/${encodeURIComponent(channelInfo.name)}`)
     }
@@ -167,7 +168,7 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
           ) : (
             <div className="space-y-2">
               {formattedMessages.map((message) => {
-                const channelInfo = channelMap.get(message.channelId)
+                const channelInfo = message.channelId ? channelMap.get(message.channelId as Id<"channels">) : null
                 return (
                   <div
                     key={message.id}
