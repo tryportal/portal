@@ -17,6 +17,8 @@ import {
   DownloadSimpleIcon,
   ImageIcon,
   BookmarkSimpleIcon,
+  CheckIcon,
+  XIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,6 +37,7 @@ import {
 } from "@/components/ui/tooltip"
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
+import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -220,6 +223,7 @@ function MessageItem({
   message, 
   currentUserId,
   onDeleteMessage,
+  onEditMessage,
   onReply,
   onForward,
   onReaction,
@@ -236,6 +240,7 @@ function MessageItem({
   message: Message
   currentUserId?: string
   onDeleteMessage?: (messageId: string) => void
+  onEditMessage?: (messageId: string, content: string) => void
   onReply?: (messageId: string) => void
   onForward?: (messageId: string) => void
   onReaction?: (messageId: string, emoji: string) => void
@@ -250,6 +255,8 @@ function MessageItem({
   isGrouped?: boolean
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
+  const [isEditing, setIsEditing] = React.useState(false)
+  const [editContent, setEditContent] = React.useState(message.content)
   const isOwner = currentUserId === message.user.id
 
   const handleCopy = () => {
@@ -261,6 +268,33 @@ function MessageItem({
       onUnsave?.(message.id)
     } else {
       onSave?.(message.id)
+    }
+  }
+
+  const handleEditClick = () => {
+    setIsEditing(true)
+    setEditContent(message.content)
+  }
+
+  const handleEditSave = () => {
+    if (editContent.trim() && editContent !== message.content) {
+      onEditMessage?.(message.id, editContent)
+    }
+    setIsEditing(false)
+  }
+
+  const handleEditCancel = () => {
+    setIsEditing(false)
+    setEditContent(message.content)
+  }
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleEditSave()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      handleEditCancel()
     }
   }
 
@@ -332,15 +366,57 @@ function MessageItem({
               )}
             </div>
           )}
-          {message.content && (
-            <div className="text-sm text-[#26251E]/90 leading-[1.46] prose prose-sm max-w-none" style={{ marginTop: isGrouped ? "0" : "0" }}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={MarkdownComponents}
-              >
-                {processedContent}
-              </ReactMarkdown>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                className="min-h-[80px] text-sm"
+                autoFocus
+              />
+              <div className="flex gap-2 text-xs text-[#26251E]/70">
+                <div className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-[#26251E]/5 rounded border border-[#26251E]/10">Enter</kbd>
+                  <span>to save</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-[#26251E]/5 rounded border border-[#26251E]/10">Esc</kbd>
+                  <span>to cancel</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleEditSave}
+                  disabled={!editContent.trim() || editContent === message.content}
+                >
+                  <CheckIcon className="size-4 mr-1" />
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEditCancel}
+                >
+                  <XIcon className="size-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
             </div>
+          ) : (
+            <>
+              {message.content && (
+                <div className="text-sm text-[#26251E]/90 leading-[1.46] prose prose-sm max-w-none" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={MarkdownComponents}
+                  >
+                    {processedContent}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </>
           )}
           
           {/* Attachments */}
@@ -451,7 +527,7 @@ function MessageItem({
                 )}
               </DropdownMenuItem>
               {isOwner && (
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleEditClick}>
                   <PencilIcon className="size-4" />
                   Edit message
                 </DropdownMenuItem>
@@ -501,6 +577,7 @@ export function MessageList({
   messages, 
   currentUserId, 
   onDeleteMessage,
+  onEditMessage,
   onReply,
   onForward,
   onReaction,
@@ -644,6 +721,7 @@ export function MessageList({
                     message={message} 
                     currentUserId={currentUserId}
                     onDeleteMessage={onDeleteMessage}
+                    onEditMessage={onEditMessage}
                     onReply={onReply}
                     onForward={onForward}
                     onReaction={onReaction}

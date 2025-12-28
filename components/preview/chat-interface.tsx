@@ -55,7 +55,6 @@ export function ChatInterface({
   messages,
   onSendMessage,
   onDeleteMessage,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onEditMessage,
   onReaction,
   onPin,
@@ -131,6 +130,7 @@ export function ChatInterface({
         messages={messages} 
         currentUserId={currentUserId}
         onDeleteMessage={onDeleteMessage}
+        onEditMessage={onEditMessage}
         onReply={handleReply}
         onForward={handleForward}
         onReaction={onReaction}

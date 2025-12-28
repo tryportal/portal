@@ -86,6 +86,7 @@ export default function ChannelPage({
   // Mutations
   const sendMessage = useMutation(api.messages.sendMessage);
   const deleteMessage = useMutation(api.messages.deleteMessage);
+  const editMessage = useMutation(api.messages.editMessage);
   const setTyping = useMutation(api.messages.setTyping);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
   const toggleReaction = useMutation(api.messages.toggleReaction);
@@ -360,6 +361,17 @@ export default function ChannelPage({
     }
   };
 
+  const handleEditMessage = async (messageId: string, content: string) => {
+    try {
+      await editMessage({ 
+        messageId: messageId as Id<"messages">, 
+        content 
+      });
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+    }
+  };
+
   const handleTyping = async () => {
     if (!channelId || !canPost) return;
 
@@ -443,6 +455,7 @@ export default function ChannelPage({
         messages={messages}
         onSendMessage={handleSendMessage}
         onDeleteMessage={handleDeleteMessage}
+        onEditMessage={handleEditMessage}
         onReaction={handleReaction}
         onPin={handlePin}
         onSave={handleSave}
