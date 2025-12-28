@@ -46,6 +46,12 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   // Get total unread message count for DMs
   const totalUnreadCount = useQuery(api.conversations.getTotalUnreadCount) ?? 0
 
+  // Get total inbox count (mentions + DMs)
+  const inboxCount = useQuery(
+    api.messages.getTotalInboxCount,
+    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+  )
+
   const handleOrganizationSwitch = (orgSlug: string) => {
     router.push(`/w/${orgSlug}`)
   }
@@ -63,8 +69,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         router.push(`/w/${currentSlug}`)
       } else if (tabId === "messages") {
         router.push(`/w/${currentSlug}/messages`)
+      } else if (tabId === "inbox") {
+        router.push(`/w/${currentSlug}/inbox`)
       }
-      // Inbox tab can be implemented later
     }
   }
 
@@ -169,7 +176,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
-            const showBadge = tab.id === "messages" && totalUnreadCount > 0
+            const showMessagesBadge = tab.id === "messages" && totalUnreadCount > 0
+            const showInboxBadge = tab.id === "inbox" && (inboxCount?.total ?? 0) > 0
+            const badgeCount = tab.id === "messages" ? totalUnreadCount : (inboxCount?.total ?? 0)
             return (
               <Button
                 key={tab.id}
@@ -184,9 +193,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               >
                 <Icon weight={isActive ? "fill" : "regular"} className="size-4" />
                 {tab.label}
-                {showBadge && (
+                {(showMessagesBadge || showInboxBadge) && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-                    {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                    {badgeCount > 99 ? "99+" : badgeCount}
                   </span>
                 )}
               </Button>

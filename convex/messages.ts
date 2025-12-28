@@ -2073,3 +2073,410 @@ export const searchUsersForDM = action({
     return results.slice(0, 10);
   },
 });
+
+// ============================================================================
+// Inbox Queries (Unread Mentions & DMs)
+// ============================================================================
+
+/**
+ * Get unread mentions for the current user in a specific organization
+ * Returns channel messages where the user was mentioned and hasn't marked as read
+ */
+export const getUnreadMentions = query({
+  args: { organizationId: v.id("organizations"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 50;
+
+    // Check membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return [];
+
+    // Get all channels in the organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = channels.map((c) => c._id);
+
+    // Get user's read mention statuses
+    const readStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readMessageIds = new Set(readStatuses.map((rs) => rs.messageId));
+
+    // Get all messages from these channels that mention the current user
+    const allMentions: Array<Doc<"messages"> & { channelName?: string; categoryName?: string }> = [];
+
+    for (const channelId of channelIds) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
+        .order("desc")
+        .collect();
+
+      const mentionedMessages = messages.filter((m) => {
+        // Check if user is mentioned
+        const hasMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+        // Check if not already read
+        const isUnread = !readMessageIds.has(m._id);
+        // Not from current user
+        const notFromSelf = m.userId !== userId;
+        return hasMention && isUnread && notFromSelf;
+      });
+
+      // Get channel info for context
+      const channel = channels.find((c) => c._id === channelId);
+      if (channel) {
+        const category = await ctx.db.get(channel.categoryId);
+        mentionedMessages.forEach((m) => {
+          allMentions.push({
+            ...m,
+            channelName: channel.name,
+            categoryName: category?.name,
+          });
+        });
+      }
+    }
+
+    // Sort by createdAt descending and limit
+    allMentions.sort((a, b) => b.createdAt - a.createdAt);
+    return allMentions.slice(0, limit);
+  },
+});
+
+/**
+ * Get unread DMs grouped by sender
+ * Returns conversations with unread messages, grouped by the other participant
+ */
+export const getUnreadDMsGroupedBySender = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Get all conversations for this user
+    const conversationsAsP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const conversationsAsP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
+    const uniqueConversations = Array.from(
+      new Map(allConversations.map((c) => [c._id, c])).values()
+    );
+
+    // Get all read statuses for this user
+    const readStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readStatusMap = new Map(
+      readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
+    );
+
+    const groupedDMs: Array<{
+      conversationId: Id<"conversations">;
+      otherParticipantId: string;
+      unreadCount: number;
+      lastMessage: {
+        content: string;
+        createdAt: number;
+        userId: string;
+      } | null;
+    }> = [];
+
+    // Count unread messages in each conversation
+    for (const conv of uniqueConversations) {
+      const lastReadAt = readStatusMap.get(conv._id) ?? 0;
+
+      const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) =>
+          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+        )
+        .collect();
+
+      // Filter out messages from current user
+      const unreadFromOther = unreadMessages.filter((msg) => msg.userId !== userId);
+
+      if (unreadFromOther.length > 0) {
+        // Get the last message
+        const lastMessage = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation_and_created", (q) => q.eq("conversationId", conv._id))
+          .order("desc")
+          .first();
+
+        const otherParticipantId = conv.participant1Id === userId
+          ? conv.participant2Id
+          : conv.participant1Id;
+
+        groupedDMs.push({
+          conversationId: conv._id,
+          otherParticipantId,
+          unreadCount: unreadFromOther.length,
+          lastMessage: lastMessage
+            ? {
+                content: lastMessage.content,
+                createdAt: lastMessage.createdAt,
+                userId: lastMessage.userId,
+              }
+            : null,
+        });
+      }
+    }
+
+    // Sort by last message time descending
+    groupedDMs.sort((a, b) => 
+      (b.lastMessage?.createdAt ?? 0) - (a.lastMessage?.createdAt ?? 0)
+    );
+
+    return groupedDMs;
+  },
+});
+
+/**
+ * Get total inbox count (unread mentions + unread DMs) for badge display
+ */
+export const getTotalInboxCount = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { mentions: 0, dms: 0, total: 0 };
+
+    const userId = identity.subject;
+
+    // Check membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return { mentions: 0, dms: 0, total: 0 };
+
+    // Count unread mentions
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = channels.map((c) => c._id);
+
+    const readStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readMessageIds = new Set(readStatuses.map((rs) => rs.messageId));
+
+    let mentionCount = 0;
+
+    for (const channelId of channelIds) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
+        .collect();
+
+      const unreadMentions = messages.filter((m) => {
+        const hasMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+        const isUnread = !readMessageIds.has(m._id);
+        const notFromSelf = m.userId !== userId;
+        return hasMention && isUnread && notFromSelf;
+      });
+
+      mentionCount += unreadMentions.length;
+    }
+
+    // Count unread DMs
+    const conversationsAsP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const conversationsAsP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
+    const uniqueConversations = Array.from(
+      new Map(allConversations.map((c) => [c._id, c])).values()
+    );
+
+    const convReadStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const convReadStatusMap = new Map(
+      convReadStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
+    );
+
+    let dmCount = 0;
+
+    for (const conv of uniqueConversations) {
+      const lastReadAt = convReadStatusMap.get(conv._id) ?? 0;
+
+      const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) =>
+          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+        )
+        .collect();
+
+      dmCount += unreadMessages.filter((msg) => msg.userId !== userId).length;
+    }
+
+    return {
+      mentions: mentionCount,
+      dms: dmCount,
+      total: mentionCount + dmCount,
+    };
+  },
+});
+
+// ============================================================================
+// Inbox Mutations (Mark Mentions as Read)
+// ============================================================================
+
+/**
+ * Mark a single mention as read
+ */
+export const markMentionAsRead = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const message = await ctx.db.get(args.messageId);
+
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    // Verify the user was actually mentioned
+    if (!message.mentions || !message.mentions.includes(userId)) {
+      throw new Error("User was not mentioned in this message");
+    }
+
+    // Check if already marked as read
+    const existingStatus = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user_and_message", (q) =>
+        q.eq("userId", userId).eq("messageId", args.messageId)
+      )
+      .first();
+
+    if (existingStatus) {
+      // Already marked as read
+      return { success: true, alreadyRead: true };
+    }
+
+    // Create new read status
+    await ctx.db.insert("mentionReadStatus", {
+      userId,
+      messageId: args.messageId,
+      readAt: Date.now(),
+    });
+
+    return { success: true, alreadyRead: false };
+  },
+});
+
+/**
+ * Mark all mentions as read for a specific organization
+ */
+export const markAllMentionsAsRead = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Not a member of this organization");
+    }
+
+    // Get all channels in the organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = channels.map((c) => c._id);
+
+    // Get user's already-read mention statuses
+    const existingReadStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const alreadyReadMessageIds = new Set(existingReadStatuses.map((rs) => rs.messageId));
+
+    // Find all unread mentions and mark them as read
+    let markedCount = 0;
+    const now = Date.now();
+
+    for (const channelId of channelIds) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
+        .collect();
+
+      const unreadMentions = messages.filter((m) => {
+        const hasMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+        const isUnread = !alreadyReadMessageIds.has(m._id);
+        const notFromSelf = m.userId !== userId;
+        return hasMention && isUnread && notFromSelf;
+      });
+
+      for (const mention of unreadMentions) {
+        await ctx.db.insert("mentionReadStatus", {
+          userId,
+          messageId: mention._id,
+          readAt: now,
+        });
+        markedCount++;
+      }
+    }
+
+    return { success: true, markedCount };
+  },
+});

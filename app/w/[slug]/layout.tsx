@@ -34,12 +34,14 @@ function WorkspaceLayoutContent({
     
     if (pathname.includes(`/w/${slug}/messages`)) {
       setActiveTab("messages");
+    } else if (pathname.includes(`/w/${slug}/inbox`)) {
+      setActiveTab("inbox");
     } else if (pathname === `/w/${slug}` || pathname.includes(`/w/${slug}/`)) {
       // Check if it's a channel route (has category/channel) or just the home page
       const pathParts = pathname.split("/").filter(Boolean);
       // If we're at /w/[slug] or /w/[slug]/people etc., it's "home"
-      // If it's /w/[slug]/messages, we already handled it above
-      if (!pathname.includes("/messages")) {
+      // If it's /w/[slug]/messages or /w/[slug]/inbox, we already handled it above
+      if (!pathname.includes("/messages") && !pathname.includes("/inbox")) {
         setActiveTab("home");
       }
     }

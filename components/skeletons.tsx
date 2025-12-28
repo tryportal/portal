@@ -284,6 +284,75 @@ export function OverviewPageSkeleton() {
   );
 }
 
+// Inbox page skeleton
+export function InboxPageSkeleton() {
+  return (
+    <main className="flex-1 overflow-hidden">
+      <div className="flex h-full flex-col bg-[#F7F7F4]">
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <Skeleton className="h-7 w-24 mb-2" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="h-8 w-32 rounded-md" />
+          </div>
+
+          {/* Mentions section */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Skeleton className="size-5 rounded" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="size-5 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-4">
+                  <Skeleton className="size-10 rounded-full flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-12 ml-auto" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4 mt-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* DMs section */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Skeleton className="size-5 rounded" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="size-5 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-4">
+                  <Skeleton className="size-10 rounded-full flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-3 w-12 ml-auto" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 // Full workspace layout skeleton (sidebar + content)
 export function WorkspaceLayoutSkeleton({ children }: { children?: React.ReactNode }) {
   return (

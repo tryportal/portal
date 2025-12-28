@@ -142,4 +142,13 @@ export default defineSchema({
     .index("by_conversation", ["conversationId"])
     .index("by_user", ["userId"])
     .index("by_conversation_and_user", ["conversationId", "userId"]),
+
+  // Tracks which mentions have been read by users (for inbox)
+  mentionReadStatus: defineTable({
+    userId: v.string(), // The user who was mentioned
+    messageId: v.id("messages"), // The message containing the mention
+    readAt: v.number(), // When they read/dismissed it
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_message", ["userId", "messageId"]),
 });
