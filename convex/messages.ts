@@ -334,8 +334,9 @@ export const sendMessage = mutation({
     }
 
     // If replying, verify parent message exists and is in the same channel
+    let parentMessage: Doc<"messages"> | null = null;
     if (args.parentMessageId) {
-      const parentMessage = await ctx.db.get(args.parentMessageId);
+      parentMessage = await ctx.db.get(args.parentMessageId);
       if (!parentMessage) {
         throw new Error("Parent message not found");
       }
@@ -346,6 +347,13 @@ export const sendMessage = mutation({
 
     // Parse mentions from content
     const mentions = parseMentions(args.content);
+    
+    // If replying, add the parent message author to mentions
+    if (parentMessage && parentMessage.userId !== userId) {
+      if (!mentions.includes(parentMessage.userId)) {
+        mentions.push(parentMessage.userId);
+      }
+    }
 
     const messageId = await ctx.db.insert("messages", {
       channelId: args.channelId,
