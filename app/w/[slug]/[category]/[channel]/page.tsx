@@ -421,11 +421,22 @@ export default function ChannelPage({
     }
   };
 
-  const handleForward = async (messageId: string, targetChannelId: string) => {
+  const handleForwardToChannel = async (messageId: string, targetChannelId: string) => {
     try {
       await forwardMessage({ 
         messageId: messageId as Id<"messages">,
         targetChannelId: targetChannelId as Id<"channels">,
+      });
+    } catch (error) {
+      console.error("Failed to forward message:", error);
+    }
+  };
+
+  const handleForwardToConversation = async (messageId: string, targetConversationId: string) => {
+    try {
+      await forwardMessage({ 
+        messageId: messageId as Id<"messages">,
+        targetConversationId: targetConversationId as Id<"conversations">,
       });
     } catch (error) {
       console.error("Failed to forward message:", error);
@@ -460,7 +471,8 @@ export default function ChannelPage({
         onPin={handlePin}
         onSave={handleSave}
         onUnsave={handleUnsave}
-        onForward={handleForward}
+        onForwardToChannel={handleForwardToChannel}
+        onForwardToConversation={handleForwardToConversation}
         onAvatarClick={handleAvatarClick}
         onNameClick={handleNameClick}
         currentUserId={currentUserId}
@@ -474,6 +486,7 @@ export default function ChannelPage({
         userNames={userNames}
         mentionUsers={mentionUsers}
         isAdmin={isAdmin}
+        organizationId={organizationId}
       />
     </div>
   );

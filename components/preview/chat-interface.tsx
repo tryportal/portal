@@ -6,7 +6,9 @@ import { MessageList, type Message } from "./message-list"
 import { MessageInput, type ReplyingTo } from "./message-input"
 import { TypingIndicator } from "@/components/typing-indicator"
 import { PinnedMessagesDialog, type PinnedMessage } from "./pinned-messages-dialog"
+import { ForwardMessageDialog } from "./forward-message-dialog"
 import type { MentionUser } from "./mention-autocomplete"
+import type { Id } from "@/convex/_generated/dataModel"
 
 interface TypingUser {
   userId: string
@@ -32,7 +34,8 @@ interface ChatInterfaceProps {
   onPin?: (messageId: string) => void
   onSave?: (messageId: string) => void
   onUnsave?: (messageId: string) => void
-  onForward?: (messageId: string, targetChannelId: string) => void
+  onForwardToChannel?: (messageId: string, channelId: string) => void
+  onForwardToConversation?: (messageId: string, conversationId: string) => void
   onAvatarClick?: (userId: string) => void
   onNameClick?: (userId: string) => void
   currentUserId?: string
@@ -46,6 +49,7 @@ interface ChatInterfaceProps {
   userNames?: Record<string, string>
   mentionUsers?: MentionUser[]
   isAdmin?: boolean
+  organizationId?: Id<"organizations">
 }
 
 export function ChatInterface({
@@ -60,8 +64,8 @@ export function ChatInterface({
   onPin,
   onSave,
   onUnsave,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onForward,
+  onForwardToChannel,
+  onForwardToConversation,
   onAvatarClick,
   onNameClick,
   currentUserId,
@@ -75,9 +79,15 @@ export function ChatInterface({
   userNames = {},
   mentionUsers = [],
   isAdmin = false,
+  organizationId,
 }: ChatInterfaceProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
   const [pinnedDialogOpen, setPinnedDialogOpen] = React.useState(false)
+  const [forwardDialogOpen, setForwardDialogOpen] = React.useState(false)
+  const [forwardingMessage, setForwardingMessage] = React.useState<{
+    id: string
+    content: string
+  } | null>(null)
 
   // Handle reply button click
   const handleReply = (messageId: string) => {
@@ -96,10 +106,16 @@ export function ChatInterface({
     setReplyingTo(null)
   }
 
-  // Handle forward (placeholder - would need channel selection UI)
+  // Handle forward button click - opens the forward dialog
   const handleForward = (messageId: string) => {
-    // In a full implementation, this would open a channel selection dialog
-    console.log("Forward message:", messageId)
+    const message = messages.find((m) => m.id === messageId)
+    if (message) {
+      setForwardingMessage({
+        id: message.id,
+        content: message.content,
+      })
+      setForwardDialogOpen(true)
+    }
   }
 
   // Handle name click to insert mention
@@ -113,6 +129,16 @@ export function ChatInterface({
     setPinnedDialogOpen(false)
     // In a full implementation, this would scroll to the message
     console.log("Scroll to message:", messageId)
+  }
+
+  // Handle forward to channel
+  const handleForwardToChannel = async (messageId: string, channelId: string) => {
+    await onForwardToChannel?.(messageId, channelId)
+  }
+
+  // Handle forward to conversation
+  const handleForwardToConversation = async (messageId: string, conversationId: string) => {
+    await onForwardToConversation?.(messageId, conversationId)
   }
 
   return (
@@ -171,6 +197,17 @@ export function ChatInterface({
         onMessageClick={handlePinnedMessageClick}
         onUnpin={onPin}
         isAdmin={isAdmin}
+      />
+
+      {/* Forward Message Dialog */}
+      <ForwardMessageDialog
+        open={forwardDialogOpen}
+        onOpenChange={setForwardDialogOpen}
+        messageId={forwardingMessage?.id ?? null}
+        messageContent={forwardingMessage?.content ?? ""}
+        organizationId={organizationId}
+        onForwardToChannel={handleForwardToChannel}
+        onForwardToConversation={handleForwardToConversation}
       />
     </div>
   )

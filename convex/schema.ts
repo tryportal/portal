@@ -132,4 +132,14 @@ export default defineSchema({
     .index("by_channel_and_user", ["channelId", "userId"])
     .index("by_conversation", ["conversationId"])
     .index("by_conversation_and_user", ["conversationId", "userId"]),
+
+  // Tracks the last time a user read a conversation (for unread badges)
+  conversationReadStatus: defineTable({
+    conversationId: v.id("conversations"),
+    userId: v.string(), // Clerk user ID
+    lastReadAt: v.number(), // Timestamp of when user last read the conversation
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_user", ["userId"])
+    .index("by_conversation_and_user", ["conversationId", "userId"]),
 });

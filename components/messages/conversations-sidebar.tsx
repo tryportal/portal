@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useQuery, useAction } from "convex/react"
-import { useRouter, useParams, usePathname } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import {
   PlusIcon,
@@ -41,7 +41,6 @@ interface UserData {
 export function ConversationsSidebar() {
   const router = useRouter()
   const params = useParams()
-  const pathname = usePathname()
   const slug = params?.slug as string
   const conversationId = params?.conversationId as string | undefined
   const { user } = useUser()
@@ -55,6 +54,9 @@ export function ConversationsSidebar() {
   const conversations = useQuery(
     api.conversations.getUserConversations
   ) as ConversationWithDetails[] | undefined
+
+  // Fetch unread counts for all conversations
+  const unreadCounts = useQuery(api.conversations.getUnreadCountsForAllConversations) ?? {}
 
   // Fetch user data for other participants
   const getUserDataAction = useAction(api.messages.getUserData)
@@ -205,6 +207,8 @@ export function ConversationsSidebar() {
               const participantImage = getParticipantImage(conversation.otherParticipantId)
               const isOwnLastMessage = conversation.lastMessage?.userId === user?.id
               const isActive = conversationId === conversation._id
+              const unreadCount = unreadCounts[conversation._id] ?? 0
+              const hasUnread = unreadCount > 0
 
               return (
                 <button
@@ -228,6 +232,10 @@ export function ConversationsSidebar() {
                         {participantInitials}
                       </AvatarFallback>
                     </Avatar>
+                    {/* Unread indicator dot on avatar */}
+                    {hasUnread && !isActive && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#FAFAF8]" />
+                    )}
                   </div>
 
                   {/* Content */}
@@ -235,18 +243,23 @@ export function ConversationsSidebar() {
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn(
                         "text-sm truncate",
-                        isActive ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
+                        isActive ? "font-semibold text-[#26251E]" : hasUnread ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
                       )}>
                         {participantName}
                       </p>
-                      {conversation.lastMessage && (
-                        <span className="text-[10px] text-[#26251E]/40 flex-shrink-0">
-                          {formatTime(conversation.lastMessage.createdAt)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {conversation.lastMessage && (
+                          <span className="text-[10px] text-[#26251E]/40">
+                            {formatTime(conversation.lastMessage.createdAt)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {conversation.lastMessage ? (
-                      <p className="text-xs text-[#26251E]/50 truncate mt-0.5">
+                      <p className={cn(
+                        "text-xs truncate mt-0.5",
+                        hasUnread && !isActive ? "text-[#26251E]/70 font-medium" : "text-[#26251E]/50"
+                      )}>
                         {isOwnLastMessage && (
                           <span className="text-[#26251E]/30">You: </span>
                         )}

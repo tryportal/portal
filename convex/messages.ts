@@ -875,17 +875,27 @@ export const getUserData = action({
 // ============================================================================
 
 /**
- * Forward a message to another channel
+ * Forward a message to another channel or conversation (DM)
+ * Either targetChannelId or targetConversationId must be provided (not both)
  */
 export const forwardMessage = mutation({
   args: {
     messageId: v.id("messages"),
-    targetChannelId: v.id("channels"),
+    targetChannelId: v.optional(v.id("channels")),
+    targetConversationId: v.optional(v.id("conversations")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
+    }
+
+    // Validate that exactly one target is provided
+    if (!args.targetChannelId && !args.targetConversationId) {
+      throw new Error("Must provide either a target channel or conversation");
+    }
+    if (args.targetChannelId && args.targetConversationId) {
+      throw new Error("Cannot forward to both a channel and conversation");
     }
 
     const userId = identity.subject;
@@ -894,24 +904,84 @@ export const forwardMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Check access to target channel
-    const { channel: targetChannel, isAdmin } = await checkChannelAccess(ctx, args.targetChannelId);
-
-    // Check if target channel is read-only
-    if (targetChannel.permissions === "readOnly" && !isAdmin) {
-      throw new Error("Only admins can post in this read-only channel");
+    // Verify user has access to the source message
+    if (message.channelId) {
+      const channel = await ctx.db.get(message.channelId);
+      if (!channel) {
+        throw new Error("Source channel not found");
+      }
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
+      if (!membership) {
+        throw new Error("Not a member of the source organization");
+      }
+    } else if (message.conversationId) {
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) {
+        throw new Error("Source conversation not found");
+      }
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in the source conversation");
+      }
+    } else {
+      throw new Error("Invalid source message");
     }
 
-    // Create new forwarded message
-    const forwardedMessageId = await ctx.db.insert("messages", {
-      channelId: args.targetChannelId,
-      userId,
-      content: message.content,
-      attachments: message.attachments,
-      createdAt: Date.now(),
-    });
+    // Forward to channel
+    if (args.targetChannelId) {
+      const { channel: targetChannel, isAdmin } = await checkChannelAccess(ctx, args.targetChannelId);
 
-    return forwardedMessageId;
+      // Check if target channel is read-only
+      if (targetChannel.permissions === "readOnly" && !isAdmin) {
+        throw new Error("Only admins can post in this read-only channel");
+      }
+
+      // Create new forwarded message in channel
+      const forwardedMessageId = await ctx.db.insert("messages", {
+        channelId: args.targetChannelId,
+        userId,
+        content: message.content,
+        attachments: message.attachments,
+        createdAt: Date.now(),
+      });
+
+      return forwardedMessageId;
+    }
+
+    // Forward to conversation (DM)
+    if (args.targetConversationId) {
+      const conversation = await ctx.db.get(args.targetConversationId);
+      if (!conversation) {
+        throw new Error("Target conversation not found");
+      }
+
+      // Verify user is a participant in the target conversation
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        throw new Error("Not a participant in the target conversation");
+      }
+
+      // Create new forwarded message in conversation
+      const forwardedMessageId = await ctx.db.insert("messages", {
+        conversationId: args.targetConversationId,
+        userId,
+        content: message.content,
+        attachments: message.attachments,
+        createdAt: Date.now(),
+      });
+
+      // Update conversation's lastMessageAt
+      await ctx.db.patch(args.targetConversationId, {
+        lastMessageAt: Date.now(),
+      });
+
+      return forwardedMessageId;
+    }
+
+    throw new Error("No target provided");
   },
 });
 

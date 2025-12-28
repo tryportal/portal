@@ -33,7 +33,7 @@ export function DmHeader({
   const [searchQuery, setSearchQuery] = React.useState("")
 
   return (
-    <header className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
       {/* Left: Participant info */}
       <div className="flex items-center gap-3">
         {onBack && (

@@ -263,3 +263,217 @@ export const updateLastMessageAt = mutation({
   },
 });
 
+// ============================================================================
+// Read Status - Unread Message Tracking
+// ============================================================================
+
+/**
+ * Mark a conversation as read by the current user
+ * This updates the lastReadAt timestamp to now
+ */
+export const markConversationAsRead = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Verify user is a participant
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      throw new Error("Not a participant in this conversation");
+    }
+
+    const now = Date.now();
+
+    // Check if read status exists
+    const existingStatus = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_conversation_and_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", userId)
+      )
+      .first();
+
+    if (existingStatus) {
+      // Update existing status
+      await ctx.db.patch(existingStatus._id, { lastReadAt: now });
+    } else {
+      // Create new read status
+      await ctx.db.insert("conversationReadStatus", {
+        conversationId: args.conversationId,
+        userId,
+        lastReadAt: now,
+      });
+    }
+  },
+});
+
+/**
+ * Get unread message count for a specific conversation
+ */
+export const getUnreadCount = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return 0;
+
+    const userId = identity.subject;
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation) return 0;
+
+    // Verify user is a participant
+    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+      return 0;
+    }
+
+    // Get the user's last read timestamp
+    const readStatus = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_conversation_and_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", userId)
+      )
+      .first();
+
+    const lastReadAt = readStatus?.lastReadAt ?? 0;
+
+    // Count messages after lastReadAt that are NOT from the current user
+    const unreadMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_and_created", (q) =>
+        q.eq("conversationId", args.conversationId).gt("createdAt", lastReadAt)
+      )
+      .collect();
+
+    // Filter out messages from current user (you don't have unread messages from yourself)
+    return unreadMessages.filter((msg) => msg.userId !== userId).length;
+  },
+});
+
+/**
+ * Get total unread message count across all conversations for the current user
+ */
+export const getTotalUnreadCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return 0;
+
+    const userId = identity.subject;
+
+    // Get all conversations for this user
+    const conversationsAsP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const conversationsAsP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
+    const uniqueConversations = Array.from(
+      new Map(allConversations.map((c) => [c._id, c])).values()
+    );
+
+    // Get all read statuses for this user
+    const readStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readStatusMap = new Map(
+      readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
+    );
+
+    let totalUnread = 0;
+
+    // Count unread messages in each conversation
+    for (const conv of uniqueConversations) {
+      const lastReadAt = readStatusMap.get(conv._id) ?? 0;
+
+      const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) =>
+          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+        )
+        .collect();
+
+      // Filter out messages from current user
+      totalUnread += unreadMessages.filter((msg) => msg.userId !== userId).length;
+    }
+
+    return totalUnread;
+  },
+});
+
+/**
+ * Get unread counts for all conversations (for sidebar badges)
+ * Returns a map of conversationId -> unread count
+ */
+export const getUnreadCountsForAllConversations = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return {};
+
+    const userId = identity.subject;
+
+    // Get all conversations for this user
+    const conversationsAsP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const conversationsAsP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
+    const uniqueConversations = Array.from(
+      new Map(allConversations.map((c) => [c._id, c])).values()
+    );
+
+    // Get all read statuses for this user
+    const readStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readStatusMap = new Map(
+      readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
+    );
+
+    const unreadCounts: Record<string, number> = {};
+
+    // Count unread messages in each conversation
+    for (const conv of uniqueConversations) {
+      const lastReadAt = readStatusMap.get(conv._id) ?? 0;
+
+      const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) =>
+          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+        )
+        .collect();
+
+      // Filter out messages from current user
+      const count = unreadMessages.filter((msg) => msg.userId !== userId).length;
+      if (count > 0) {
+        unreadCounts[conv._id] = count;
+      }
+    }
+
+    return unreadCounts;
+  },
+});
+

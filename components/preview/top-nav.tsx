@@ -11,6 +11,8 @@ import {
 } from "@phosphor-icons/react"
 import { UserButton } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { useWorkspaceData } from "@/components/workspace-context"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -40,6 +42,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } = useWorkspaceData()
+
+  // Get total unread message count for DMs
+  const totalUnreadCount = useQuery(api.conversations.getTotalUnreadCount) ?? 0
 
   const handleOrganizationSwitch = (orgSlug: string) => {
     router.push(`/w/${orgSlug}`)
@@ -164,13 +169,14 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
+            const showBadge = tab.id === "messages" && totalUnreadCount > 0
             return (
               <Button
                 key={tab.id}
                 variant={isActive ? "secondary" : "ghost"}
                 size="default"
                 onClick={() => handleTabChange(tab.id)}
-                className={`gap-1.5 ${
+                className={`gap-1.5 relative ${
                   isActive
                     ? "bg-[#26251E]/10 text-[#26251E]"
                     : "text-[#26251E]/70 hover:text-[#26251E]"
@@ -178,6 +184,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               >
                 <Icon weight={isActive ? "fill" : "regular"} className="size-4" />
                 {tab.label}
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                    {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                  </span>
+                )}
               </Button>
             )
           })}

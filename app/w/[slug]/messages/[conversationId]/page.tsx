@@ -11,6 +11,7 @@ import { MessageList, type Message, type Attachment, type Reaction } from "@/com
 import { MessageInput } from "@/components/preview/message-input"
 import { TypingIndicator } from "@/components/typing-indicator"
 import { DmHeader } from "@/components/messages/dm-header"
+import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
 
 export default function ConversationPage({
@@ -43,6 +44,13 @@ export default function ConversationPage({
     }
   }, [params])
 
+  // Get organization by slug for forward dialog
+  const organization = useQuery(
+    api.organizations.getOrganizationBySlug,
+    routeParams?.slug ? { slug: routeParams.slug } : "skip"
+  )
+  const organizationId = organization?._id
+
   // Get conversation data
   const conversationId = routeParams?.conversationId as Id<"conversations"> | undefined
   const conversation = useQuery(
@@ -63,6 +71,13 @@ export default function ConversationPage({
     conversationId ? { conversationId } : "skip"
   )
 
+  // Forward dialog state
+  const [forwardDialogOpen, setForwardDialogOpen] = React.useState(false)
+  const [forwardingMessage, setForwardingMessage] = React.useState<{
+    id: string
+    content: string
+  } | null>(null)
+
   // Mutations
   const sendMessage = useMutation(api.messages.sendDirectMessage)
   const deleteMessage = useMutation(api.messages.deleteDirectMessage)
@@ -70,6 +85,8 @@ export default function ConversationPage({
   const setTyping = useMutation(api.messages.setTypingInConversation)
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl)
   const toggleReaction = useMutation(api.messages.toggleDirectMessageReaction)
+  const forwardMessage = useMutation(api.messages.forwardMessage)
+  const markAsRead = useMutation(api.conversations.markConversationAsRead)
 
   // Fetch user data for other participant
   React.useEffect(() => {
@@ -77,6 +94,13 @@ export default function ConversationPage({
       fetchUserData([conversation.otherParticipantId])
     }
   }, [conversation?.otherParticipantId, fetchUserData])
+
+  // Mark conversation as read when viewing and when new messages arrive
+  React.useEffect(() => {
+    if (conversationId && rawMessages && rawMessages.length > 0) {
+      markAsRead({ conversationId })
+    }
+  }, [conversationId, rawMessages?.length, markAsRead])
 
   // Fetch user data for typing users
   React.useEffect(() => {
@@ -345,6 +369,39 @@ export default function ConversationPage({
     setReplyingTo(null)
   }
 
+  const handleForward = (messageId: string) => {
+    const message = messages.find((m) => m.id === messageId)
+    if (message) {
+      setForwardingMessage({
+        id: message.id,
+        content: message.content,
+      })
+      setForwardDialogOpen(true)
+    }
+  }
+
+  const handleForwardToChannel = async (messageId: string, targetChannelId: string) => {
+    try {
+      await forwardMessage({
+        messageId: messageId as Id<"messages">,
+        targetChannelId: targetChannelId as Id<"channels">,
+      })
+    } catch (error) {
+      console.error("Failed to forward message:", error)
+    }
+  }
+
+  const handleForwardToConversation = async (messageId: string, targetConversationId: string) => {
+    try {
+      await forwardMessage({
+        messageId: messageId as Id<"messages">,
+        targetConversationId: targetConversationId as Id<"conversations">,
+      })
+    } catch (error) {
+      console.error("Failed to forward message:", error)
+    }
+  }
+
   return (
     <main className="flex flex-1 flex-col h-full bg-[#F7F7F4] overflow-hidden">
       {/* DM Header */}
@@ -362,6 +419,7 @@ export default function ConversationPage({
           onDeleteMessage={handleDeleteMessage}
           onEditMessage={handleEditMessage}
           onReply={handleReply}
+          onForward={handleForward}
           onReaction={handleReaction}
           onAvatarClick={handleAvatarClick}
           onNameClick={handleNameClick}
@@ -386,6 +444,17 @@ export default function ConversationPage({
         onCancelReply={handleCancelReply}
         mentionUsers={[]}
         isDirectMessage
+      />
+
+      {/* Forward Message Dialog */}
+      <ForwardMessageDialog
+        open={forwardDialogOpen}
+        onOpenChange={setForwardDialogOpen}
+        messageId={forwardingMessage?.id ?? null}
+        messageContent={forwardingMessage?.content ?? ""}
+        organizationId={organizationId}
+        onForwardToChannel={handleForwardToChannel}
+        onForwardToConversation={handleForwardToConversation}
       />
     </main>
   )
