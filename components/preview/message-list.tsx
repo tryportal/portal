@@ -38,6 +38,9 @@ import { EmptyChannelState } from "./empty-channel-state"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
+// Context for attachment URLs (batch loaded at MessageList level)
+const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
+
 export interface Attachment {
   storageId: string
   name: string
@@ -108,10 +111,9 @@ function isImageType(type: string): boolean {
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
   
-  // Fetch the URL for this attachment
-  const url = useQuery(api.messages.getStorageUrl, { 
-    storageId: attachment.storageId as Id<"_storage"> 
-  })
+  // Get URL from batch-loaded context instead of individual query
+  const attachmentUrls = React.useContext(AttachmentUrlContext)
+  const url = attachmentUrls[attachment.storageId] || null
   
   if (isImage && url) {
     return (
@@ -476,6 +478,23 @@ export function MessageList({
   const previousMessageCount = React.useRef(0)
   const hasInitialScrolled = React.useRef(false)
 
+  // Collect all storage IDs from message attachments for batch loading
+  const storageIds = React.useMemo(() => {
+    const ids: Id<"_storage">[] = []
+    messages.forEach((msg) => {
+      msg.attachments?.forEach((att) => {
+        ids.push(att.storageId as Id<"_storage">)
+      })
+    })
+    return ids
+  }, [messages])
+
+  // Batch load all attachment URLs in a single query
+  const attachmentUrls = useQuery(
+    api.messages.getBatchStorageUrls,
+    storageIds.length > 0 ? { storageIds } : "skip"
+  ) ?? {}
+
   // Callback to scroll viewport to bottom
   const scrollToBottom = React.useCallback(() => {
     if (scrollRef.current) {
@@ -568,32 +587,34 @@ export function MessageList({
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-hidden">
-      <ScrollArea className="h-full">
-        <div className="flex flex-col justify-end min-h-full py-4">
-          <div className="space-y-1">
-            {messages.map((message) => (
-              <MessageItem 
-                key={message.id} 
-                message={message} 
-                currentUserId={currentUserId}
-                onDeleteMessage={onDeleteMessage}
-                onReply={onReply}
-                onForward={onForward}
-                onReaction={onReaction}
-                onPin={onPin}
-                onSave={onSave}
-                onUnsave={onUnsave}
-                onAvatarClick={onAvatarClick}
-                onNameClick={onNameClick}
-                isSaved={savedMessageIds.has(message.id)}
-                userNames={userNames}
-                isAdmin={isAdmin}
-              />
-            ))}
+    <AttachmentUrlContext.Provider value={attachmentUrls}>
+      <div ref={scrollRef} className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <div className="flex flex-col justify-end min-h-full py-4">
+            <div className="space-y-1">
+              {messages.map((message) => (
+                <MessageItem 
+                  key={message.id} 
+                  message={message} 
+                  currentUserId={currentUserId}
+                  onDeleteMessage={onDeleteMessage}
+                  onReply={onReply}
+                  onForward={onForward}
+                  onReaction={onReaction}
+                  onPin={onPin}
+                  onSave={onSave}
+                  onUnsave={onUnsave}
+                  onAvatarClick={onAvatarClick}
+                  onNameClick={onNameClick}
+                  isSaved={savedMessageIds.has(message.id)}
+                  userNames={userNames}
+                  isAdmin={isAdmin}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
-    </div>
+        </ScrollArea>
+      </div>
+    </AttachmentUrlContext.Provider>
   )
 }

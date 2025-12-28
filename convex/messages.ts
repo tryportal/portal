@@ -52,17 +52,21 @@ async function checkChannelAccess(
 // ============================================================================
 
 /**
- * Get all messages for a channel, ordered by creation time
+ * Get messages for a channel with pagination, ordered by creation time (newest first for initial load)
  */
 export const getMessages = query({
-  args: { channelId: v.id("channels") },
+  args: { 
+    channelId: v.id("channels"),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.number()), // createdAt timestamp for cursor-based pagination
+  },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return { messages: [], nextCursor: null, hasMore: false };
 
     // Get channel and verify membership
     const channel = await ctx.db.get(args.channelId);
-    if (!channel) return [];
+    if (!channel) return { messages: [], nextCursor: null, hasMore: false };
 
     const membership = await ctx.db
       .query("organizationMembers")
@@ -71,15 +75,43 @@ export const getMessages = query({
       )
       .first();
 
-    if (!membership) return [];
+    if (!membership) return { messages: [], nextCursor: null, hasMore: false };
+
+    const limit = args.limit ?? 50; // Default to 50 messages
 
     // Get messages ordered by creation time
-    const messages = await ctx.db
+    let messagesQuery = ctx.db
       .query("messages")
-      .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId))
-      .collect();
+      .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId));
 
-    return messages;
+    // If we have a cursor, filter to get older messages
+    if (args.cursor) {
+      messagesQuery = messagesQuery.filter((q) => 
+        q.lt(q.field("createdAt"), args.cursor!)
+      );
+    }
+
+    // Get one extra to check if there are more
+    const messages = await messagesQuery
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = messages.length > limit;
+    const resultMessages = hasMore ? messages.slice(0, limit) : messages;
+    
+    // Reverse to get chronological order for display
+    const chronologicalMessages = resultMessages.reverse();
+    
+    // Next cursor is the oldest message's createdAt
+    const nextCursor = hasMore && resultMessages.length > 0 
+      ? resultMessages[resultMessages.length - 1].createdAt 
+      : null;
+
+    return { 
+      messages: chronologicalMessages, 
+      nextCursor, 
+      hasMore 
+    };
   },
 });
 
@@ -494,6 +526,24 @@ export const getStorageUrl = query({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
     return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+/**
+ * Get URLs for multiple stored files in a single batch query
+ * This prevents N+1 query patterns when loading multiple attachments
+ */
+export const getBatchStorageUrls = query({
+  args: { storageIds: v.array(v.id("_storage")) },
+  handler: async (ctx, args) => {
+    const urls = await Promise.all(
+      args.storageIds.map(async (storageId) => {
+        const url = await ctx.storage.getUrl(storageId);
+        return { storageId, url };
+      })
+    );
+    // Return as a map for easy lookup
+    return Object.fromEntries(urls.map(({ storageId, url }) => [storageId, url]));
   },
 });
 

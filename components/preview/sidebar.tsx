@@ -81,6 +81,7 @@ interface SortableChannelProps {
   }
   isActive: boolean
   onSelect: () => void
+  onPrefetch?: () => void
   isAdmin: boolean
   onEdit: () => void
   onDelete: () => void
@@ -90,6 +91,7 @@ function SortableChannel({
   channel,
   isActive,
   onSelect,
+  onPrefetch,
   isAdmin,
   onEdit,
   onDelete,
@@ -116,6 +118,7 @@ function SortableChannel({
       ref={setNodeRef}
       style={style}
       className="group relative"
+      onMouseEnter={onPrefetch}
     >
       <Button
         variant={isActive ? "secondary" : "ghost"}
@@ -197,6 +200,7 @@ interface SortableCategoryProps {
   onToggle: () => void
   activeChannelId: string | null
   onChannelSelect: (channelId: string, categoryName: string, channelName: string) => void
+  onChannelPrefetch: (categoryName: string, channelName: string) => void
   isAdmin: boolean
   onEditChannel: (channelId: Id<"channels">) => void
   onDeleteChannel: (channelId: Id<"channels">) => void
@@ -209,6 +213,7 @@ function SortableCategory({
   onToggle,
   activeChannelId,
   onChannelSelect,
+  onChannelPrefetch,
   isAdmin,
   onEditChannel,
   onDeleteChannel,
@@ -289,6 +294,7 @@ function SortableCategory({
                 channel={channel}
                 isActive={activeChannelId === channel._id}
                 onSelect={() => onChannelSelect(channel._id, category.name, channel.name)}
+                onPrefetch={() => onChannelPrefetch(category.name, channel.name)}
                 isAdmin={isAdmin}
                 onEdit={() => onEditChannel(channel._id)}
                 onDelete={() => onDeleteChannel(channel._id)}
@@ -453,6 +459,15 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       const encodedCategory = encodeURIComponent(categoryName.toLowerCase())
       const encodedChannel = encodeURIComponent(channelName.toLowerCase())
       router.push(`/${currentSlug}/${encodedCategory}/${encodedChannel}`)
+    }
+  }
+
+  // Prefetch channel on hover for faster navigation
+  const handleChannelPrefetch = (categoryName: string, channelName: string) => {
+    if (currentSlug) {
+      const encodedCategory = encodeURIComponent(categoryName.toLowerCase())
+      const encodedChannel = encodeURIComponent(channelName.toLowerCase())
+      router.prefetch(`/${currentSlug}/${encodedCategory}/${encodedChannel}`)
     }
   }
 
@@ -628,6 +643,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       onToggle={() => toggleCategory(category._id)}
                       activeChannelId={activeChannelFromUrl}
                       onChannelSelect={handleChannelSelect}
+                      onChannelPrefetch={handleChannelPrefetch}
                       isAdmin={isAdmin}
                       onEditChannel={handleEditChannel}
                       onDeleteChannel={handleDeleteChannel}

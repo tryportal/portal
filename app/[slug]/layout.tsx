@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { WorkspaceProvider, useWorkspace, useWorkspaceData } from "@/components/workspace-context";
+import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { TopNav } from "@/components/preview/top-nav";
@@ -126,7 +127,9 @@ export default function Layout({
 
   return (
     <WorkspaceProvider slug={slug}>
-      <WorkspaceLayoutContent>{children}</WorkspaceLayoutContent>
+      <UserDataCacheProvider>
+        <WorkspaceLayoutContent>{children}</WorkspaceLayoutContent>
+      </UserDataCacheProvider>
     </WorkspaceProvider>
   );
 }

@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { CircleNotchIcon } from "@phosphor-icons/react";
 import { getIconComponent } from "@/components/icon-picker";
 import { ChatInterface } from "@/components/preview/chat-interface";
+import { useUserDataCache } from "@/components/user-data-cache";
 import type { Message, Attachment, Reaction } from "@/components/preview/message-list";
 import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog";
 import type { MentionUser } from "@/components/preview/mention-autocomplete";
 import type { Id } from "@/convex/_generated/dataModel";
-
-// Polling interval for typing users (in ms)
-const TYPING_POLL_INTERVAL = 2000;
 
 export default function ChannelPage({
   params,
@@ -23,19 +21,13 @@ export default function ChannelPage({
 }) {
   const router = useRouter();
   const { user } = useUser();
+  const { cache: userDataCache, fetchUserData } = useUserDataCache();
+  
   const [routeParams, setRouteParams] = React.useState<{
     slug: string;
     category: string;
     channel: string;
   } | null>(null);
-
-  // Typing users state (from action)
-  const [typingUsers, setTypingUsers] = React.useState<Array<{
-    userId: string;
-    firstName: string | null;
-    lastName: string | null;
-    imageUrl: string | null;
-  }>>([]);
 
   // Resolve params if it's a Promise (Next.js 15+)
   React.useEffect(() => {
@@ -61,11 +53,14 @@ export default function ChannelPage({
   // Get channel ID for queries
   const channelId = channelData?.channel?._id;
 
-  // Get messages for the channel
-  const rawMessages = useQuery(
+  // Get messages for the channel (paginated - loads 50 most recent)
+  const messagesData = useQuery(
     api.messages.getMessages,
-    channelId ? { channelId } : "skip"
+    channelId ? { channelId, limit: 50 } : "skip"
   );
+  
+  // Extract messages array from paginated response
+  const rawMessages = messagesData?.messages;
 
   // Get organization ID for additional queries
   const organizationId = channelData?.channel?.organizationId;
@@ -99,159 +94,48 @@ export default function ChannelPage({
   const unsaveMessage = useMutation(api.messages.unsaveMessage);
   const forwardMessage = useMutation(api.messages.forwardMessage);
 
-  // Actions
-  const getTypingUsersAction = useAction(api.messages.getTypingUsers);
-  const getUserDataAction = useAction(api.messages.getUserData);
+  // Real-time subscription for typing users (replaces polling)
+  const typingUsersQuery = useQuery(
+    api.messages.getTypingUsersQuery,
+    channelId ? { channelId } : "skip"
+  );
 
-  // State for user data cache
-  const [userDataCache, setUserDataCache] = React.useState<Record<string, {
-    firstName: string | null;
-    lastName: string | null;
-    imageUrl: string | null;
-  }>>({});
-  
-  // State to track if user data is fully loaded
-  const [isUserDataLoaded, setIsUserDataLoaded] = React.useState(false);
-  
-  // State to track if all images (avatars and attachments) are loaded
-  const [areImagesLoaded, setAreImagesLoaded] = React.useState(false);
-  
-  // State for initial render delay (gives attachment queries time to start)
-  const [initialDelayComplete, setInitialDelayComplete] = React.useState(false);
-
-  // Poll for typing users
+  // Fetch user data for typing users
   React.useEffect(() => {
-    if (!channelId) return;
-
-    const fetchTypingUsers = async () => {
-      try {
-        const users = await getTypingUsersAction({ channelId });
-        setTypingUsers(users);
-      } catch {
-        // Ignore errors
-      }
-    };
-
-    // Fetch immediately
-    fetchTypingUsers();
-
-    // Set up polling
-    const interval = setInterval(fetchTypingUsers, TYPING_POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [channelId, getTypingUsersAction]);
-
-  // Fetch user data for all unique user IDs in messages
-  React.useEffect(() => {
-    if (!rawMessages || rawMessages.length === 0) {
-      setIsUserDataLoaded(true);
-      return;
+    if (typingUsersQuery?.typingUsers && typingUsersQuery.typingUsers.length > 0) {
+      fetchUserData(typingUsersQuery.typingUsers);
     }
+  }, [typingUsersQuery?.typingUsers, fetchUserData]);
+
+  // Transform typing users with cached user data
+  const typingUsers = React.useMemo(() => {
+    if (!typingUsersQuery?.typingUsers) return [];
+    return typingUsersQuery.typingUsers.map((userId) => {
+      const cached = userDataCache[userId];
+      return {
+        userId,
+        firstName: cached?.firstName ?? null,
+        lastName: cached?.lastName ?? null,
+        imageUrl: cached?.imageUrl ?? null,
+      };
+    });
+  }, [typingUsersQuery?.typingUsers, userDataCache]);
+
+  // Fetch user data for all unique user IDs in messages using global cache
+  React.useEffect(() => {
+    if (!rawMessages || rawMessages.length === 0) return;
 
     const uniqueUserIds = Array.from(new Set(rawMessages.map(msg => msg.userId)));
-    const missingUserIds = uniqueUserIds.filter(userId => !userDataCache[userId]);
+    fetchUserData(uniqueUserIds);
+  }, [rawMessages, fetchUserData]);
 
-    if (missingUserIds.length === 0) {
-      setIsUserDataLoaded(true);
-      return;
-    }
-
-    setIsUserDataLoaded(false);
-
-    const fetchUserData = async () => {
-      try {
-        const usersData = await getUserDataAction({ userIds: missingUserIds });
-        const newCache: typeof userDataCache = {};
-        usersData.forEach(user => {
-          newCache[user.userId] = {
-            firstName: user.firstName,
-            lastName: user.lastName,
-            imageUrl: user.imageUrl,
-          };
-        });
-        setUserDataCache(prev => ({ ...prev, ...newCache }));
-        setIsUserDataLoaded(true);
-      } catch {
-        // Even on error, mark as loaded to prevent infinite loading
-        setIsUserDataLoaded(true);
-      }
-    };
-
-    fetchUserData();
-  }, [rawMessages, getUserDataAction, userDataCache]);
-
-  // Preload all avatar images and attachment images
+  // Also fetch user data for pinned messages
   React.useEffect(() => {
-    if (!rawMessages || !isUserDataLoaded) {
-      setAreImagesLoaded(false);
-      return;
-    }
+    if (!pinnedMessagesRaw || pinnedMessagesRaw.length === 0) return;
 
-    // Collect all image URLs that need to be preloaded
-    const imageUrls: string[] = [];
-    
-    // Add avatar images from user data cache
-    Object.values(userDataCache).forEach(userData => {
-      if (userData.imageUrl) {
-        imageUrls.push(userData.imageUrl);
-      }
-    });
-    
-    // Add current user's avatar
-    if (user?.imageUrl) {
-      imageUrls.push(user.imageUrl);
-    }
-
-    // If there are no images to load, mark as loaded immediately
-    if (imageUrls.length === 0) {
-      setAreImagesLoaded(true);
-      return;
-    }
-
-    // Preload all images
-    let loadedCount = 0;
-    let hasError = false;
-
-    const checkAllLoaded = () => {
-      if (loadedCount === imageUrls.length || hasError) {
-        setAreImagesLoaded(true);
-      }
-    };
-
-    imageUrls.forEach(url => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        checkAllLoaded();
-      };
-      img.onerror = () => {
-        loadedCount++;
-        hasError = true;
-        checkAllLoaded();
-      };
-      img.src = url;
-    });
-
-    // Timeout fallback - if images take too long, show content anyway (max 3 seconds)
-    const timeout = setTimeout(() => {
-      setAreImagesLoaded(true);
-    }, 3000);
-
-    return () => clearTimeout(timeout);
-  }, [rawMessages, isUserDataLoaded, userDataCache, user]);
-  
-  // Add a small initial delay after data loads to give attachment queries time to initiate
-  React.useEffect(() => {
-    if (isUserDataLoaded && areImagesLoaded) {
-      const timeout = setTimeout(() => {
-        setInitialDelayComplete(true);
-      }, 400); // 400ms delay to let attachment queries start and DOM settle
-      
-      return () => clearTimeout(timeout);
-    } else {
-      setInitialDelayComplete(false);
-    }
-  }, [isUserDataLoaded, areImagesLoaded]);
+    const uniqueUserIds = Array.from(new Set(pinnedMessagesRaw.map(msg => msg.userId)));
+    fetchUserData(uniqueUserIds);
+  }, [pinnedMessagesRaw, fetchUserData]);
 
   // Redirect if channel not found (after data is loaded)
   React.useEffect(() => {
@@ -349,8 +233,9 @@ export default function ChannelPage({
     });
   }, [pinnedMessagesRaw, userDataCache, user]);
 
-  // Loading state - show spinner until everything is ready
-  if (!routeParams || channelData === undefined || rawMessages === undefined || !isUserDataLoaded || !areImagesLoaded || !initialDelayComplete) {
+  // Optimized loading state - only wait for essential data (channel + messages)
+  // User data and images load progressively
+  if (!routeParams || channelData === undefined || messagesData === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center bg-white">
         <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
