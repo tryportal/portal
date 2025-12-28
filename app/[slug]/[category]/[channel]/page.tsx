@@ -109,6 +109,15 @@ export default function ChannelPage({
     lastName: string | null;
     imageUrl: string | null;
   }>>({});
+  
+  // State to track if user data is fully loaded
+  const [isUserDataLoaded, setIsUserDataLoaded] = React.useState(false);
+  
+  // State to track if all images (avatars and attachments) are loaded
+  const [areImagesLoaded, setAreImagesLoaded] = React.useState(false);
+  
+  // State for initial render delay (gives attachment queries time to start)
+  const [initialDelayComplete, setInitialDelayComplete] = React.useState(false);
 
   // Poll for typing users
   React.useEffect(() => {
@@ -134,12 +143,20 @@ export default function ChannelPage({
 
   // Fetch user data for all unique user IDs in messages
   React.useEffect(() => {
-    if (!rawMessages || rawMessages.length === 0) return;
+    if (!rawMessages || rawMessages.length === 0) {
+      setIsUserDataLoaded(true);
+      return;
+    }
 
     const uniqueUserIds = Array.from(new Set(rawMessages.map(msg => msg.userId)));
     const missingUserIds = uniqueUserIds.filter(userId => !userDataCache[userId]);
 
-    if (missingUserIds.length === 0) return;
+    if (missingUserIds.length === 0) {
+      setIsUserDataLoaded(true);
+      return;
+    }
+
+    setIsUserDataLoaded(false);
 
     const fetchUserData = async () => {
       try {
@@ -153,13 +170,88 @@ export default function ChannelPage({
           };
         });
         setUserDataCache(prev => ({ ...prev, ...newCache }));
+        setIsUserDataLoaded(true);
       } catch {
-        // Ignore errors
+        // Even on error, mark as loaded to prevent infinite loading
+        setIsUserDataLoaded(true);
       }
     };
 
     fetchUserData();
   }, [rawMessages, getUserDataAction, userDataCache]);
+
+  // Preload all avatar images and attachment images
+  React.useEffect(() => {
+    if (!rawMessages || !isUserDataLoaded) {
+      setAreImagesLoaded(false);
+      return;
+    }
+
+    // Collect all image URLs that need to be preloaded
+    const imageUrls: string[] = [];
+    
+    // Add avatar images from user data cache
+    Object.values(userDataCache).forEach(userData => {
+      if (userData.imageUrl) {
+        imageUrls.push(userData.imageUrl);
+      }
+    });
+    
+    // Add current user's avatar
+    if (user?.imageUrl) {
+      imageUrls.push(user.imageUrl);
+    }
+
+    // If there are no images to load, mark as loaded immediately
+    if (imageUrls.length === 0) {
+      setAreImagesLoaded(true);
+      return;
+    }
+
+    // Preload all images
+    let loadedCount = 0;
+    let hasError = false;
+
+    const checkAllLoaded = () => {
+      if (loadedCount === imageUrls.length || hasError) {
+        setAreImagesLoaded(true);
+      }
+    };
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.onload = () => {
+        loadedCount++;
+        checkAllLoaded();
+      };
+      img.onerror = () => {
+        loadedCount++;
+        hasError = true;
+        checkAllLoaded();
+      };
+      img.src = url;
+    });
+
+    // Timeout fallback - if images take too long, show content anyway (max 3 seconds)
+    const timeout = setTimeout(() => {
+      setAreImagesLoaded(true);
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [rawMessages, isUserDataLoaded, userDataCache, user]);
+  
+  // Add a small initial delay after data loads to give attachment queries time to initiate
+  React.useEffect(() => {
+    if (isUserDataLoaded && areImagesLoaded) {
+      const timeout = setTimeout(() => {
+        setInitialDelayComplete(true);
+      }, 400); // 400ms delay to let attachment queries start and DOM settle
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setInitialDelayComplete(false);
+    }
+  }, [isUserDataLoaded, areImagesLoaded]);
 
   // Redirect if channel not found (after data is loaded)
   React.useEffect(() => {
@@ -257,8 +349,8 @@ export default function ChannelPage({
     });
   }, [pinnedMessagesRaw, userDataCache, user]);
 
-  // Loading state
-  if (!routeParams || channelData === undefined) {
+  // Loading state - show spinner until everything is ready
+  if (!routeParams || channelData === undefined || rawMessages === undefined || !isUserDataLoaded || !areImagesLoaded || !initialDelayComplete) {
     return (
       <div className="flex flex-1 items-center justify-center bg-white">
         <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />

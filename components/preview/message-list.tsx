@@ -473,16 +473,84 @@ export function MessageList({
   isAdmin,
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const previousMessageCount = React.useRef(0)
+  const hasInitialScrolled = React.useRef(false)
 
-  React.useEffect(() => {
-    // Auto-scroll to bottom on new messages
+  // Callback to scroll viewport to bottom
+  const scrollToBottom = React.useCallback(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-slot="scroll-area-viewport"]')
       if (viewport) {
         viewport.scrollTop = viewport.scrollHeight
       }
     }
-  }, [messages])
+  }, [])
+
+  // Use MutationObserver to keep scroll at bottom during initial content loading
+  // This handles async-loaded images and attachments that change content height
+  const hasMessages = messages.length > 0
+  React.useEffect(() => {
+    if (!scrollRef.current || !hasMessages) return
+
+    const viewport = scrollRef.current.querySelector('[data-slot="scroll-area-viewport"]')
+    if (!viewport) return
+
+    // Track if we're in the initial loading phase (first 2 seconds after mount)
+    let isInitialLoadPhase = true
+    const initialLoadTimeout = setTimeout(() => {
+      isInitialLoadPhase = false
+    }, 2000)
+
+    // Observe DOM mutations and scroll to bottom when content changes during initial load
+    const observer = new MutationObserver(() => {
+      if (isInitialLoadPhase) {
+        scrollToBottom()
+      }
+    })
+
+    observer.observe(viewport, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'style', 'class'],
+    })
+
+    // Initial scroll
+    scrollToBottom()
+
+    return () => {
+      observer.disconnect()
+      clearTimeout(initialLoadTimeout)
+    }
+  }, [hasMessages, scrollToBottom])
+
+  // Scroll to bottom on mount and when messages change
+  React.useLayoutEffect(() => {
+    // On initial mount, scroll multiple times to handle content loading
+    if (!hasInitialScrolled.current && messages.length > 0) {
+      hasInitialScrolled.current = true
+      
+      // Immediate scroll
+      scrollToBottom()
+      
+      // Scroll again after a short delay to catch any late-rendering content
+      requestAnimationFrame(() => {
+        scrollToBottom()
+        
+        // One more scroll after another frame to be absolutely sure
+        requestAnimationFrame(() => {
+          scrollToBottom()
+        })
+      })
+      
+      previousMessageCount.current = messages.length
+    }
+    // Scroll when new messages arrive
+    else if (messages.length > previousMessageCount.current) {
+      scrollToBottom()
+      previousMessageCount.current = messages.length
+    }
+  }, [messages, scrollToBottom])
 
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
