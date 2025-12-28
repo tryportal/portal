@@ -1,5 +1,5 @@
-import { ChatInterfaceSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function Loading() {
-  return <ChatInterfaceSkeleton />;
+  return <LoadingSpinner fullScreen />;
 }

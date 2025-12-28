@@ -19,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { InvitePeopleDialog } from "@/components/invite-people-dialog";
-import { PeoplePageSkeleton, MemberCardSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // Type for member data
 type MemberWithUserData = {
@@ -51,6 +52,9 @@ export default function PeoplePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  // Set page title
+  usePageTitle("People - Portal");
 
   // Get members action
   const getMembers = useAction(api.organizations.getOrganizationMembers);
@@ -108,9 +112,9 @@ export default function PeoplePage() {
     router.push(`/w/${slug}/people/${member.userId}`);
   };
 
-  // Show skeleton while context is loading
+  // Show loading spinner while context is loading
   if (contextLoading) {
-    return <PeoplePageSkeleton />;
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
@@ -135,16 +139,8 @@ export default function PeoplePage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="mx-auto max-w-3xl py-12 px-6">
-              <div className="space-y-6">
-                <div className="h-4 w-48 bg-[#26251E]/5 rounded animate-pulse" />
-                <div className="h-10 w-full bg-[#26251E]/5 rounded-md animate-pulse" />
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <MemberCardSkeleton key={i} />
-                  ))}
-                </div>
-              </div>
+            <div className="flex h-full items-center justify-center py-12">
+              <LoadingSpinner text="Loading members..." />
             </div>
           ) : error ? (
             <div className="flex h-full items-center justify-center py-12">

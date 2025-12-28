@@ -3,8 +3,9 @@
 import * as React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { CircleNotchIcon } from "@phosphor-icons/react";
 import { SavedMessagesPage } from "@/components/preview/saved-messages-page";
+import { usePageTitle } from "@/lib/use-page-title";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function SavedPage({
   params,
@@ -28,13 +29,12 @@ export default function SavedPage({
     routeParams ? { slug: routeParams.slug } : "skip"
   );
 
+  // Set page title
+  usePageTitle("Saved Messages - Portal");
+
   // Loading state
   if (!routeParams || organization === undefined) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-[#F7F7F4]">
-        <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   // Organization not found

@@ -1,6 +1,6 @@
-import { InboxPageSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function Loading() {
-  return <InboxPageSkeleton />;
+  return <LoadingSpinner fullScreen />;
 }
 

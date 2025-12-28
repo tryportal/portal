@@ -1,5 +1,5 @@
-import { MemberProfileSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function Loading() {
-  return <MemberProfileSkeleton />;
+  return <LoadingSpinner fullScreen />;
 }

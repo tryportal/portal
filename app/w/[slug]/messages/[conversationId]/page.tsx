@@ -5,14 +5,15 @@ import { useQuery, useMutation, useAction } from "convex/react"
 import { useRouter, useParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { api } from "@/convex/_generated/api"
-import { CircleNotchIcon } from "@phosphor-icons/react"
 import { useUserDataCache } from "@/components/user-data-cache"
+import { LoadingSpinner } from "@/components/loading-spinner"
 import { MessageList, type Message, type Attachment, type Reaction } from "@/components/preview/message-list"
 import { MessageInput } from "@/components/preview/message-input"
 import { TypingIndicator } from "@/components/typing-indicator"
 import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
+import { usePageTitle } from "@/lib/use-page-title"
 
 export default function ConversationPage({
   params,
@@ -144,6 +145,9 @@ export default function ConversationPage({
     return "Loading..."
   }, [participantData])
 
+  // Set page title
+  usePageTitle(`${participantName} - Portal`)
+
   const participantInitials = React.useMemo(() => {
     if (participantData?.firstName && participantData?.lastName) {
       return `${participantData.firstName[0]}${participantData.lastName[0]}`.toUpperCase()
@@ -247,11 +251,7 @@ export default function ConversationPage({
 
   // Loading state
   if (!routeParams || conversation === undefined || messagesData === undefined) {
-    return (
-      <div className="flex flex-1 h-full items-center justify-center bg-[#F7F7F4]">
-        <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
-      </div>
-    )
+    return <LoadingSpinner fullScreen />
   }
 
   // Not found or not authorized

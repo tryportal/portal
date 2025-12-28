@@ -8,7 +8,7 @@ import * as React from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useWorkspaceData } from "@/components/workspace-context";
-import { MemberProfileSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { 
   ArrowLeftIcon, 
   ShieldIcon, 
@@ -50,6 +50,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // Type for member data
 type MemberWithUserData = {
@@ -275,9 +276,17 @@ export default function MemberProfilePage({
 
   const canEdit = isAdmin || (member && member.userId === currentUserId);
 
-  // Show skeleton while context is loading
+  // Set page title
+  const displayName = member
+    ? member.publicUserData?.firstName && member.publicUserData?.lastName
+      ? `${member.publicUserData.firstName} ${member.publicUserData.lastName}`
+      : member.emailAddress || "User"
+    : "Loading...";
+  usePageTitle(`${displayName} - Portal`);
+
+  // Show loading spinner while context is loading
   if (contextLoading) {
-    return <MemberProfileSkeleton />;
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
@@ -298,10 +307,7 @@ export default function MemberProfilePage({
         <div className="flex-1 overflow-y-auto bg-white/50">
           {isLoading ? (
             <div className="flex h-full items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/40" />
-                <p className="text-sm text-[#26251E]/60">Loading member...</p>
-              </div>
+              <LoadingSpinner text="Loading member..." />
             </div>
           ) : error ? (
             <div className="flex h-full items-center justify-center py-12">

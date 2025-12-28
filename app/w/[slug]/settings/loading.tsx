@@ -1,5 +1,5 @@
-import { SettingsPageSkeleton } from "@/components/skeletons";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function Loading() {
-  return <SettingsPageSkeleton />;
+  return <LoadingSpinner fullScreen />;
 }

@@ -5,14 +5,15 @@ import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
-import { CircleNotchIcon } from "@phosphor-icons/react";
 import { getIconComponent } from "@/components/icon-picker";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { ChatInterface } from "@/components/preview/chat-interface";
 import { useUserDataCache } from "@/components/user-data-cache";
 import type { Message, Attachment, Reaction } from "@/components/preview/message-list";
 import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog";
 import type { MentionUser } from "@/components/preview/mention-autocomplete";
 import type { Id } from "@/convex/_generated/dataModel";
+import { usePageTitle } from "@/lib/use-page-title";
 
 export default function ChannelPage({
   params,
@@ -237,20 +238,12 @@ export default function ChannelPage({
   // Optimized loading state - only wait for essential data (channel + messages)
   // User data and images load progressively
   if (!routeParams || channelData === undefined || messagesData === undefined) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-white">
-        <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   // Redirecting state
   if (channelData === null) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-white">
-        <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   const { channel, membership } = channelData;
@@ -259,6 +252,9 @@ export default function ChannelPage({
   const isAdmin = membership?.role === "admin";
   const canPost = !isReadOnly || isAdmin;
   const currentUserId = user?.id;
+
+  // Set page title
+  usePageTitle(`${channel.name} - Portal`);
 
   // Transform raw messages to the format expected by ChatInterface
   const messages: Message[] = (rawMessages || []).map((msg) => {

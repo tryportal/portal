@@ -2,8 +2,10 @@
 
 import * as React from "react"
 import { ChatCircleIcon } from "@phosphor-icons/react"
+import { usePageTitle } from "@/lib/use-page-title"
 
 export default function MessagesPage() {
+  usePageTitle("Messages - Portal");
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-[#F7F7F4] h-full">
       <div className="flex flex-col items-center text-center max-w-md px-6">
