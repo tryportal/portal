@@ -308,6 +308,7 @@ export default function ChannelPage({
         hour: "numeric", 
         minute: "2-digit" 
       }),
+      createdAt: msg.createdAt, // Add raw timestamp for grouping
       user: {
         id: msg.userId,
         name,

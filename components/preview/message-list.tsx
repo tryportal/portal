@@ -57,6 +57,7 @@ export interface Message {
   id: string
   content: string
   timestamp: string
+  createdAt?: number // Raw timestamp for grouping logic
   user: {
     id: string
     name: string
@@ -121,17 +122,17 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block max-w-xs rounded-lg overflow-hidden border border-[#26251E]/10 hover:border-[#26251E]/20 transition-colors"
+        className="block max-w-xs rounded-md overflow-hidden border border-[#26251E]/10 hover:border-[#26251E]/20 transition-all hover:shadow-sm"
       >
         <img
           src={url}
           alt={attachment.name}
-          className="max-h-64 w-auto object-contain"
+          className="max-h-64 w-auto object-contain bg-[#26251E]/[0.02]"
         />
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#26251E]/5 text-xs text-[#26251E]/60">
-          <ImageIcon className="size-3.5" />
-          <span className="truncate flex-1">{attachment.name}</span>
-          <span>{formatFileSize(attachment.size)}</span>
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#26251E]/[0.04] text-xs text-[#26251E]/70">
+          <ImageIcon className="size-3.5 flex-shrink-0" />
+          <span className="truncate flex-1 font-medium">{attachment.name}</span>
+          <span className="text-[#26251E]/50 font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
     )
@@ -142,14 +143,14 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
       href={url || "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-lg border border-[#26251E]/10 px-3 py-2 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors max-w-xs"
+      className="flex items-center gap-2.5 rounded-md border border-[#26251E]/10 px-2.5 py-2 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-all hover:shadow-sm max-w-xs"
     >
-      <FileIcon className="size-8 text-[#26251E]/40" weight="duotone" />
+      <FileIcon className="size-8 text-[#26251E]/40 flex-shrink-0" weight="duotone" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-[#26251E] truncate">{attachment.name}</div>
-        <div className="text-xs text-[#26251E]/50">{formatFileSize(attachment.size)}</div>
+        <div className="text-xs text-[#26251E]/50 font-medium">{formatFileSize(attachment.size)}</div>
       </div>
-      <DownloadSimpleIcon className="size-4 text-[#26251E]/40" />
+      <DownloadSimpleIcon className="size-4 text-[#26251E]/40 flex-shrink-0" />
     </a>
   )
 }
@@ -164,7 +165,7 @@ const MarkdownComponents = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 hover:underline"
+      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
     >
       {children}
     </a>
@@ -172,28 +173,33 @@ const MarkdownComponents = {
   code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => {
     if (inline) {
       return (
-        <code className="px-1 py-0.5 bg-[#26251E]/5 rounded text-sm font-mono">
+        <code className="px-1 py-0.5 bg-[#26251E]/8 rounded text-[13px] font-mono text-[#26251E]/95">
           {children}
         </code>
       )
     }
     return (
-      <pre className="p-2 bg-[#26251E]/5 rounded-md overflow-x-auto my-1">
-        <code className="text-sm font-mono">{children}</code>
+      <pre className="p-2 bg-[#26251E]/6 rounded-md overflow-x-auto my-1.5 border border-[#26251E]/8">
+        <code className="text-[13px] font-mono text-[#26251E]/90">{children}</code>
       </pre>
     )
   },
   ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc list-inside my-1">{children}</ul>
+    <ul className="list-disc list-inside my-1 space-y-0.5">{children}</ul>
   ),
   ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal list-inside my-1">{children}</ol>
+    <ol className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
   ),
   strong: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="font-semibold">{children}</strong>
+    <strong className="font-semibold text-[#26251E]">{children}</strong>
   ),
   em: ({ children }: { children?: React.ReactNode }) => (
-    <em className="italic">{children}</em>
+    <em className="italic text-[#26251E]/85">{children}</em>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="pl-2.5 py-0.5 my-1 border-l-2 border-[#26251E]/20 text-[#26251E]/70 italic">
+      {children}
+    </blockquote>
   ),
 }
 
@@ -225,6 +231,7 @@ function MessageItem({
   isSaved,
   userNames,
   isAdmin,
+  isGrouped,
 }: { 
   message: Message
   currentUserId?: string
@@ -240,6 +247,7 @@ function MessageItem({
   isSaved?: boolean
   userNames?: Record<string, string>
   isAdmin?: boolean
+  isGrouped?: boolean
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
   const isOwner = currentUserId === message.user.id
@@ -261,13 +269,14 @@ function MessageItem({
 
   return (
     <div
-      className="group relative rounded-lg px-4 py-2 hover:bg-[#26251E]/[0.03] transition-colors"
+      className="group relative px-4 hover:bg-[#26251E]/[0.03] transition-colors"
+      style={{ paddingTop: isGrouped ? "1px" : "6px", paddingBottom: isGrouped ? "1px" : "6px" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Reply indicator */}
       {message.parentMessage && (
-        <div className="flex items-center gap-2 mb-1 ml-11 text-xs text-[#26251E]/50">
+        <div className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-[#26251E]/50">
           <ArrowBendUpLeftIcon className="size-3" />
           <span>Replying to</span>
           <span className="font-medium text-[#26251E]/70">{message.parentMessage.userName}</span>
@@ -277,44 +286,54 @@ function MessageItem({
 
       {/* Pin indicator */}
       {message.pinned && (
-        <div className="flex items-center gap-1.5 mb-1 ml-11 text-xs text-amber-600">
+        <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-amber-600 font-medium">
           <PushPinIcon className="size-3" weight="fill" />
-          <span>Pinned</span>
+          <span>Pinned message</span>
         </div>
       )}
 
-      <div className="flex gap-3">
-        {/* Avatar */}
-        <Avatar 
-          className="cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => onAvatarClick?.(message.user.id)}
-        >
-          {message.user.avatar ? (
-            <AvatarImage src={message.user.avatar} alt={message.user.name} />
-          ) : null}
-          <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-xs">
-            {message.user.initials}
-          </AvatarFallback>
-        </Avatar>
+      <div className="flex gap-2.5">
+        {/* Avatar - hidden when grouped */}
+        {!isGrouped ? (
+          <Avatar 
+            className="size-8 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+            onClick={() => onAvatarClick?.(message.user.id)}
+          >
+            {message.user.avatar ? (
+              <AvatarImage src={message.user.avatar} alt={message.user.name} />
+            ) : null}
+            <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-[11px] font-medium">
+              {message.user.initials}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
+            <span className="text-[8px] text-[#26251E]/0 group-hover:text-[#26251E]/50 transition-colors font-medium tabular-nums">
+              {message.timestamp}
+            </span>
+          </div>
+        )}
 
         {/* Message content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <button
-              onClick={() => onNameClick?.(message.user.id)}
-              className="font-semibold text-sm text-[#26251E] hover:underline"
-            >
-              {message.user.name}
-            </button>
-            <span className="text-xs text-[#26251E]/40">
-              {message.timestamp}
-            </span>
-            {message.editedAt && (
-              <span className="text-[10px] text-[#26251E]/30">(edited)</span>
-            )}
-          </div>
+          {!isGrouped && (
+            <div className="flex items-baseline gap-2 mb-0.5">
+              <button
+                onClick={() => onNameClick?.(message.user.id)}
+                className="font-semibold text-sm text-[#26251E] hover:underline"
+              >
+                {message.user.name}
+              </button>
+              <span className="text-[11px] text-[#26251E]/50 font-medium tabular-nums">
+                {message.timestamp}
+              </span>
+              {message.editedAt && (
+                <span className="text-[10px] text-[#26251E]/40 font-medium">(edited)</span>
+              )}
+            </div>
+          )}
           {message.content && (
-            <div className="text-sm text-[#26251E]/80 mt-0.5 leading-relaxed prose prose-sm max-w-none">
+            <div className="text-sm text-[#26251E]/90 leading-[1.46] prose prose-sm max-w-none" style={{ marginTop: isGrouped ? "0" : "0" }}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={MarkdownComponents}
@@ -347,7 +366,7 @@ function MessageItem({
 
       {/* Hover actions */}
       {isHovered && (
-        <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-md border border-[#26251E]/10 bg-[#F7F7F4] p-0.5 shadow-sm">
+        <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-[#26251E]/10 bg-white p-0.5 shadow-md">
           <Tooltip>
             <TooltipTrigger
               render={<Button
@@ -453,6 +472,29 @@ function MessageItem({
       )}
     </div>
   )
+}
+
+// Helper function to check if a message should be grouped with the previous one
+function shouldGroupMessages(current: Message, previous: Message | undefined): boolean {
+  if (!previous) return false
+  
+  // Don't group if different users
+  if (current.user.id !== previous.user.id) return false
+  
+  // Don't group if there's a parent message (reply)
+  if (current.parentMessageId || previous.parentMessageId) return false
+  
+  // Don't group if either message is pinned
+  if (current.pinned || previous.pinned) return false
+  
+  // Check if within 1 minute (60000 milliseconds)
+  if (current.createdAt && previous.createdAt) {
+    const timeDiff = current.createdAt - previous.createdAt
+    return timeDiff <= 60000 // 1 minute in milliseconds
+  }
+  
+  // If no timestamps available, don't group
+  return false
 }
 
 export function MessageList({ 
@@ -591,26 +633,32 @@ export function MessageList({
       <div ref={scrollRef} className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="flex flex-col justify-end min-h-full py-4">
-            <div className="space-y-1">
-              {messages.map((message) => (
-                <MessageItem 
-                  key={message.id} 
-                  message={message} 
-                  currentUserId={currentUserId}
-                  onDeleteMessage={onDeleteMessage}
-                  onReply={onReply}
-                  onForward={onForward}
-                  onReaction={onReaction}
-                  onPin={onPin}
-                  onSave={onSave}
-                  onUnsave={onUnsave}
-                  onAvatarClick={onAvatarClick}
-                  onNameClick={onNameClick}
-                  isSaved={savedMessageIds.has(message.id)}
-                  userNames={userNames}
-                  isAdmin={isAdmin}
-                />
-              ))}
+            <div className="space-y-0">
+              {messages.map((message, index) => {
+                const previousMessage = index > 0 ? messages[index - 1] : undefined
+                const isGrouped = shouldGroupMessages(message, previousMessage)
+                
+                return (
+                  <MessageItem 
+                    key={message.id} 
+                    message={message} 
+                    currentUserId={currentUserId}
+                    onDeleteMessage={onDeleteMessage}
+                    onReply={onReply}
+                    onForward={onForward}
+                    onReaction={onReaction}
+                    onPin={onPin}
+                    onSave={onSave}
+                    onUnsave={onUnsave}
+                    onAvatarClick={onAvatarClick}
+                    onNameClick={onNameClick}
+                    isSaved={savedMessageIds.has(message.id)}
+                    userNames={userNames}
+                    isAdmin={isAdmin}
+                    isGrouped={isGrouped}
+                  />
+                )
+              })}
             </div>
           </div>
         </ScrollArea>
