@@ -224,7 +224,7 @@ export default function ConversationPage({
   // Loading state
   if (!routeParams || conversation === undefined || messagesData === undefined) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-white">
+      <div className="flex flex-1 h-full items-center justify-center bg-[#F7F7F4]">
         <CircleNotchIcon className="size-6 animate-spin text-[#26251E]/20" />
       </div>
     )
@@ -233,13 +233,13 @@ export default function ConversationPage({
   // Not found or not authorized
   if (conversation === null) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-white">
+      <div className="flex flex-1 h-full flex-col items-center justify-center bg-[#F7F7F4]">
         <p className="text-sm text-[#26251E]/60 mb-2">Conversation not found</p>
         <button
           onClick={() => router.push(`/w/${routeParams.slug}/messages`)}
           className="text-sm text-[#26251E] hover:underline"
         >
-          Back to messages
+          Select another conversation
         </button>
       </div>
     )
@@ -318,10 +318,6 @@ export default function ConversationPage({
     }
   }
 
-  const handleBack = () => {
-    router.push(`/w/${routeParams.slug}/messages`)
-  }
-
   const handleAvatarClick = (userId: string) => {
     if (routeParams) {
       router.push(`/w/${routeParams.slug}/people/${userId}`)
@@ -350,36 +346,37 @@ export default function ConversationPage({
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-[#F7F7F4]">
+    <main className="flex flex-1 flex-col h-full bg-[#F7F7F4] overflow-hidden">
       {/* DM Header */}
       <DmHeader
         participantName={participantName}
         participantImageUrl={participantData?.imageUrl}
         participantInitials={participantInitials}
-        onBack={handleBack}
       />
 
-      {/* Message List */}
-      <MessageList
-        messages={messages}
-        currentUserId={currentUserId}
-        onDeleteMessage={handleDeleteMessage}
-        onEditMessage={handleEditMessage}
-        onReply={handleReply}
-        onReaction={handleReaction}
-        onAvatarClick={handleAvatarClick}
-        onNameClick={handleNameClick}
-        savedMessageIds={new Set()}
-        userNames={userNames}
-        channelName={participantName}
-        channelDescription="Direct message"
-        isAdmin={false}
-      />
+      {/* Message List - takes up available space */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <MessageList
+          messages={messages}
+          currentUserId={currentUserId}
+          onDeleteMessage={handleDeleteMessage}
+          onEditMessage={handleEditMessage}
+          onReply={handleReply}
+          onReaction={handleReaction}
+          onAvatarClick={handleAvatarClick}
+          onNameClick={handleNameClick}
+          savedMessageIds={new Set()}
+          userNames={userNames}
+          channelName={participantName}
+          channelDescription="Direct message"
+          isAdmin={false}
+        />
+      </div>
 
       {/* Typing Indicator */}
       <TypingIndicator typingUsers={typingUsers} />
 
-      {/* Message Input */}
+      {/* Message Input - stays at bottom */}
       <MessageInput
         onSendMessage={handleSendMessage}
         channelName={participantName}
@@ -388,6 +385,7 @@ export default function ConversationPage({
         replyingTo={replyingTo}
         onCancelReply={handleCancelReply}
         mentionUsers={[]}
+        isDirectMessage
       />
     </main>
   )

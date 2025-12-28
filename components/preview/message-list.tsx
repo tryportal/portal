@@ -594,6 +594,7 @@ export function MessageList({
   isAdmin,
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const viewportRef = React.useRef<HTMLElement | null>(null)
   const previousMessageCount = React.useRef(0)
   const hasInitialScrolled = React.useRef(false)
 
@@ -614,110 +615,220 @@ export function MessageList({
     storageIds.length > 0 ? { storageIds } : "skip"
   ) ?? {}
 
-  // Callback to scroll viewport to bottom
+  // Callback to scroll to bottom
   const scrollToBottom = React.useCallback(() => {
     if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector('[data-slot="scroll-area-viewport"]')
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight
-      }
+      // Direct scroll on the container
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [])
 
-  // Use MutationObserver to keep scroll at bottom during initial content loading
+  // Use MutationObserver and ResizeObserver to keep scroll at bottom during content loading
   // This handles async-loaded images and attachments that change content height
   const hasMessages = messages.length > 0
   React.useEffect(() => {
     if (!scrollRef.current || !hasMessages) return
 
-    const viewport = scrollRef.current.querySelector('[data-slot="scroll-area-viewport"]')
-    if (!viewport) return
+    const container = scrollRef.current
 
-    // Track if we're in the initial loading phase (first 2 seconds after mount)
+    // Track if we're in the initial loading phase (first 5 seconds after mount)
     let isInitialLoadPhase = true
     const initialLoadTimeout = setTimeout(() => {
       isInitialLoadPhase = false
-    }, 2000)
+    }, 5000)
 
-    // Observe DOM mutations and scroll to bottom when content changes during initial load
-    const observer = new MutationObserver(() => {
-      if (isInitialLoadPhase) {
-        scrollToBottom()
+    // Force scroll function
+    const forceScroll = () => {
+      if (container) {
+        container.scrollTop = container.scrollHeight
       }
+    }
+
+    // Observe DOM mutations and scroll to bottom when content changes
+    const mutationObserver = new MutationObserver(() => {
+      forceScroll()
     })
 
-    observer.observe(viewport, {
+    mutationObserver.observe(container, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['src', 'style', 'class'],
     })
 
+    // Observe resize changes to scroll when content height changes
+    const resizeObserver = new ResizeObserver(() => {
+      if (isInitialLoadPhase) {
+        forceScroll()
+      }
+    })
+
+    resizeObserver.observe(container)
+
     // Initial scroll
-    scrollToBottom()
+    forceScroll()
 
     return () => {
-      observer.disconnect()
+      mutationObserver.disconnect()
+      resizeObserver.disconnect()
       clearTimeout(initialLoadTimeout)
     }
-  }, [hasMessages, scrollToBottom])
+  }, [hasMessages])
 
   // Scroll to bottom on mount and when messages change
   React.useLayoutEffect(() => {
-    // On initial mount, scroll multiple times to handle content loading
-    if (!hasInitialScrolled.current && messages.length > 0) {
-      hasInitialScrolled.current = true
-      
-      // Immediate scroll
+    if (messages.length > 0) {
+      // Always scroll to bottom when messages change
       scrollToBottom()
       
-      // Scroll again after a short delay to catch any late-rendering content
+      // Multiple scroll attempts to handle async content
       requestAnimationFrame(() => {
         scrollToBottom()
-        
-        // One more scroll after another frame to be absolutely sure
         requestAnimationFrame(() => {
           scrollToBottom()
         })
       })
       
       previousMessageCount.current = messages.length
+      if (!hasInitialScrolled.current) {
+        hasInitialScrolled.current = true
+      }
     }
-    // Scroll when new messages arrive
-    else if (messages.length > previousMessageCount.current) {
-      scrollToBottom()
-      previousMessageCount.current = messages.length
+  }, [messages.length, scrollToBottom])
+
+  // Additional effect to ensure scroll to bottom after component is fully rendered
+  React.useEffect(() => {
+    if (messages.length > 0 && scrollRef.current) {
+      // Function to attempt scroll with retries
+      const attemptScroll = (attempts = 0) => {
+        if (attempts > 10) return // Max 10 attempts
+        scrollToBottom()
+        
+        // Check if we're actually at the bottom
+        const viewport = scrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
+        if (viewport) {
+          const isAtBottom = Math.abs(viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) < 5
+          if (!isAtBottom && attempts < 10) {
+            // Retry after a short delay
+            setTimeout(() => attemptScroll(attempts + 1), 50)
+          }
+        }
+      }
+      
+      // Use multiple timeouts to ensure DOM is fully ready and layout is complete
+      const timeout1 = setTimeout(() => attemptScroll(), 50)
+      const timeout2 = setTimeout(() => attemptScroll(), 200)
+      const timeout3 = setTimeout(() => attemptScroll(), 500)
+      
+      // Also use requestAnimationFrame for immediate scroll after paint
+      requestAnimationFrame(() => {
+        attemptScroll()
+        requestAnimationFrame(() => {
+          attemptScroll()
+        })
+      })
+      
+      return () => {
+        clearTimeout(timeout1)
+        clearTimeout(timeout2)
+        clearTimeout(timeout3)
+      }
     }
-  }, [messages, scrollToBottom])
+  }, [messages.length, scrollToBottom])
 
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
     return (
-      <div ref={scrollRef} className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <EmptyChannelState
-            channelName={channelName}
-            channelDescription={channelDescription}
-            channelIcon={channelIcon}
-          />
-        </ScrollArea>
+      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
+        <EmptyChannelState
+          channelName={channelName}
+          channelDescription={channelDescription}
+          channelIcon={channelIcon}
+        />
       </div>
     )
   }
 
+  const lastMessageRef = React.useRef<HTMLDivElement>(null)
+
+  // Aggressive scroll to bottom when messages change
+  React.useEffect(() => {
+    if (messages.length > 0) {
+      const forceScrollToBottom = () => {
+        // Try scrolling the container
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }
+        
+        // Also try scrolling the last message into view
+        if (lastMessageRef.current) {
+          lastMessageRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
+        }
+      }
+      
+      // Immediate scroll
+      forceScrollToBottom()
+      
+      // Multiple attempts with different timings
+      requestAnimationFrame(() => {
+        forceScrollToBottom()
+        requestAnimationFrame(() => {
+          forceScrollToBottom()
+          requestAnimationFrame(() => {
+            forceScrollToBottom()
+          })
+        })
+      })
+      
+      const timeout1 = setTimeout(forceScrollToBottom, 10)
+      const timeout2 = setTimeout(forceScrollToBottom, 50)
+      const timeout3 = setTimeout(forceScrollToBottom, 100)
+      const timeout4 = setTimeout(forceScrollToBottom, 200)
+      const timeout5 = setTimeout(forceScrollToBottom, 500)
+      
+      return () => {
+        clearTimeout(timeout1)
+        clearTimeout(timeout2)
+        clearTimeout(timeout3)
+        clearTimeout(timeout4)
+        clearTimeout(timeout5)
+      }
+    }
+  }, [messages.length])
+
+  // Callback ref to get direct access to viewport
+  const scrollAreaRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (node && messages.length > 0) {
+      // Find viewport and scroll immediately
+      const viewport = node.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
+      if (viewport) {
+        // Use setTimeout to ensure content is rendered
+        setTimeout(() => {
+          viewport.scrollTop = viewport.scrollHeight
+        }, 0)
+      }
+    }
+  }, [messages.length])
+
   return (
     <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div ref={scrollRef} className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="flex flex-col justify-end min-h-full py-4">
-            <div className="space-y-0">
-              {messages.map((message, index) => {
-                const previousMessage = index > 0 ? messages[index - 1] : undefined
-                const isGrouped = shouldGroupMessages(message, previousMessage)
-                
-                return (
+      <div 
+        ref={scrollRef} 
+        className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
+        style={{ scrollBehavior: 'auto' }}
+      >
+        {/* Spacer pushes messages to bottom when content doesn't fill viewport */}
+        <div className="flex-1" />
+        <div className="py-4">
+          <div className="space-y-0">
+            {messages.map((message, index) => {
+              const previousMessage = index > 0 ? messages[index - 1] : undefined
+              const isGrouped = shouldGroupMessages(message, previousMessage)
+              const isLastMessage = index === messages.length - 1
+              
+              return (
+                <div key={message.id} ref={isLastMessage ? lastMessageRef : undefined}>
                   <MessageItem 
-                    key={message.id} 
                     message={message} 
                     currentUserId={currentUserId}
                     onDeleteMessage={onDeleteMessage}
@@ -735,11 +846,11 @@ export function MessageList({
                     isAdmin={isAdmin}
                     isGrouped={isGrouped}
                   />
-                )
-              })}
-            </div>
+                </div>
+              )
+            })}
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </AttachmentUrlContext.Provider>
   )

@@ -66,6 +66,7 @@ interface MessageInputProps {
   replyingTo?: ReplyingTo | null
   onCancelReply?: () => void
   mentionUsers?: MentionUser[]
+  isDirectMessage?: boolean
 }
 
 const EMOJI_LIST = [
@@ -94,6 +95,7 @@ export function MessageInput({
   replyingTo,
   onCancelReply,
   mentionUsers = [],
+  isDirectMessage = false,
 }: MessageInputProps) {
   const [message, setMessage] = React.useState("")
   const [emojiOpen, setEmojiOpen] = React.useState(false)
@@ -483,7 +485,9 @@ export function MessageInput({
           placeholder={
             disabled && disabledReason
               ? disabledReason
-              : `Message #${channelName}`
+              : isDirectMessage
+                ? `Message ${channelName}`
+                : `Message #${channelName}`
           }
           disabled={disabled}
           className="min-h-[32px] max-h-[100px] flex-1 resize-none border-0 bg-transparent py-1.5 px-2 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed"
