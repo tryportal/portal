@@ -10,6 +10,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SetupWizard } from "@/components/setup/setup-wizard";
+import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { Button } from "@/components/ui/button";
 
 function SetupContent() {
@@ -156,7 +157,9 @@ function SetupContent() {
 
       {/* Main content */}
       <main className="flex-1 flex items-center justify-center px-4 pt-14">
-        <SetupWizard organizationId={setupOrgId ?? undefined} />
+        <UserDataCacheProvider>
+          <SetupWizard organizationId={setupOrgId ?? undefined} />
+        </UserDataCacheProvider>
       </main>
     </div>
   );
