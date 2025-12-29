@@ -38,11 +38,10 @@ interface UserData {
   imageUrl: string | null
 }
 
-export function ConversationsSidebar() {
+export function MobileConversationsList() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.slug as string
-  const conversationId = params?.conversationId as string | undefined
   const { user } = useUser()
   const { organization } = useWorkspaceData()
 
@@ -50,15 +49,12 @@ export function ConversationsSidebar() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [userDataCache, setUserDataCache] = React.useState<Record<string, UserData>>({})
 
-  // Fetch conversations
   const conversations = useQuery(
     api.conversations.getUserConversations
   ) as ConversationWithDetails[] | undefined
 
-  // Fetch unread counts for all conversations
   const unreadCounts = useQuery(api.conversations.getUnreadCountsForAllConversations) ?? {}
 
-  // Fetch user data for other participants
   const getUserDataAction = useAction(api.messages.getUserData)
 
   React.useEffect(() => {
@@ -131,7 +127,6 @@ export function ConversationsSidebar() {
     router.push(`/w/${slug}/messages/${id}`)
   }
 
-  // Filter conversations by search query
   const filteredConversations = React.useMemo(() => {
     if (!conversations) return []
     if (!searchQuery.trim()) return conversations
@@ -144,7 +139,7 @@ export function ConversationsSidebar() {
 
   if (!organization?._id) {
     return (
-      <div className="hidden sm:flex h-full w-72 flex-col border-r border-[#26251E]/10 bg-[#FAFAF8]">
+      <div className="flex h-full flex-col bg-[#FAFAF8]">
         <div className="flex h-14 items-center justify-center">
           <p className="text-sm text-[#26251E]/40">Loading...</p>
         </div>
@@ -153,30 +148,30 @@ export function ConversationsSidebar() {
   }
 
   return (
-    <div className="hidden sm:flex h-full w-72 flex-col border-r border-[#26251E]/10 bg-[#FAFAF8]">
+    <div className="flex h-full flex-col bg-[#FAFAF8]">
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b border-[#26251E]/10 px-4">
-        <h2 className="text-sm font-semibold text-[#26251E]">Messages</h2>
+        <h2 className="text-base font-semibold text-[#26251E]">Messages</h2>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
           className="text-[#26251E]/60 hover:text-[#26251E]"
         >
-          <PlusIcon className="size-4" weight="bold" />
+          <PlusIcon className="size-5" weight="bold" />
         </Button>
       </div>
 
       {/* Search */}
       <div className="p-3 border-b border-[#26251E]/5">
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
           <Input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 bg-[#26251E]/5 pl-8 text-sm placeholder:text-[#26251E]/40 border-transparent focus-visible:border-[#26251E]/20"
+            className="h-10 bg-[#26251E]/5 pl-9 text-sm placeholder:text-[#26251E]/40 border-transparent focus-visible:border-[#26251E]/20"
           />
         </div>
       </div>
@@ -194,7 +189,7 @@ export function ConversationsSidebar() {
                 variant="outline"
                 onClick={() => setNewDmDialogOpen(true)}
               >
-                <PlusIcon className="size-3.5 mr-1.5" />
+                <PlusIcon className="size-4 mr-1.5" />
                 New Message
               </Button>
             )}
@@ -206,7 +201,6 @@ export function ConversationsSidebar() {
               const participantInitials = getParticipantInitials(conversation.otherParticipantId)
               const participantImage = getParticipantImage(conversation.otherParticipantId)
               const isOwnLastMessage = conversation.lastMessage?.userId === user?.id
-              const isActive = conversationId === conversation._id
               const unreadCount = unreadCounts[conversation._id] ?? 0
               const hasUnread = unreadCount > 0
 
@@ -214,51 +208,43 @@ export function ConversationsSidebar() {
                 <button
                   key={conversation._id}
                   onClick={() => handleConversationClick(conversation._id)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
-                    isActive
-                      ? "bg-[#26251E]/10"
-                      : "hover:bg-[#26251E]/5"
-                  )}
+                  className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-[#26251E]/5 active:bg-[#26251E]/10"
                 >
-                  {/* Avatar with online indicator potential */}
                   <div className="relative flex-shrink-0">
-                    <Avatar size="default">
+                    <Avatar className="size-12">
                       <AvatarImage
                         src={participantImage || undefined}
                         alt={participantName}
                       />
-                      <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-xs font-medium">
+                      <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-sm font-medium">
                         {participantInitials}
                       </AvatarFallback>
                     </Avatar>
-                    {/* Unread indicator dot on avatar */}
-                    {hasUnread && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#FAFAF8]" />
+                    {hasUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#FAFAF8] text-[10px] font-semibold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
                     )}
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn(
                         "text-sm truncate",
-                        isActive ? "font-semibold text-[#26251E]" : hasUnread ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
+                        hasUnread ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
                       )}>
                         {participantName}
                       </p>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {conversation.lastMessage && (
-                          <span className="text-[10px] text-[#26251E]/40">
-                            {formatTime(conversation.lastMessage.createdAt)}
-                          </span>
-                        )}
-                      </div>
+                      {conversation.lastMessage && (
+                        <span className="text-xs text-[#26251E]/40 flex-shrink-0">
+                          {formatTime(conversation.lastMessage.createdAt)}
+                        </span>
+                      )}
                     </div>
                     {conversation.lastMessage ? (
                       <p className={cn(
                         "text-xs truncate mt-0.5",
-                        hasUnread && !isActive ? "text-[#26251E]/70 font-medium" : "text-[#26251E]/50"
+                        hasUnread ? "text-[#26251E]/70 font-medium" : "text-[#26251E]/50"
                       )}>
                         {isOwnLastMessage && (
                           <span className="text-[#26251E]/30">You: </span>
@@ -287,4 +273,3 @@ export function ConversationsSidebar() {
     </div>
   )
 }
-

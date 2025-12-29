@@ -7,16 +7,16 @@ import { GitHubLogo } from "./icons/github-logo"
 
 export function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-border">
+    <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-border">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2">
             <Image
               src="/portal-full.svg"
               alt="Portal"
               width={100}
               height={32}
-              className="h-6 w-auto dark:invert"
+              className="h-5 sm:h-6 w-auto dark:invert"
             />
           </div>
 
@@ -57,7 +57,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
+        <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-border text-center text-xs sm:text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} Portal. Open source under MIT License.</p>
         </div>
       </div>

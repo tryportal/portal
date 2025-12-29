@@ -203,12 +203,12 @@ export function InboxPage({ organizationId }: InboxPageProps) {
 
   return (
     <ScrollArea className="h-full flex-1">
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-[#26251E]">Inbox</h1>
-            <p className="text-sm text-[#26251E]/60">
+            <h1 className="text-lg sm:text-xl font-semibold text-[#26251E]">Inbox</h1>
+            <p className="text-xs sm:text-sm text-[#26251E]/60">
               Your unread mentions and direct messages
             </p>
           </div>
@@ -217,35 +217,35 @@ export function InboxPage({ organizationId }: InboxPageProps) {
               variant="outline"
               size="sm"
               onClick={handleMarkAllMentionsAsRead}
-              className="text-[#26251E]/70 hover:text-[#26251E]"
+              className="text-[#26251E]/70 hover:text-[#26251E] text-xs sm:text-sm self-start sm:self-auto"
             >
-              <CheckCircleIcon className="size-4 mr-1.5" />
+              <CheckCircleIcon className="size-3.5 sm:size-4 mr-1.5" />
               Mark all as read
             </Button>
           )}
         </div>
 
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-[#26251E]/5 mb-4">
-              <CheckIcon className="size-8 text-[#26251E]/40" weight="light" />
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
+            <div className="flex size-14 sm:size-16 items-center justify-center rounded-full bg-[#26251E]/5 mb-3 sm:mb-4">
+              <CheckIcon className="size-6 sm:size-8 text-[#26251E]/40" weight="light" />
             </div>
-            <h2 className="text-lg font-medium text-[#26251E] mb-1">All caught up!</h2>
-            <p className="text-sm text-[#26251E]/50 max-w-sm">
+            <h2 className="text-base sm:text-lg font-medium text-[#26251E] mb-1">All caught up!</h2>
+            <p className="text-xs sm:text-sm text-[#26251E]/50 max-w-sm">
               You have no unread mentions or direct messages. New notifications will appear here.
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Mentions Section */}
             {hasMentions && (
               <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <AtIcon className="size-5 text-[#26251E]/70" weight="bold" />
-                  <h2 className="text-sm font-semibold text-[#26251E] uppercase tracking-wide">
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                  <AtIcon className="size-4 sm:size-5 text-[#26251E]/70" weight="bold" />
+                  <h2 className="text-xs sm:text-sm font-semibold text-[#26251E] uppercase tracking-wide">
                     Mentions
                   </h2>
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#26251E] px-1.5 text-[10px] font-semibold text-white">
+                  <span className="flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-[#26251E] px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-semibold text-white">
                     {unreadMentions?.length}
                   </span>
                 </div>
@@ -260,28 +260,28 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                       <div
                         key={mention._id}
                         onClick={() => handleMentionClick(mention)}
-                        className="group flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-4 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
+                        className="group flex items-start gap-2.5 sm:gap-3 rounded-lg border border-[#26251E]/10 bg-white p-3 sm:p-4 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
                       >
-                        <Avatar className="size-10 flex-shrink-0">
+                        <Avatar className="size-8 sm:size-10 flex-shrink-0">
                           <AvatarImage src={authorImage || undefined} alt={authorName} />
-                          <AvatarFallback className="text-xs bg-[#26251E]/10 text-[#26251E]">
+                          <AvatarFallback className="text-[10px] sm:text-xs bg-[#26251E]/10 text-[#26251E]">
                             {authorInitials}
                           </AvatarFallback>
                         </Avatar>
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-[#26251E]">{authorName}</p>
+                          <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
+                            <p className="text-xs sm:text-sm font-medium text-[#26251E]">{authorName}</p>
                             {mention.channelName && (
-                              <span className="text-xs text-[#26251E]/40">
+                              <span className="text-[10px] sm:text-xs text-[#26251E]/40">
                                 in #{mention.channelName}
                               </span>
                             )}
-                            <span className="text-xs text-[#26251E]/40 ml-auto flex-shrink-0">
+                            <span className="text-[10px] sm:text-xs text-[#26251E]/40 ml-auto flex-shrink-0">
                               {formatTime(mention.createdAt)}
                             </span>
                           </div>
-                          <p className="text-sm text-[#26251E]/70 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
                             {mention.content}
                           </p>
                         </div>
@@ -291,7 +291,7 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                           variant="ghost"
                           size="icon-sm"
                           onClick={(e) => handleMarkMentionAsRead(e, mention._id)}
-                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-[#26251E]/40 hover:text-[#26251E]"
+                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-[#26251E]/40 hover:text-[#26251E] hidden sm:flex"
                           title="Mark as read"
                         >
                           <CheckIcon className="size-4" />
@@ -306,12 +306,12 @@ export function InboxPage({ organizationId }: InboxPageProps) {
             {/* Direct Messages Section */}
             {hasDMs && (
               <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <ChatCircleIcon className="size-5 text-[#26251E]/70" weight="bold" />
-                  <h2 className="text-sm font-semibold text-[#26251E] uppercase tracking-wide">
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                  <ChatCircleIcon className="size-4 sm:size-5 text-[#26251E]/70" weight="bold" />
+                  <h2 className="text-xs sm:text-sm font-semibold text-[#26251E] uppercase tracking-wide">
                     Direct Messages
                   </h2>
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#26251E] px-1.5 text-[10px] font-semibold text-white">
+                  <span className="flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-[#26251E] px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-semibold text-white">
                     {unreadDMs?.reduce((sum, dm) => sum + dm.unreadCount, 0)}
                   </span>
                 </div>
@@ -326,35 +326,35 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                       <div
                         key={dm.conversationId}
                         onClick={() => handleDMClick(dm)}
-                        className="group flex items-start gap-3 rounded-lg border border-[#26251E]/10 bg-white p-4 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
+                        className="group flex items-start gap-2.5 sm:gap-3 rounded-lg border border-[#26251E]/10 bg-white p-3 sm:p-4 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
                       >
                         <div className="relative flex-shrink-0">
-                          <Avatar className="size-10">
+                          <Avatar className="size-8 sm:size-10">
                             <AvatarImage src={participantImage || undefined} alt={participantName} />
-                            <AvatarFallback className="text-xs bg-[#26251E]/10 text-[#26251E]">
+                            <AvatarFallback className="text-[10px] sm:text-xs bg-[#26251E]/10 text-[#26251E]">
                               {participantInitials}
                             </AvatarFallback>
                           </Avatar>
                           {/* Unread count badge */}
-                          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
+                          <span className="absolute -top-1 -right-1 flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-red-500 px-0.5 sm:px-1 text-[9px] sm:text-[10px] font-semibold text-white ring-2 ring-white">
                             {dm.unreadCount > 99 ? "99+" : dm.unreadCount}
                           </span>
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-[#26251E]">{participantName}</p>
-                            <span className="text-xs text-[#26251E]/40">
+                          <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
+                            <p className="text-xs sm:text-sm font-medium text-[#26251E]">{participantName}</p>
+                            <span className="text-[10px] sm:text-xs text-[#26251E]/40 hidden sm:inline">
                               {dm.unreadCount} unread {dm.unreadCount === 1 ? "message" : "messages"}
                             </span>
                             {dm.lastMessage && (
-                              <span className="text-xs text-[#26251E]/40 ml-auto flex-shrink-0">
+                              <span className="text-[10px] sm:text-xs text-[#26251E]/40 ml-auto flex-shrink-0">
                                 {formatTime(dm.lastMessage.createdAt)}
                               </span>
                             )}
                           </div>
                           {dm.lastMessage && (
-                            <p className="text-sm text-[#26251E]/70 line-clamp-2">
+                            <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
                               {dm.lastMessage.userId === user?.id ? (
                                 <span className="text-[#26251E]/40">You: </span>
                               ) : null}
@@ -363,7 +363,7 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                           )}
                         </div>
 
-                        <ArrowRightIcon className="size-4 text-[#26251E]/30 group-hover:text-[#26251E]/60 flex-shrink-0 mt-3 transition-colors" />
+                        <ArrowRightIcon className="size-3.5 sm:size-4 text-[#26251E]/30 group-hover:text-[#26251E]/60 flex-shrink-0 mt-2 sm:mt-3 transition-colors" />
                       </div>
                     )
                   })}

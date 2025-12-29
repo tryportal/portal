@@ -20,7 +20,7 @@ export function Hero() {
   const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null;
 
   return (
-    <section className="pt-32 pb-20 px-6 overflow-hidden">
+    <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -32,7 +32,7 @@ export function Hero() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground text-sm mb-8 backdrop-blur-sm"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground text-xs sm:text-sm mb-6 sm:mb-8 backdrop-blur-sm"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -41,18 +41,18 @@ export function Hero() {
             Now in Alpha
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] text-balance">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] text-balance">
             Team chat that respects{" "}
             <span className="text-muted-foreground">your privacy.</span>
           </h1>
 
-          <p className="mt-6 text-xl text-muted-foreground max-w-2xl mx-auto text-balance font-light leading-relaxed">
+          <p className="mt-4 sm:mt-6 text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto text-balance font-light leading-relaxed px-2 sm:px-0">
             Portal is the open-source alternative to Slack. Real-time messaging,
             organized channels, and seamless collaboration — without the
             surveillance.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             {authLoaded && (
               <>
                 {isSignedIn && workspaceUrl ? (
@@ -76,20 +76,20 @@ export function Hero() {
             )}
           </div>
 
-          <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground/80">
-            <div className="flex items-center gap-2">
+          <div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-muted-foreground/80">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <ShieldCheck
-                size={18}
+                size={16}
                 weight="fill"
-                className="text-foreground"
+                className="text-foreground sm:size-[18px]"
               />
               <span>Privacy-first</span>
             </div>
-            <div className="flex items-center gap-2">
-              <GitHubLogo className="w-[18px] h-[18px] text-foreground" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <GitHubLogo className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-foreground" />
               <span>Open Source</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-foreground font-semibold">$0</span>
               <span>Completely free</span>
             </div>
@@ -100,9 +100,9 @@ export function Hero() {
           initial={{ opacity: 0, y: 40, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-20 relative"
+          className="mt-12 sm:mt-20 relative mx-2 sm:mx-0"
         >
-          <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-2xl bg-card ring-1 ring-white/10">
+          <div className="relative rounded-lg sm:rounded-xl overflow-hidden border border-border/50 shadow-xl sm:shadow-2xl bg-card ring-1 ring-white/10">
             <Image
               src="/images/portal-main.png"
               alt="Portal chat interface showing real-time messaging"
@@ -112,7 +112,7 @@ export function Hero() {
               priority
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none h-32 bottom-0 top-auto" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none h-16 sm:h-32 bottom-0 top-auto" />
         </motion.div>
       </div>
     </section>

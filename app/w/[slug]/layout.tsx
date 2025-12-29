@@ -107,8 +107,8 @@ function WorkspaceLayoutContent({
       {/* Top Navigation */}
       <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main Content Area - add bottom padding on mobile for bottom nav */}
+      <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
         {/* Sidebar - hidden on messages tab */}
         {showSidebar && (
           <Sidebar

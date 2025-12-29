@@ -306,7 +306,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-[95%] sm:max-w-md mx-auto px-2 sm:px-0">
       {/* Progress indicator */}
       <div className="mb-8">
         <SetupProgress currentStep={step} steps={STEPS} />

@@ -125,7 +125,7 @@ function SetupContent() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 px-4 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm z-50">
+      <header className="fixed top-0 left-0 right-0 h-14 px-3 sm:px-4 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm z-50">
         <div className="flex items-center gap-2">
           <div className="size-7 rounded-lg bg-primary flex items-center justify-center">
             <img
@@ -134,7 +134,7 @@ function SetupContent() {
               className="size-4 invert"
             />
           </div>
-          <span className="font-semibold text-sm">Portal</span>
+          <span className="font-semibold text-xs sm:text-sm">Portal</span>
         </div>
 
         <div className="flex items-center gap-3">

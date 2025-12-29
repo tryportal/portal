@@ -182,23 +182,23 @@ export function WorkspaceSettingsPage({
   return (
     <div className="flex h-full flex-col bg-[#F7F7F4]">
       {/* Header */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <GearIcon className="size-5 text-[#26251E]" weight="fill" />
-          <h1 className="text-base font-semibold text-[#26251E]">Workspace Settings</h1>
+          <GearIcon className="size-4 sm:size-5 text-[#26251E]" weight="fill" />
+          <h1 className="text-sm sm:text-base font-semibold text-[#26251E]">Workspace Settings</h1>
         </div>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl py-12 px-6">
+        <div className="mx-auto max-w-3xl py-6 sm:py-12 px-4 sm:px-6">
           <div className="space-y-10">
             
             {/* Profile Section */}
             <section className="space-y-6">
               <div>
-                <h2 className="text-lg font-medium text-[#26251E]">Workspace Profile</h2>
-                <p className="text-sm text-[#26251E]/60">Manage your workspace's public identity.</p>
+                <h2 className="text-base sm:text-lg font-medium text-[#26251E]">Workspace Profile</h2>
+                <p className="text-xs sm:text-sm text-[#26251E]/60">Manage your workspace's public identity.</p>
               </div>
               
               <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
@@ -250,8 +250,8 @@ export function WorkspaceSettingsPage({
             {/* URL Section */}
             <section className="space-y-6">
                <div>
-                <h2 className="text-lg font-medium text-[#26251E]">Workspace URL</h2>
-                <p className="text-sm text-[#26251E]/60">The web address for your workspace.</p>
+                <h2 className="text-base sm:text-lg font-medium text-[#26251E]">Workspace URL</h2>
+                <p className="text-xs sm:text-sm text-[#26251E]/60">The web address for your workspace.</p>
               </div>
 
               <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
@@ -329,8 +329,8 @@ export function WorkspaceSettingsPage({
             {/* Danger Zone */}
             <section className="space-y-6">
               <div>
-                <h2 className="text-lg font-medium text-red-600">Danger Zone</h2>
-                <p className="text-sm text-[#26251E]/60">Irreversible and destructive actions.</p>
+                <h2 className="text-base sm:text-lg font-medium text-red-600">Danger Zone</h2>
+                <p className="text-xs sm:text-sm text-[#26251E]/60">Irreversible and destructive actions.</p>
               </div>
 
               <div className="rounded-xl border border-red-200 bg-white p-6 shadow-sm">

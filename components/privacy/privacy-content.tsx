@@ -230,16 +230,16 @@ export function PrivacyContent() {
           remarkPlugins={[remarkGfm]}
           components={{
             h1: ({ node, ...props }) => (
-              <h1 className="text-5xl font-bold text-foreground mb-8 mt-8 first:mt-0 tracking-tight" {...props} />
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-8 mt-8 first:mt-0 tracking-tight" {...props} />
             ),
             h2: ({ node, ...props }) => (
-              <h2 className="text-3xl font-semibold text-foreground mb-6 mt-12 first:mt-0 tracking-tight" {...props} />
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground mb-6 mt-12 first:mt-0 tracking-tight" {...props} />
             ),
             h3: ({ node, ...props }) => (
               <h3 className="text-xl font-semibold text-foreground mb-4 mt-8" {...props} />
             ),
             p: ({ node, ...props }) => (
-              <p className="text-lg text-muted-foreground mb-6 leading-relaxed font-light" {...props} />
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed font-light" {...props} />
             ),
             ul: ({ node, ...props }) => (
               <ul className="list-disc list-inside text-muted-foreground mb-6 space-y-2 ml-4" {...props} />

@@ -53,17 +53,17 @@ const item = {
 
 export function Features() {
   return (
-    <section className="py-32 px-6 bg-muted/30">
+    <section className="py-16 sm:py-32 px-4 sm:px-6 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-20"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Everything you need for team communication</h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto font-light">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight px-2">Everything you need for team communication</h2>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto font-light px-4">
             Built for teams who value simplicity, speed, and privacy.
           </p>
         </motion.div>
@@ -73,20 +73,20 @@ export function Features() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8"
         >
           {features.map((feature) => (
             <motion.div
               key={feature.title}
               variants={item}
               whileHover={{ y: -5 }}
-              className="bg-background border border-border/50 rounded-2xl p-8 hover:shadow-lg hover:border-foreground/10 transition-all duration-300"
+              className="bg-background border border-border/50 rounded-xl sm:rounded-2xl p-5 sm:p-8 hover:shadow-lg hover:border-foreground/10 transition-all duration-300"
             >
-              <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-6 text-foreground">
-                <feature.icon size={24} weight="fill" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-muted/50 flex items-center justify-center mb-4 sm:mb-6 text-foreground">
+                <feature.icon className="size-5 sm:size-6" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">{feature.title}</h3>
-              <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3 tracking-tight">{feature.title}</h3>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>

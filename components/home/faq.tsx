@@ -38,17 +38,17 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section className="py-24 px-6">
+    <section className="py-16 sm:py-24 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Frequently Asked Questions</h2>
-          <p className="mt-4 text-muted-foreground">Got questions? We've got answers.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">Frequently Asked Questions</h2>
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-muted-foreground">Got questions? We've got answers.</p>
         </motion.div>
 
         <motion.div
@@ -60,10 +60,10 @@ export function FAQ() {
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((faq, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-left text-foreground hover:no-underline">
+                <AccordionTrigger className="text-left text-sm sm:text-base text-foreground hover:no-underline py-3 sm:py-4">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+                <AccordionContent className="text-sm sm:text-base text-muted-foreground">{faq.answer}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

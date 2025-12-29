@@ -104,13 +104,13 @@ export default function InvitePage({
   if (!invitationData || !invitationData.invitation || !invitationData.organization) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-16 rounded-full bg-red-50 flex items-center justify-center">
-              <XCircle className="size-8 text-red-500" weight="fill" />
+            <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
+              <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
             </div>
-            <h1 className="text-2xl font-semibold text-[#26251E]">Invalid Invitation</h1>
-            <p className="text-[#26251E]/60">
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Invalid Invitation</h1>
+            <p className="text-sm sm:text-base text-[#26251E]/60">
               This invitation link is invalid or has expired. Please request a new invitation from your team admin.
             </p>
             <Button
@@ -131,15 +131,15 @@ export default function InvitePage({
   if (invitation.status !== "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-16 rounded-full bg-amber-50 flex items-center justify-center">
-              <EnvelopeSimple className="size-8 text-amber-500" weight="fill" />
+            <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
+              <EnvelopeSimple className="size-5 sm:size-8 text-amber-500" weight="fill" />
             </div>
-            <h1 className="text-2xl font-semibold text-[#26251E]">
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">
               Invitation {invitation.status === "accepted" ? "Already Accepted" : "No Longer Valid"}
             </h1>
-            <p className="text-[#26251E]/60">
+            <p className="text-sm sm:text-base text-[#26251E]/60">
               {invitation.status === "accepted"
                 ? "This invitation has already been accepted. You can access the organization from your dashboard."
                 : "This invitation has been revoked. Please request a new invitation from your team admin."}
@@ -160,13 +160,13 @@ export default function InvitePage({
   if (invitation.expiresAt < Date.now()) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-16 rounded-full bg-amber-50 flex items-center justify-center">
-              <XCircle className="size-8 text-amber-500" weight="fill" />
+            <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
+              <XCircle className="size-5 sm:size-8 text-amber-500" weight="fill" />
             </div>
-            <h1 className="text-2xl font-semibold text-[#26251E]">Invitation Expired</h1>
-            <p className="text-[#26251E]/60">
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Invitation Expired</h1>
+            <p className="text-sm sm:text-base text-[#26251E]/60">
               This invitation has expired. Please request a new invitation from your team admin.
             </p>
             <Button
@@ -185,14 +185,14 @@ export default function InvitePage({
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-16 rounded-full bg-green-50 flex items-center justify-center">
-              <CheckCircle className="size-8 text-green-500" weight="fill" />
+            <div className="size-12 sm:size-16 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="size-5 sm:size-8 text-green-500" weight="fill" />
             </div>
-            <h1 className="text-2xl font-semibold text-[#26251E]">Welcome to {organization.name}!</h1>
-            <p className="text-[#26251E]/60">
-              You've successfully joined the team. Redirecting you to the workspace...
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Welcome to {organization.name}!</h1>
+            <p className="text-sm sm:text-base text-[#26251E]/60">
+              You&apos;ve successfully joined the team. Redirecting you to the workspace...
             </p>
             <Spinner className="size-5 animate-spin text-[#26251E]/40 mt-4" />
           </div>
@@ -205,16 +205,16 @@ export default function InvitePage({
   if (!isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5 mb-6">
+        <div className="max-w-[95%] sm:max-w-md w-full">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5 mb-6">
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="size-16 rounded-full bg-[#26251E]/5 flex items-center justify-center">
-                <EnvelopeSimple className="size-8 text-[#26251E]" weight="fill" />
+              <div className="size-12 sm:size-16 rounded-full bg-[#26251E]/5 flex items-center justify-center">
+                <EnvelopeSimple className="size-5 sm:size-8 text-[#26251E]" weight="fill" />
               </div>
-              <h1 className="text-2xl font-semibold text-[#26251E]">
-                You're invited to join {organization.name}
+              <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">
+                You&apos;re invited to join {organization.name}
               </h1>
-              <p className="text-[#26251E]/60">
+              <p className="text-sm sm:text-base text-[#26251E]/60">
                 Sign in or create an account to accept this invitation and join the team as {invitation.role === "admin" ? "an admin" : "a member"}.
               </p>
             </div>
@@ -250,13 +250,13 @@ export default function InvitePage({
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-[#26251E]/5">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-16 rounded-full bg-red-50 flex items-center justify-center">
-              <XCircle className="size-8 text-red-500" weight="fill" />
+            <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
+              <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
             </div>
-            <h1 className="text-2xl font-semibold text-[#26251E]">Something went wrong</h1>
-            <p className="text-[#26251E]/60">{error}</p>
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Something went wrong</h1>
+            <p className="text-sm sm:text-base text-[#26251E]/60">{error}</p>
             <div className="flex gap-3 mt-4">
               <Button
                 variant="outline"

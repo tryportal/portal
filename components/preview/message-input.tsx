@@ -363,7 +363,7 @@ export function MessageInput({
   const canSend = (message.trim() || hasUploadedAttachments) && !disabled
 
   return (
-    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-3 py-2">
+    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-2 sm:px-3 py-2">
       {/* Reply indicator */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#26251E]/10 bg-white px-3 py-2">
@@ -441,17 +441,17 @@ export function MessageInput({
         {/* Attachment button */}
         <DropdownMenu>
           <Tooltip>
-            <TooltipTrigger
-              render={<DropdownMenuTrigger
-                render={<Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
-                  disabled={disabled}
-                />}
-              />}
-            >
-              <PlusIcon className="size-4" />
+          <TooltipTrigger
+          render={<DropdownMenuTrigger
+            render={<Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 size-8 sm:size-9 text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
+              disabled={disabled}
+            />}
+          />}
+          >
+          <PlusIcon className="size-4" />
             </TooltipTrigger>
             <TooltipContent side="top">Add attachment</TooltipContent>
           </Tooltip>
@@ -490,12 +490,12 @@ export function MessageInput({
                 : `Message #${channelName}`
           }
           disabled={disabled}
-          className="min-h-[32px] max-h-[100px] flex-1 resize-none border-0 bg-transparent py-1.5 px-2 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed"
+          className="min-h-[32px] max-h-[100px] h-9 sm:h-10 flex-1 resize-none border-0 bg-transparent py-1.5 px-2 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed"
           rows={1}
         />
 
         {/* Right side buttons */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           {/* Emoji picker */}
           <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
             <Tooltip>
@@ -504,7 +504,7 @@ export function MessageInput({
                   render={<Button
                     variant="ghost"
                     size="icon"
-                    className="text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                    className="size-8 sm:size-9 text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
                     disabled={disabled}
                   />}
                 />}
@@ -542,7 +542,7 @@ export function MessageInput({
                 onClick={handleSend}
                 disabled={!canSend || isUploading}
                 size="icon"
-                className="bg-[#26251E] text-[#F7F7F4] hover:bg-[#26251E]/80 disabled:opacity-30"
+                className="size-8 sm:size-9 bg-[#26251E] text-[#F7F7F4] hover:bg-[#26251E]/80 disabled:opacity-30"
               />}
             >
               <PaperPlaneTiltIcon className="size-4" weight="fill" />
