@@ -47,10 +47,6 @@ function WorkspaceLayoutContent({
   // Track if we're transitioning between major tabs (home/messages/inbox)
   // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
   const isTransitioning = activeTab !== currentPathTab;
-  
-  // Track if we're transitioning between major tabs (home/messages/inbox)
-  // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
-  const isTransitioning = activeTab !== currentPathTab;
 
   // Track workspace view
   const trackedRef = React.useRef(false);
