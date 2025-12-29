@@ -29,7 +29,7 @@ interface InviteFormProps {
   onRevokeInvitation: (invitationId: string) => Promise<void>;
   existingMembers: Array<{
     id: string;
-    emailAddress: string;
+    displayName?: string;
     role: string;
     publicUserData?: {
       firstName?: string | null;
@@ -168,7 +168,7 @@ export function InviteForm({
     if (firstName || lastName) {
       return `${firstName || ""} ${lastName || ""}`.trim();
     }
-    return member.emailAddress;
+    return member.displayName || "Unknown";
   };
 
   const getMemberInitials = (member: (typeof existingMembers)[0]) => {
@@ -179,7 +179,7 @@ export function InviteForm({
     }
     if (firstName) return firstName[0].toUpperCase();
     if (lastName) return lastName[0].toUpperCase();
-    if (member.emailAddress) return member.emailAddress[0].toUpperCase();
+    if (member.displayName) return member.displayName[0].toUpperCase();
     return "?";
   };
 

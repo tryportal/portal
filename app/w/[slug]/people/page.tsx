@@ -1,12 +1,13 @@
 "use client";
 
-import { useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import * as React from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useWorkspaceData } from "@/components/workspace-context";
+import { useUserDataCache } from "@/components/user-data-cache";
 import { 
   UsersIcon,
   MagnifyingGlassIcon,
@@ -22,7 +23,7 @@ import { InvitePeopleDialog } from "@/components/invite-people-dialog";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { usePageTitle } from "@/lib/use-page-title";
 
-// Type for member data
+// Type for member data with user info from cache
 type MemberWithUserData = {
   _id: Id<"organizationMembers">;
   organizationId: Id<"organizations">;
@@ -34,7 +35,6 @@ type MemberWithUserData = {
   location?: string;
   timezone?: string;
   bio?: string;
-  emailAddress: string | null;
   publicUserData: {
     firstName: string | null;
     lastName: string | null;
@@ -45,48 +45,60 @@ type MemberWithUserData = {
 export default function PeoplePage() {
   const router = useRouter();
   const { organization, slug, isLoading: contextLoading } = useWorkspaceData();
+  const { cache: userDataCache, fetchUserData } = useUserDataCache();
 
-  // Members state
-  const [members, setMembers] = useState<MemberWithUserData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Set page title
   usePageTitle("People - Portal");
 
-  // Get members action
-  const getMembers = useAction(api.organizations.getOrganizationMembers);
+  // Get members with reactive query
+  const membersResult = useQuery(
+    api.organizations.getOrganizationMembersQuery,
+    organization?._id ? { organizationId: organization._id } : "skip"
+  );
 
-  // Fetch members when organization is available
+  const rawMembers = membersResult?.members ?? [];
+  const isLoading = membersResult === undefined;
+
+  // Fetch user data for all members
   React.useEffect(() => {
-    const fetchMembers = async () => {
-      if (!organization?._id) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const result = await getMembers({ organizationId: organization._id });
-        setMembers(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load members");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (organization?._id) {
-      fetchMembers();
+    if (rawMembers.length > 0) {
+      const userIds = rawMembers.map((m) => m.userId);
+      fetchUserData(userIds);
     }
-  }, [organization?._id, getMembers]);
+  }, [rawMembers, fetchUserData]);
+
+  // Transform members with cached user data
+  const members: MemberWithUserData[] = React.useMemo(() => {
+    return rawMembers.map((member) => {
+      const cached = userDataCache[member.userId];
+      return {
+        _id: member._id,
+        organizationId: member.organizationId,
+        userId: member.userId,
+        role: member.role,
+        joinedAt: member.joinedAt,
+        jobTitle: member.jobTitle,
+        department: member.department,
+        location: member.location,
+        timezone: member.timezone,
+        bio: member.bio,
+        publicUserData: cached ? {
+          firstName: cached.firstName,
+          lastName: cached.lastName,
+          imageUrl: cached.imageUrl,
+        } : undefined,
+      };
+    });
+  }, [rawMembers, userDataCache]);
 
   const getDisplayName = (member: MemberWithUserData) => {
     if (member.publicUserData?.firstName || member.publicUserData?.lastName) {
       return `${member.publicUserData.firstName || ""} ${member.publicUserData.lastName || ""}`.trim();
     }
-    return member.emailAddress || "Unknown User";
+    return "Unknown User";
   };
 
   const getInitials = (member: MemberWithUserData) => {
@@ -103,8 +115,7 @@ export default function PeoplePage() {
     const query = searchQuery.toLowerCase();
     return members.filter((member) => {
       const name = getDisplayName(member).toLowerCase();
-      const email = (member.emailAddress || "").toLowerCase();
-      return name.includes(query) || email.includes(query);
+      return name.includes(query);
     });
   }, [members, searchQuery]);
 
@@ -142,19 +153,6 @@ export default function PeoplePage() {
             <div className="flex h-full items-center justify-center py-12">
               <LoadingSpinner text="Loading members..." />
             </div>
-          ) : error ? (
-            <div className="flex h-full items-center justify-center py-12">
-              <div className="text-center">
-                <p className="text-sm text-red-600 mb-2">{error}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                >
-                  Retry
-                </Button>
-              </div>
-            </div>
           ) : (
             <div className="mx-auto max-w-3xl py-12 px-6">
               <div className="space-y-6">
@@ -171,7 +169,7 @@ export default function PeoplePage() {
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/40" />
                   <Input
-                    placeholder="Search by name or email..."
+                    placeholder="Search by name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9 bg-white border-[#26251E]/10"
@@ -208,11 +206,6 @@ export default function PeoplePage() {
                           {member.jobTitle && (
                             <p className="text-xs font-medium text-[#26251E]/60 truncate max-w-[200px]">
                               {member.jobTitle}
-                            </p>
-                          )}
-                          {!member.jobTitle && member.emailAddress && (
-                            <p className="text-xs text-[#26251E]/40 truncate max-w-[200px]">
-                              {member.emailAddress}
                             </p>
                           )}
                         </div>

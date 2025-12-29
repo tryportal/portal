@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -8,19 +8,19 @@ import { Spinner, ArrowRight } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { analytics } from "@/lib/analytics";
+import { useUserDataCache } from "@/components/user-data-cache";
 import { Button } from "@/components/ui/button";
 import { SetupProgress } from "@/components/setup/setup-progress";
 import { IdentityStep } from "@/components/setup/steps/identity-step";
 import { AboutStep } from "@/components/setup/steps/about-step";
 import { InviteStep } from "@/components/setup/steps/invite-step";
 
-// Type for member data returned from the action
+// Type for member data with user info from cache
 type MemberWithUserData = {
   _id: Id<"organizationMembers">;
   organizationId: Id<"organizations">;
   userId: string;
   role: "admin" | "member";
-  emailAddress: string | null;
   publicUserData: {
     firstName: string | null;
     lastName: string | null;
@@ -62,6 +62,7 @@ interface SetupWizardProps {
 
 export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) {
   const router = useRouter();
+  const { cache: userDataCache, fetchUserData } = useUserDataCache();
 
   // URL state for step and org ID using nuqs
   const [step, setStep] = useQueryState("step", parseAsInteger.withDefault(0));
@@ -92,20 +93,39 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     currentOrgId ? { organizationId: currentOrgId, role: "member" as const } : "skip"
   );
 
-  // Members state (fetched via action)
-  const [members, setMembers] = useState<MemberWithUserData[]>([]);
-  const fetchMembers = useAction(api.organizations.getOrganizationMembers);
+  // Members query (reactive)
+  const membersResult = useQuery(
+    api.organizations.getOrganizationMembersQuery,
+    currentOrgId ? { organizationId: currentOrgId } : "skip"
+  );
 
-  // Fetch members when organization ID changes
+  const rawMembers = membersResult?.members ?? [];
+
+  // Fetch user data for all members
   useEffect(() => {
-    if (currentOrgId) {
-      fetchMembers({ organizationId: currentOrgId })
-        .then(setMembers)
-        .catch(console.error);
-    } else {
-      setMembers([]);
+    if (rawMembers.length > 0) {
+      const userIds = rawMembers.map((m) => m.userId);
+      fetchUserData(userIds);
     }
-  }, [currentOrgId, fetchMembers]);
+  }, [rawMembers, fetchUserData]);
+
+  // Transform members with cached user data
+  const members: MemberWithUserData[] = useMemo(() => {
+    return rawMembers.map((member) => {
+      const cached = userDataCache[member.userId];
+      return {
+        _id: member._id,
+        organizationId: member.organizationId,
+        userId: member.userId,
+        role: member.role,
+        publicUserData: cached ? {
+          firstName: cached.firstName,
+          lastName: cached.lastName,
+          imageUrl: cached.imageUrl,
+        } : undefined,
+      };
+    });
+  }, [rawMembers, userDataCache]);
 
   // Form state
   const [name, setName] = useState("");
@@ -255,12 +275,19 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
   };
 
   // Format members for display
-  const formattedMembers = members.map((member: MemberWithUserData) => ({
-    id: member._id,
-    emailAddress: member.emailAddress || member.userId,
-    role: member.role === "admin" ? "org:admin" : "org:member",
-    publicUserData: member.publicUserData,
-  }));
+  const formattedMembers = members.map((member: MemberWithUserData) => {
+    const firstName = member.publicUserData?.firstName;
+    const lastName = member.publicUserData?.lastName;
+    const displayName = firstName || lastName
+      ? `${firstName || ""} ${lastName || ""}`.trim()
+      : undefined;
+    return {
+      id: member._id,
+      displayName,
+      role: member.role === "admin" ? "org:admin" : "org:member",
+      publicUserData: member.publicUserData,
+    };
+  });
 
   // Format invitations for display
   const formattedInvitations = (pendingInvitations || [])

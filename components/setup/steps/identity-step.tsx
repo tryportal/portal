@@ -37,7 +37,10 @@ export function IdentityStep({
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="logo" className="text-xs font-medium text-muted-foreground">
+          <Label
+            htmlFor="logo"
+            className="text-xs font-medium text-muted-foreground"
+          >
             Logo
           </Label>
           <LogoUpload
@@ -49,7 +52,10 @@ export function IdentityStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">
+          <Label
+            htmlFor="name"
+            className="text-xs font-medium text-muted-foreground"
+          >
             Workspace name
           </Label>
           <Input
@@ -62,12 +68,15 @@ export function IdentityStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="slug" className="text-xs font-medium text-muted-foreground">
+          <Label
+            htmlFor="slug"
+            className="text-xs font-medium text-muted-foreground"
+          >
             Workspace URL
           </Label>
           <div className="flex">
             <span className="h-10 px-3 flex items-center text-xs text-muted-foreground bg-muted border border-r-0 border-input rounded-l-md">
-              tryportal.app/
+              tryportal.app/w/
             </span>
             <Input
               id="slug"

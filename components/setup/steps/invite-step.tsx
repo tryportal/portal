@@ -12,7 +12,7 @@ interface InviteStepProps {
   onRevokeInvitation: (invitationId: string) => Promise<void>;
   existingMembers: Array<{
     id: string;
-    emailAddress: string;
+    displayName?: string;
     role: string;
     publicUserData?: {
       firstName?: string | null;
