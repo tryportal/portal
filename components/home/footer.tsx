@@ -29,9 +29,7 @@ export function Footer() {
               Changelog
             </Link>
             <Link
-              href="https://github.com/tryportal/portal"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/privacy"
               className="hover:text-foreground transition-colors"
             >
               Privacy
