@@ -16,25 +16,30 @@ export function CTA() {
   const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null
 
   return (
-    <section className="py-24 px-6 bg-foreground">
-      <div className="max-w-4xl mx-auto text-center">
+    <section className="py-32 px-6">
+      <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-foreground text-background rounded-[2.5rem] p-12 sm:p-24 text-center relative overflow-hidden"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-background">Ready to try something better?</h2>
-          <p className="mt-4 text-lg text-background/70 max-w-xl mx-auto">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight relative z-10">Ready to try something better?</h2>
+          <p className="mt-6 text-xl text-background/80 max-w-2xl mx-auto font-light relative z-10">
             Join teams who value privacy and simplicity. Get started with Portal today — it's free, forever.
           </p>
-          <div className="mt-8">
+          <div className="mt-10 relative z-10">
             {authLoaded && (
               <>
                 {isSignedIn && workspaceUrl ? (
                   <Link
                     href={workspaceUrl}
-                    className="inline-flex items-center gap-2 bg-background text-foreground px-8 py-4 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 bg-background text-foreground px-8 py-4 rounded-full font-medium hover:scale-105 transition-transform"
                   >
                     Go to Workspace
                     <ArrowRight size={18} weight="bold" />
@@ -42,7 +47,7 @@ export function CTA() {
                 ) : (
                   <Link
                     href="/sign-up"
-                    className="inline-flex items-center gap-2 bg-background text-foreground px-8 py-4 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 bg-background text-foreground px-8 py-4 rounded-full font-medium hover:scale-105 transition-transform"
                   >
                     Get Started
                     <ArrowRight size={18} weight="bold" />

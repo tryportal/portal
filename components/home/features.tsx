@@ -53,17 +53,17 @@ const item = {
 
 export function Features() {
   return (
-    <section className="py-24 px-6 bg-muted/30">
+    <section className="py-32 px-6 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-20"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Everything you need for team communication</h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Everything you need for team communication</h2>
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto font-light">
             Built for teams who value simplicity, speed, and privacy.
           </p>
         </motion.div>
@@ -72,20 +72,21 @@ export function Features() {
           variants={container}
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
           {features.map((feature) => (
             <motion.div
               key={feature.title}
               variants={item}
-              className="bg-card border border-border rounded-xl p-6 hover:border-foreground/20 transition-colors"
+              whileHover={{ y: -5 }}
+              className="bg-background border border-border/50 rounded-2xl p-8 hover:shadow-lg hover:border-foreground/10 transition-all duration-300"
             >
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-4">
-                <feature.icon size={24} weight="duotone" className="text-foreground" />
+              <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-6 text-foreground">
+                <feature.icon size={24} weight="fill" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">{feature.title}</h3>
+              <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>

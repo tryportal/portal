@@ -30,37 +30,37 @@ const showcases = [
 
 export function FeatureShowcase() {
   return (
-    <section className="py-24 px-6">
-      <div className="max-w-6xl mx-auto space-y-32">
+    <section className="py-32 px-6 overflow-hidden">
+      <div className="max-w-6xl mx-auto space-y-40">
         {showcases.map((showcase, index) => (
           <motion.div
             key={showcase.title}
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.7 }}
+            viewport={{ once: true, margin: "-20%" }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className={`flex flex-col ${
               index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
-            } items-center gap-12 lg:gap-16`}
+            } items-center gap-12 lg:gap-24`}
           >
-            <div className="flex-1 space-y-4">
-              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{showcase.title}</h3>
-              <p className="text-muted-foreground leading-relaxed">{showcase.description}</p>
+            <div className="flex-1 space-y-6">
+              <h3 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">{showcase.title}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed font-light">{showcase.description}</p>
               <a
                 href="https://github.com/tryportal/portal"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-foreground font-medium hover:gap-3 transition-all"
+                className="inline-flex items-center gap-2 text-foreground font-medium hover:gap-3 transition-all group"
               >
                 Learn more
-                <ArrowRight size={16} weight="bold" />
+                <ArrowRight size={16} weight="bold" className="group-hover:translate-x-1 transition-transform" />
               </a>
             </div>
             <div className="flex-1 w-full">
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="rounded-2xl overflow-hidden border border-border shadow-xl"
+                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-card ring-1 ring-black/5"
               >
                 <Image
                   src={showcase.image || "/placeholder.svg"}

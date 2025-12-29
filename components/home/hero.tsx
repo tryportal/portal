@@ -18,43 +18,43 @@ export function Hero() {
   const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null
 
   return (
-    <section className="pt-32 pb-20 px-6">
+    <section className="pt-32 pb-20 px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="text-center max-w-3xl mx-auto"
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm mb-6"
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground text-sm mb-8 backdrop-blur-sm"
           >
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            Currently in Alpha
+            v1.0 is now available
           </motion.div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight text-balance">
-            Team chat that respects your privacy.
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] text-balance">
+            Team chat that respects <span className="text-muted-foreground">your privacy.</span>
           </h1>
 
-          <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto text-balance">
-            Portal is a modern, open-source alternative to Slack. Real-time messaging, organized channels, and seamless
-            collaboration — all while keeping your data yours.
+          <p className="mt-6 text-xl text-muted-foreground max-w-2xl mx-auto text-balance font-light leading-relaxed">
+            Portal is the open-source alternative to Slack. Real-time messaging, organized channels, and seamless
+            collaboration — without the surveillance.
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             {authLoaded && (
               <>
                 {isSignedIn && workspaceUrl ? (
                   <Link
                     href={workspaceUrl}
-                    className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 rounded-full font-medium hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                   >
                     Go to Workspace
                     <ArrowRight size={18} weight="bold" />
@@ -62,7 +62,7 @@ export function Hero() {
                 ) : (
                   <Link
                     href="/sign-up"
-                    className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 rounded-full font-medium hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                   >
                     Get Started Free
                     <ArrowRight size={18} weight="bold" />
@@ -72,7 +72,7 @@ export function Hero() {
             )}
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground/80">
             <div className="flex items-center gap-2">
               <ShieldCheck size={18} weight="fill" className="text-foreground" />
               <span>Privacy-first</span>
@@ -89,21 +89,22 @@ export function Hero() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="mt-16 relative"
+          initial={{ opacity: 0, y: 40, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-20 relative"
         >
-          <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-card">
+          <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-2xl bg-card ring-1 ring-white/10">
             <Image
               src="/images/portal-main.png"
               alt="Portal chat interface showing real-time messaging"
               width={1200}
               height={700}
               className="w-full h-auto"
+              priority
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none h-32 bottom-0 top-auto" />
         </motion.div>
       </div>
     </section>

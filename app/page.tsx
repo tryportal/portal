@@ -68,7 +68,7 @@ export default function Page() {
           alt="Portal"
           width={120}
           height={32}
-          className="h-8 w-auto"
+          className="h-8 w-auto dark:invert"
           priority
         />
         <div className="size-5 animate-spin rounded-full border-2 border-[#26251E]/10 border-t-[#26251E]/40" />
