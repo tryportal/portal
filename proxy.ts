@@ -3,10 +3,13 @@ import { NextResponse } from "next/server";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
+  "/",
   "/preview(.*)",
   "/api/webhooks(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/home(.*)",
+  "/privacy(.*)",
 ]);
 
 const isSetupRoute = createRouteMatcher(["/setup(.*)"]);
@@ -19,11 +22,10 @@ export const proxy = clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
-  // If user is not signed in, redirect to sign-in
+  // If user is not signed in, redirect to landing page
   if (!userId) {
-    const signInUrl = new URL("/sign-in", request.url);
-    signInUrl.searchParams.set("redirect_url", request.url);
-    return NextResponse.redirect(signInUrl);
+    const homeUrl = new URL("/home", request.url);
+    return NextResponse.redirect(homeUrl);
   }
 
   // Allow setup route for authenticated users

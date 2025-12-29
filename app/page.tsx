@@ -26,9 +26,9 @@ export default function Page() {
   useEffect(() => {
     if (!authLoaded) return;
 
-    // If not signed in, redirect to sign-in
+    // If not signed in, redirect to landing page
     if (!isSignedIn) {
-      router.replace("/sign-in");
+      router.replace("/home");
       return;
     }
 
