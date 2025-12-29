@@ -61,7 +61,8 @@ function WorkspaceLayoutContent({
   React.useEffect(() => {
     if (!pathname || !slug) return;
     const tabFromPath = getTabFromPathname(pathname, slug);
-    setActiveTab(tabFromPath);
+    // Only update if different to avoid redundant state updates
+    setActiveTab(prev => prev !== tabFromPath ? tabFromPath : prev);
   }, [pathname, slug, setActiveTab]);
 
   // Redirect to sign-in if not authenticated
@@ -122,9 +123,7 @@ function WorkspaceLayoutContent({
             <LoadingSpinner fullScreen />
           </div>
         ) : (
-          <React.Suspense fallback={<div className="flex-1 overflow-hidden"><LoadingSpinner fullScreen /></div>}>
-            {children}
-          </React.Suspense>
+          children
         )}
       </div>
     </div>
