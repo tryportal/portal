@@ -45,7 +45,6 @@ export function Navbar() {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <GitHubLogo size={20} />
-            <span className="hidden sm:inline">GitHub</span>
           </Link>
           {authLoaded && (
             <>
