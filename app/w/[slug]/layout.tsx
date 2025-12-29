@@ -11,6 +11,18 @@ import { NoAccess } from "@/components/no-access";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { analytics } from "@/lib/analytics";
 
+// Helper to get the current tab from a pathname
+function getTabFromPathname(pathname: string | null, slug: string): "home" | "messages" | "inbox" {
+  if (!pathname || !slug) return "home";
+  
+  if (pathname.includes(`/w/${slug}/messages`)) {
+    return "messages";
+  } else if (pathname.includes(`/w/${slug}/inbox`)) {
+    return "inbox";
+  }
+  return "home";
+}
+
 function WorkspaceLayoutContent({
   children,
 }: {
@@ -29,6 +41,13 @@ function WorkspaceLayoutContent({
 
   const { membership, isLoading, isError, slug, organization } = useWorkspaceData();
 
+  // Track the tab derived from the actual current pathname
+  const currentPathTab = getTabFromPathname(pathname, slug);
+  
+  // Track if we're transitioning between major tabs (home/messages/inbox)
+  // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
+  const isTransitioning = activeTab !== currentPathTab;
+
   // Track workspace view
   const trackedRef = React.useRef(false);
   React.useEffect(() => {
@@ -38,23 +57,12 @@ function WorkspaceLayoutContent({
     }
   }, [membership, organization, slug]);
 
-  // Sync activeTab with current route
+  // Sync activeTab with current route (for direct navigation/browser back-forward)
   React.useEffect(() => {
     if (!pathname || !slug) return;
-    
-    if (pathname.includes(`/w/${slug}/messages`)) {
-      setActiveTab("messages");
-    } else if (pathname.includes(`/w/${slug}/inbox`)) {
-      setActiveTab("inbox");
-    } else if (pathname === `/w/${slug}` || pathname.includes(`/w/${slug}/`)) {
-      // Check if it's a channel route (has category/channel) or just the home page
-      const pathParts = pathname.split("/").filter(Boolean);
-      // If we're at /w/[slug] or /w/[slug]/people etc., it's "home"
-      // If it's /w/[slug]/messages or /w/[slug]/inbox, we already handled it above
-      if (!pathname.includes("/messages") && !pathname.includes("/inbox")) {
-        setActiveTab("home");
-      }
-    }
+    const tabFromPath = getTabFromPathname(pathname, slug);
+    // Only update if different to avoid redundant state updates
+    setActiveTab(prev => prev !== tabFromPath ? tabFromPath : prev);
   }, [pathname, slug, setActiveTab]);
 
   // Redirect to sign-in if not authenticated
@@ -89,7 +97,9 @@ function WorkspaceLayoutContent({
     setActiveTab(tab as "home" | "messages" | "inbox");
   };
 
-  // Hide sidebar on messages tab
+  // Determine sidebar visibility based on destination tab during transitions
+  // During transition: show sidebar based on the DESTINATION tab (activeTab)
+  // Not transitioning: show sidebar based on current tab
   const showSidebar = activeTab !== "messages";
 
   return (
@@ -107,10 +117,14 @@ function WorkspaceLayoutContent({
           />
         )}
 
-        {/* Page Content - wrapped in React.Suspense for per-page loading states */}
-        <React.Suspense fallback={children}>
-          {children}
-        </React.Suspense>
+        {/* Page Content - show loading state during tab transitions */}
+        {isTransitioning ? (
+          <div className="flex-1 overflow-hidden">
+            <LoadingSpinner fullScreen />
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
