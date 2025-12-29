@@ -1,21 +1,23 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { ArrowRight, ShieldCheck } from "@phosphor-icons/react"
-import Link from "next/link"
-import Image from "next/image"
-import { useAuth } from "@clerk/nextjs"
-import { useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { GitHubLogo } from "./icons/github-logo"
+import { motion } from "framer-motion";
+import { ArrowRight, ShieldCheck } from "@phosphor-icons/react";
+import Link from "next/link";
+import Image from "next/image";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { GitHubLogo } from "./icons/github-logo";
 
 export function Hero() {
-  const { isSignedIn, isLoaded: authLoaded } = useAuth()
-  const userOrgs = useQuery(api.organizations.getUserOrganizations)
-  
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const userOrgs = useQuery(api.organizations.getUserOrganizations);
+
   // Get the first organization or admin org for signed-in users
-  const targetOrg = userOrgs?.find((org: { role: string }) => org.role === "admin") || userOrgs?.[0]
-  const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null
+  const targetOrg =
+    userOrgs?.find((org: { role: string }) => org.role === "admin") ||
+    userOrgs?.[0];
+  const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null;
 
   return (
     <section className="pt-32 pb-20 px-6 overflow-hidden">
@@ -36,16 +38,18 @@ export function Hero() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            v1.0 is now available
+            Now in Alpha
           </motion.div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] text-balance">
-            Team chat that respects <span className="text-muted-foreground">your privacy.</span>
+            Team chat that respects{" "}
+            <span className="text-muted-foreground">your privacy.</span>
           </h1>
 
           <p className="mt-6 text-xl text-muted-foreground max-w-2xl mx-auto text-balance font-light leading-relaxed">
-            Portal is the open-source alternative to Slack. Real-time messaging, organized channels, and seamless
-            collaboration — without the surveillance.
+            Portal is the open-source alternative to Slack. Real-time messaging,
+            organized channels, and seamless collaboration — without the
+            surveillance.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -74,7 +78,11 @@ export function Hero() {
 
           <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground/80">
             <div className="flex items-center gap-2">
-              <ShieldCheck size={18} weight="fill" className="text-foreground" />
+              <ShieldCheck
+                size={18}
+                weight="fill"
+                className="text-foreground"
+              />
               <span>Privacy-first</span>
             </div>
             <div className="flex items-center gap-2">
@@ -108,6 +116,5 @@ export function Hero() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }
-
