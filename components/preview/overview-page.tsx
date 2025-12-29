@@ -212,15 +212,15 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       >
                         <Avatar className="size-7 sm:size-8 flex-shrink-0">
                           <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-[10px] sm:text-xs">{message.user.initials}</AvatarFallback>
+                          <AvatarFallback className="text-xs sm:text-sm">{message.user.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
                             <p className="text-xs sm:text-sm font-medium text-[#26251E] truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-[10px] sm:text-xs text-[#26251E]/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-xs sm:text-sm text-[#26251E]/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-[10px] sm:text-xs text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
                           <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">{message.content}</p>
                         </div>
@@ -274,15 +274,15 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       >
                         <Avatar className="size-7 sm:size-8 flex-shrink-0">
                           <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-[10px] sm:text-xs">{message.user.initials}</AvatarFallback>
+                          <AvatarFallback className="text-xs sm:text-sm">{message.user.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
                             <p className="text-xs sm:text-sm font-medium text-[#26251E] truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-[10px] sm:text-xs text-[#26251E]/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-xs sm:text-sm text-[#26251E]/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-[10px] sm:text-xs text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
                           <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">{message.content}</p>
                         </div>
