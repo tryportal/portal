@@ -7,6 +7,7 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { Spinner, ArrowRight } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { SetupProgress } from "@/components/setup/setup-progress";
 import { IdentityStep } from "@/components/setup/steps/identity-step";
@@ -187,8 +188,10 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       // Move to next step or finish
       if (step < STEPS.length - 1) {
         await setStep(step + 1);
+        analytics.setupStepCompleted({ step, stepName: STEPS[step].id });
       } else {
         // Finish setup
+        analytics.setupCompleted();
         router.replace(`/w/${slug}`);
       }
     } catch (err) {

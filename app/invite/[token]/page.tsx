@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Spinner, CheckCircle, XCircle, EnvelopeSimple } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { analytics } from "@/lib/analytics";
 import * as React from "react";
 
 export default function InvitePage({
@@ -47,6 +48,8 @@ export default function InvitePage({
 
     try {
       const result = await acceptInvitation({ token });
+      const isLinkInvite = !invitationData?.invitation?.email;
+      analytics.inviteAccepted({ method: isLinkInvite ? "link" : "email" });
       setSuccess(true);
 
       // Redirect to the organization workspace after a short delay

@@ -14,6 +14,7 @@ import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
 import { usePageTitle } from "@/lib/use-page-title"
+import { analytics } from "@/lib/analytics"
 
 export default function ConversationPage({
   params,
@@ -292,6 +293,11 @@ export default function ConversationPage({
           storageId: a.storageId as Id<"_storage">,
         })),
         parentMessageId: parentMessageId as Id<"messages"> | undefined,
+      })
+      analytics.messageSent({
+        conversationId,
+        hasAttachments: !!attachments?.length,
+        isReply: !!parentMessageId,
       })
     } catch (error) {
       console.error("Failed to send message:", error)

@@ -14,6 +14,7 @@ import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog"
 import type { MentionUser } from "@/components/preview/mention-autocomplete";
 import type { Id } from "@/convex/_generated/dataModel";
 import { usePageTitle } from "@/lib/use-page-title";
+import { analytics } from "@/lib/analytics";
 
 export default function ChannelPage({
   params,
@@ -256,6 +257,13 @@ export default function ChannelPage({
   // Set page title
   usePageTitle(`${channel.name} - Portal`);
 
+  // Track channel view
+  React.useEffect(() => {
+    if (channelId) {
+      analytics.channelViewed({ channelId, name: channel.name });
+    }
+  }, [channelId, channel.name]);
+
   // Transform raw messages to the format expected by ChatInterface
   const messages: Message[] = (rawMessages || []).map((msg) => {
     // Get user info from cache, fallback to current user's data if it's their message
@@ -344,6 +352,11 @@ export default function ChannelPage({
         })),
         parentMessageId: parentMessageId as Id<"messages"> | undefined,
       });
+      analytics.messageSent({
+        channelId,
+        hasAttachments: !!attachments?.length,
+        isReply: !!parentMessageId,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
     }
@@ -352,6 +365,7 @@ export default function ChannelPage({
   const handleDeleteMessage = async (messageId: string) => {
     try {
       await deleteMessage({ messageId: messageId as Id<"messages"> });
+      analytics.messageDeleted();
     } catch (error) {
       console.error("Failed to delete message:", error);
     }
@@ -363,6 +377,7 @@ export default function ChannelPage({
         messageId: messageId as Id<"messages">, 
         content 
       });
+      analytics.messageEdited();
     } catch (error) {
       console.error("Failed to edit message:", error);
     }
@@ -388,6 +403,7 @@ export default function ChannelPage({
         messageId: messageId as Id<"messages">, 
         emoji 
       });
+      analytics.reactionAdded({ emoji });
     } catch (error) {
       console.error("Failed to toggle reaction:", error);
     }
@@ -396,6 +412,7 @@ export default function ChannelPage({
   const handlePin = async (messageId: string) => {
     try {
       await togglePin({ messageId: messageId as Id<"messages"> });
+      analytics.messagePinned();
     } catch (error) {
       console.error("Failed to toggle pin:", error);
     }
@@ -404,6 +421,7 @@ export default function ChannelPage({
   const handleSave = async (messageId: string) => {
     try {
       await saveMessage({ messageId: messageId as Id<"messages"> });
+      analytics.messageSaved();
     } catch (error) {
       console.error("Failed to save message:", error);
     }
@@ -423,6 +441,7 @@ export default function ChannelPage({
         messageId: messageId as Id<"messages">,
         targetChannelId: targetChannelId as Id<"channels">,
       });
+      analytics.messageForwarded();
     } catch (error) {
       console.error("Failed to forward message:", error);
     }
@@ -434,6 +453,7 @@ export default function ChannelPage({
         messageId: messageId as Id<"messages">,
         targetConversationId: targetConversationId as Id<"conversations">,
       });
+      analytics.messageForwarded();
     } catch (error) {
       console.error("Failed to forward message:", error);
     }

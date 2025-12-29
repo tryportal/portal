@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { analytics } from "@/lib/analytics"
 
 interface NewDmDialogProps {
   open: boolean
@@ -97,6 +98,7 @@ export function NewDmDialog({
         otherUserId: user.userId,
       })
 
+      analytics.conversationStarted()
       onOpenChange(false)
       router.push(`/w/${slug}/messages/${conversationId}`)
     } catch (error) {

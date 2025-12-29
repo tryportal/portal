@@ -27,6 +27,7 @@ import {
   PaperPlaneIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { analytics } from "@/lib/analytics";
 
 type InvitePeopleDialogProps = {
   open: boolean;
@@ -90,6 +91,7 @@ export function InvitePeopleDialog({
         email: email.trim(),
         role,
       });
+      analytics.invitationSent({ method: "email", role });
       setSuccess(true);
       setEmail("");
       setTimeout(() => {
@@ -112,6 +114,7 @@ export function InvitePeopleDialog({
         organizationId,
         role,
       });
+      analytics.inviteLinkCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create invite link");
     } finally {
@@ -140,6 +143,7 @@ export function InvitePeopleDialog({
 
     try {
       await navigator.clipboard.writeText(inviteLink);
+      analytics.inviteLinkCopied();
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {

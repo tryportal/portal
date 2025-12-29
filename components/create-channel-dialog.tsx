@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { IconPicker, getIconComponent } from "@/components/icon-picker"
 import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react"
+import { analytics } from "@/lib/analytics"
 
 interface CreateChannelDialogProps {
   open: boolean
@@ -94,13 +95,18 @@ export function CreateChannelDialog({
     setError(null)
 
     try {
-      await createChannel({
+      const channelId = await createChannel({
         organizationId,
         categoryId,
         name: name.trim().toLowerCase().replace(/\s+/g, "-"),
         description: description.trim() || undefined,
         icon,
         permissions,
+      })
+      analytics.channelCreated({
+        channelId,
+        name: name.trim().toLowerCase().replace(/\s+/g, "-"),
+        workspaceId: organizationId,
       })
       onOpenChange(false)
     } catch (err) {

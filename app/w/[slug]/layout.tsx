@@ -9,6 +9,7 @@ import { TopNav } from "@/components/preview/top-nav";
 import { Sidebar } from "@/components/preview/sidebar";
 import { NoAccess } from "@/components/no-access";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { analytics } from "@/lib/analytics";
 
 function WorkspaceLayoutContent({
   children,
@@ -26,7 +27,16 @@ function WorkspaceLayoutContent({
     setActiveTab
   } = useWorkspace();
 
-  const { membership, isLoading, isError, slug } = useWorkspaceData();
+  const { membership, isLoading, isError, slug, organization } = useWorkspaceData();
+
+  // Track workspace view
+  const trackedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (membership && organization && !trackedRef.current) {
+      analytics.workspaceViewed({ workspaceId: organization._id, slug });
+      trackedRef.current = true;
+    }
+  }, [membership, organization, slug]);
 
   // Sync activeTab with current route
   React.useEffect(() => {
@@ -74,13 +84,18 @@ function WorkspaceLayoutContent({
     return <NoAccess slug={slug} organizationExists={true} />;
   }
 
+  const handleTabChange = (tab: string) => {
+    analytics.tabChanged({ tab });
+    setActiveTab(tab as "home" | "messages" | "inbox");
+  };
+
   // Hide sidebar on messages tab
   const showSidebar = activeTab !== "messages";
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
       {/* Top Navigation */}
-      <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
