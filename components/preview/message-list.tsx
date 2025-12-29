@@ -736,22 +736,10 @@ export function MessageList({
     }
   }, [messages.length, scrollToBottom])
 
-  // Show empty state if no messages
-  if (messages.length === 0 && channelName) {
-    return (
-      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
-        <EmptyChannelState
-          channelName={channelName}
-          channelDescription={channelDescription}
-          channelIcon={channelIcon}
-        />
-      </div>
-    )
-  }
-
+  // lastMessageRef - must be called before any early returns to maintain hook order
   const lastMessageRef = React.useRef<HTMLDivElement>(null)
 
-  // Aggressive scroll to bottom when messages change
+  // Aggressive scroll to bottom when messages change - must be called before any early returns
   React.useEffect(() => {
     if (messages.length > 0) {
       const forceScrollToBottom = () => {
@@ -796,7 +784,7 @@ export function MessageList({
     }
   }, [messages.length])
 
-  // Callback ref to get direct access to viewport
+  // Callback ref to get direct access to viewport - must be called before any early returns
   const scrollAreaRef = React.useCallback((node: HTMLDivElement | null) => {
     if (node && messages.length > 0) {
       // Find viewport and scroll immediately
@@ -809,6 +797,19 @@ export function MessageList({
       }
     }
   }, [messages.length])
+
+  // Show empty state if no messages
+  if (messages.length === 0 && channelName) {
+    return (
+      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
+        <EmptyChannelState
+          channelName={channelName}
+          channelDescription={channelDescription}
+          channelIcon={channelIcon}
+        />
+      </div>
+    )
+  }
 
   return (
     <AttachmentUrlContext.Provider value={attachmentUrls}>

@@ -56,6 +56,9 @@ export function CreateChannelDialog({
     }
   }, [categoriesData, categoryId])
 
+  // Check if there are no categories
+  const hasNoCategories = categoriesData !== undefined && categoriesData.length === 0
+
   // Reset form when dialog opens/closes
   React.useEffect(() => {
     if (open) {
@@ -147,6 +150,15 @@ export function CreateChannelDialog({
 
           {step === "details" ? (
             <div className="space-y-6 py-4">
+              {hasNoCategories ? (
+                <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 border border-yellow-200">
+                  <p className="font-medium mb-1">No categories available</p>
+                  <p className="text-yellow-700">
+                    You need to create at least one category before you can create a channel. Channels must belong to a category.
+                  </p>
+                </div>
+              ) : (
+                <>
               {/* Channel Name */}
               <div className="space-y-2">
                 <Label htmlFor="channel-name" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Channel Name</Label>
@@ -195,6 +207,8 @@ export function CreateChannelDialog({
                 <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">
                   {error}
                 </div>
+              )}
+              </>
               )}
             </div>
           ) : (
@@ -251,27 +265,36 @@ export function CreateChannelDialog({
               {/* Category Selection */}
               <div className="space-y-3">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Category</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {categoriesData?.map((category) => (
-                    <label
-                      key={category._id}
-                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="category"
-                        value={category._id}
-                        checked={categoryId === category._id}
-                        onChange={() => setCategoryId(category._id)}
-                        className="sr-only"
-                      />
-                      <div className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
-                        {categoryId === category._id && <div className="size-1.5 rounded-full bg-white" />}
-                      </div>
-                      <span className="text-sm font-medium truncate">{category.name}</span>
-                    </label>
-                  ))}
-                </div>
+                {hasNoCategories ? (
+                  <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 border border-yellow-200">
+                    <p className="font-medium mb-1">No categories available</p>
+                    <p className="text-yellow-700">
+                      You need to create at least one category before you can create a channel. Channels must belong to a category.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {categoriesData?.map((category) => (
+                      <label
+                        key={category._id}
+                        className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="category"
+                          value={category._id}
+                          checked={categoryId === category._id}
+                          onChange={() => setCategoryId(category._id)}
+                          className="sr-only"
+                        />
+                        <div className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${categoryId === category._id ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
+                          {categoryId === category._id && <div className="size-1.5 rounded-full bg-white" />}
+                        </div>
+                        <span className="text-sm font-medium truncate">{category.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -292,7 +315,7 @@ export function CreateChannelDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={!name.trim()}>
+                <Button type="submit" disabled={!name.trim() || hasNoCategories}>
                   Next
                   <ArrowRightIcon className="size-4 ml-1" />
                 </Button>
@@ -303,7 +326,7 @@ export function CreateChannelDialog({
                   <ArrowLeftIcon className="size-4 mr-1" />
                   Back
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !categoryId}>
+                <Button type="submit" disabled={isSubmitting || !categoryId || hasNoCategories}>
                   {isSubmitting ? "Creating..." : "Create Channel"}
                 </Button>
               </>

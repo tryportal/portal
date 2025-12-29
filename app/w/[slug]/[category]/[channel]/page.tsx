@@ -236,6 +236,17 @@ export default function ChannelPage({
     });
   }, [pinnedMessagesRaw, userDataCache, user]);
 
+  // Set page title - must be called before any early returns to maintain hook order
+  const channelName = channelData?.channel?.name;
+  usePageTitle(channelName ? `${channelName} - Portal` : "Portal");
+
+  // Track channel view - must be called before any early returns to maintain hook order
+  React.useEffect(() => {
+    if (channelId && channelName) {
+      analytics.channelViewed({ channelId, name: channelName });
+    }
+  }, [channelId, channelName]);
+
   // Optimized loading state - only wait for essential data (channel + messages)
   // User data and images load progressively
   if (!routeParams || channelData === undefined || messagesData === undefined) {
@@ -253,16 +264,6 @@ export default function ChannelPage({
   const isAdmin = membership?.role === "admin";
   const canPost = !isReadOnly || isAdmin;
   const currentUserId = user?.id;
-
-  // Set page title
-  usePageTitle(`${channel.name} - Portal`);
-
-  // Track channel view
-  React.useEffect(() => {
-    if (channelId) {
-      analytics.channelViewed({ channelId, name: channel.name });
-    }
-  }, [channelId, channel.name]);
 
   // Transform raw messages to the format expected by ChatInterface
   const messages: Message[] = (rawMessages || []).map((msg) => {

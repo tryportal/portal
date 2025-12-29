@@ -341,6 +341,16 @@ export const createChannel = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAdmin(ctx, args.organizationId);
 
+    // Check if there are any categories in the workspace
+    const categories = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    if (categories.length === 0) {
+      throw new Error("Cannot create a channel: there are no categories in this workspace. Please create a category first.");
+    }
+
     // Verify category exists and belongs to organization
     const category = await ctx.db.get(args.categoryId);
     if (!category || category.organizationId !== args.organizationId) {

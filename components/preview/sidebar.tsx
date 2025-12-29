@@ -679,7 +679,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 Create new
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem onClick={() => setCreateChannelOpen(true)}>
+                <DropdownMenuItem 
+                  onClick={() => setCreateChannelOpen(true)}
+                  disabled={!categoriesData || categoriesData.length === 0}
+                  className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
+                >
                   <HashIcon className="size-4" />
                   New channel
                 </DropdownMenuItem>
