@@ -56,14 +56,20 @@ export function MobileConversationsList() {
   const unreadCounts = useQuery(api.conversations.getUnreadCountsForAllConversations) ?? {}
 
   const getUserDataAction = useAction(api.messages.getUserData)
+  const requestedIdsRef = React.useRef<Set<string>>(new Set())
 
   React.useEffect(() => {
     if (!conversations || conversations.length === 0) return
 
     const participantIds = conversations.map((c) => c.otherParticipantId)
-    const missingIds = participantIds.filter((id) => !userDataCache[id])
+    const missingIds = participantIds.filter(
+      (id) => !userDataCache[id] && !requestedIdsRef.current.has(id)
+    )
 
     if (missingIds.length === 0) return
+
+    // Add newly requested IDs to the ref before calling the action
+    missingIds.forEach((id) => requestedIdsRef.current.add(id))
 
     const fetchUserData = async () => {
       try {
@@ -79,7 +85,7 @@ export function MobileConversationsList() {
     }
 
     fetchUserData()
-  }, [conversations, getUserDataAction, userDataCache])
+  }, [conversations, getUserDataAction])
 
   const getParticipantName = (participantId: string) => {
     const userData = userDataCache[participantId]
