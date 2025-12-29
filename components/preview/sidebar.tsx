@@ -503,7 +503,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   if (!isOpen) {
     return (
-      <div className="flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
+      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -518,7 +518,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <>
-      <div className="flex h-full w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4]">
+      {/* Mobile Overlay */}
+      <div 
+        className="sm:hidden fixed inset-0 bg-black/50 z-40"
+        onClick={onToggle}
+      />
+      
+      {/* Sidebar - slides in on mobile */}
+      <div className="fixed sm:relative z-50 sm:z-auto h-full w-[280px] sm:w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4] flex animate-in slide-in-from-left-full sm:animate-none duration-200">
         {/* Header with toggle */}
         <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
           <div className="flex items-center gap-2">

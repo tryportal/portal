@@ -41,7 +41,7 @@ function PreviewTopNav({
   ]
 
   return (
-    <header className="grid h-14 grid-cols-3 items-center border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4 sm:grid sm:grid-cols-3">
       {/* Left: Portal Logo */}
       <div className="flex items-center">
         <Image
@@ -49,12 +49,25 @@ function PreviewTopNav({
           alt="Portal"
           width={100}
           height={24}
-          className="h-6 w-auto"
+          className="h-5 sm:h-6 w-auto hidden sm:block"
         />
+        {/* Mobile: Show workspace name */}
+        <div className="sm:hidden flex items-center gap-1.5">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+            <Image
+              src="/portal.svg"
+              alt="Workspace"
+              width={12}
+              height={12}
+              className="invert"
+            />
+          </div>
+          <span className="text-sm font-medium text-[#26251E]">Preview</span>
+        </div>
       </div>
 
-      {/* Center: Workspace + Tabs */}
-      <div className="flex items-center justify-center gap-2">
+      {/* Center: Workspace + Tabs (hidden on mobile) */}
+      <div className="hidden sm:flex items-center justify-center gap-2">
         {/* Organization display */}
         <div className="gap-2 px-2 text-[#26251E] h-8 inline-flex items-center justify-center">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
@@ -98,7 +111,7 @@ function PreviewTopNav({
 
       {/* Right: Placeholder */}
       <div className="flex justify-end">
-        <div className="size-8 rounded-full bg-[#26251E]/10" />
+        <div className="size-7 sm:size-8 rounded-full bg-[#26251E]/10" />
       </div>
     </header>
   )
@@ -130,7 +143,7 @@ function PreviewSidebar({
 
   if (!isOpen) {
     return (
-      <div className="flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
+      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -144,7 +157,7 @@ function PreviewSidebar({
   }
 
   return (
-    <div className="flex h-full w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4]">
+    <div className="hidden sm:flex h-full w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4]">
       {/* Header with toggle */}
       <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
         <div className="flex items-center gap-2">
@@ -304,9 +317,9 @@ export default function PreviewPage() {
       {/* Top Navigation */}
       <PreviewTopNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+      {/* Main Content Area - add bottom padding on mobile for potential bottom nav */}
+      <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+        {/* Sidebar - hidden on mobile */}
         <PreviewSidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((prev) => !prev)}
@@ -324,10 +337,10 @@ export default function PreviewPage() {
               onSendMessage={handleSendMessage}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center bg-[#F7F7F4]">
+            <div className="flex flex-1 items-center justify-center bg-[#F7F7F4] px-4">
               <div className="text-center">
-                <h2 className="text-lg font-semibold text-[#26251E]">Welcome to Portal</h2>
-                <p className="mt-1 text-sm text-[#26251E]/60">Select a channel from the sidebar to get started</p>
+                <h2 className="text-base sm:text-lg font-semibold text-[#26251E]">Welcome to Portal</h2>
+                <p className="mt-1 text-xs sm:text-sm text-[#26251E]/60">Select a channel from the sidebar to get started</p>
               </div>
             </div>
           )}

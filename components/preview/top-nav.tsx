@@ -8,12 +8,13 @@ import {
   CaretDownIcon,
   CheckIcon,
   PlusIcon,
+  ListIcon,
 } from "@phosphor-icons/react"
 import { UserButton } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
-import { useWorkspaceData } from "@/components/workspace-context"
+import { useWorkspaceData, useWorkspace } from "@/components/workspace-context"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +43,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } = useWorkspaceData()
+  const { sidebarOpen, setSidebarOpen } = useWorkspace()
 
   // Get total unread message count for DMs
   const totalUnreadCount = useQuery(api.conversations.getTotalUnreadCount) ?? 0
@@ -76,20 +78,56 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   }
 
   return (
-    <header className="grid h-14 grid-cols-3 items-center border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
-      {/* Left: Portal Logo */}
-      <div className="flex items-center">
+    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4 sm:grid sm:grid-cols-3">
+      {/* Left: Mobile menu button + Portal Logo */}
+      <div className="flex items-center gap-2">
+        {/* Mobile sidebar toggle - only show when sidebar would be visible (not on messages) */}
+        {activeTab !== "messages" && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="sm:hidden text-[#26251E]/70 hover:text-[#26251E]"
+          >
+            <ListIcon className="size-5" weight="bold" />
+          </Button>
+        )}
         <Image
           src="/portal-full.svg"
           alt="Portal"
           width={100}
           height={24}
-          className="h-6 w-auto"
+          className="h-5 sm:h-6 w-auto hidden sm:block"
         />
+        {/* Mobile: Show org name instead of logo */}
+        <div className="sm:hidden flex items-center gap-1.5">
+          {currentOrg?.logoUrl ? (
+            <Image
+              src={currentOrg.logoUrl}
+              alt={currentOrg.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded"
+            />
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+              <Image
+                src="/portal.svg"
+                alt="Workspace"
+                width={12}
+                height={12}
+                className="invert"
+              />
+            </div>
+          )}
+          <span className="text-sm font-medium text-[#26251E] max-w-[100px] truncate">
+            {currentOrg?.name || "Portal"}
+          </span>
+        </div>
       </div>
 
-      {/* Center: Workspace + Tabs */}
-      <div className="flex items-center justify-center gap-2">
+      {/* Center: Workspace + Tabs (hidden on mobile, shown in bottom nav) */}
+      <div className="hidden sm:flex items-center justify-center gap-2">
         {/* Organization Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
@@ -210,7 +248,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         appearance={{
           elements: {
             rootBox: "h-8",
-            avatarBox: "h-8 w-8",
+            avatarBox: "h-7 w-7 sm:h-8 sm:w-8",
             userButtonPopoverCard: "shadow-lg",
             userButtonPopoverActions: "p-2",
             userButtonPopoverActionButton: "text-[#26251E] hover:bg-[#26251E]/5",
@@ -219,6 +257,42 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         }}
         />
       </div>
+
+      {/* Mobile Bottom Tab Navigation */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#26251E]/10 bg-[#F7F7F4] px-2 py-1 safe-area-pb">
+        <div className="flex items-center justify-around">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            const showMessagesBadge = tab.id === "messages" && totalUnreadCount > 0
+            const showInboxBadge = tab.id === "inbox" && (inboxCount?.total ?? 0) > 0
+            const badgeCount = tab.id === "messages" ? totalUnreadCount : (inboxCount?.total ?? 0)
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "text-[#26251E]"
+                    : "text-[#26251E]/50"
+                }`}
+              >
+                <div className="relative">
+                  <Icon weight={isActive ? "fill" : "regular"} className="size-5" />
+                  {(showMessagesBadge || showInboxBadge) && (
+                    <span className="absolute -top-1 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-semibold text-white">
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
     </header>
   )
 }
