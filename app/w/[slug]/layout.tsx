@@ -48,13 +48,9 @@ function WorkspaceLayoutContent({
   // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
   const isTransitioning = activeTab !== currentPathTab;
   
-  // Track the previous tab for determining sidebar visibility during transitions
-  const prevTabRef = React.useRef(activeTab);
-  React.useEffect(() => {
-    if (!isTransitioning) {
-      prevTabRef.current = activeTab;
-    }
-  }, [activeTab, isTransitioning]);
+  // Track if we're transitioning between major tabs (home/messages/inbox)
+  // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
+  const isTransitioning = activeTab !== currentPathTab;
 
   // Track workspace view
   const trackedRef = React.useRef(false);
