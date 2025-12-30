@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { parseMentions } from "./mention"
 
 interface SavedMessagesPageProps {
   organizationId: Id<"organizations">
@@ -48,7 +49,10 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
   React.useEffect(() => {
     if (!savedMessages || savedMessages.length === 0) return
 
-    const uniqueUserIds = Array.from(new Set(savedMessages.map(msg => msg.userId)))
+    const uniqueUserIds = Array.from(new Set([
+      ...savedMessages.map(msg => msg.userId),
+      ...savedMessages.flatMap(msg => msg.mentions || [])
+    ]))
     const missingUserIds = uniqueUserIds.filter(userId => !userDataCache[userId])
 
     if (missingUserIds.length === 0) return
@@ -115,10 +119,26 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
       ? `${firstName[0]}${lastName[0]}`
       : firstName?.[0] || "?"
 
+    // Build user names map for mentions
+    const mentionUserNames: Record<string, string> = {}
+    if (msg.mentions) {
+      msg.mentions.forEach((userId: string) => {
+        const mentionedUserData = userDataCache[userId]
+        if (mentionedUserData) {
+          const mentionedName = mentionedUserData.firstName && mentionedUserData.lastName
+            ? `${mentionedUserData.firstName} ${mentionedUserData.lastName}`
+            : mentionedUserData.firstName || "Unknown User"
+          mentionUserNames[userId] = mentionedName
+        }
+      })
+    }
+
     return {
       id: msg._id,
       channelId: msg.channelId,
       content: msg.content,
+      mentions: msg.mentions,
+      mentionUserNames,
       timestamp: new Date(msg.createdAt).toLocaleDateString([], {
         month: "short",
         day: "numeric",
@@ -200,7 +220,7 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                           </span>
                         </div>
                         <p className="text-sm text-[#26251E]/70 line-clamp-3">
-                          {message.content}
+                          {parseMentions(message.content, message.mentionUserNames)}
                         </p>
                       </div>
                     </div>

@@ -96,8 +96,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           src="/portal-full.svg"
           alt="Portal"
           width={100}
-          height={24}
-          className="h-5 sm:h-6 w-auto hidden sm:block"
+          height={21}
+          className="h-5 sm:h-[21px] w-auto hidden sm:block"
         />
         {/* Mobile: Show org name instead of logo */}
         <div className="sm:hidden flex items-center gap-1.5">
