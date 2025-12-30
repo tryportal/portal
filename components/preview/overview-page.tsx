@@ -31,7 +31,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   const { user } = useUser()
   const orgSlug = params?.slug as string | undefined
   
-  // Fetch categories and channels
+  // Fetch categories and channels - handle undefined organizationId gracefully
   const categoriesData = useQuery(
     api.channels.getCategoriesAndChannels,
     organizationId ? { organizationId } : "skip"

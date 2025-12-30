@@ -13,17 +13,10 @@ export default function WorkspacePage() {
 
   // Show overview page when no channel is selected
   // The actual channel view is handled by the [category]/[channel] route
-  if (!organization?._id) {
-    return (
-      <main className="flex-1 overflow-hidden">
-        <LoadingSpinner fullScreen />
-      </main>
-    );
-  }
-
+  // Remove the loading spinner - render immediately for instant navigation
   return (
     <main className="flex-1 overflow-hidden">
-      <OverviewPage organizationId={organization._id} />
+      <OverviewPage organizationId={organization?._id || ("" as any)} />
     </main>
   );
 }

@@ -161,6 +161,7 @@ export function ConversationsSidebar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
+          onMouseEnter={() => router.prefetch(`/w/${slug}/messages`)}
           className="text-[#26251E]/60 hover:text-[#26251E]"
         >
           <PlusIcon className="size-4" weight="bold" />

@@ -10,14 +10,10 @@ export default function SettingsPage() {
   
   usePageTitle("Settings - Portal");
 
-  // Show loading spinner while loading
-  if (isLoading || !organization?._id) {
-    return <LoadingSpinner fullScreen />;
-  }
-
+  // Render immediately for instant navigation - handle loading in child component
   return (
     <main className="flex-1 overflow-hidden">
-      <WorkspaceSettingsPage organizationId={organization._id} />
+      <WorkspaceSettingsPage organizationId={organization?._id || ("" as any)} />
     </main>
   );
 }

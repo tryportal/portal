@@ -574,6 +574,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     router.push(`/w/${currentSlug}`)
                   }
                 }}
+                onMouseEnter={() => {
+                  if (currentSlug) {
+                    router.prefetch(`/w/${currentSlug}`)
+                  }
+                }}
                 className={`w-full justify-start gap-2 ${
                   isOverviewActive
                     ? "bg-[#26251E]/10 text-[#26251E]"
@@ -592,6 +597,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 onClick={() => {
                   if (currentSlug) {
                     router.push(`/w/${currentSlug}/people`)
+                  }
+                }}
+                onMouseEnter={() => {
+                  if (currentSlug) {
+                    router.prefetch(`/w/${currentSlug}/people`)
+                    router.prefetch(`/w/${currentSlug}/saved`)
                   }
                 }}
                 className={`w-full justify-start gap-2 ${
@@ -613,6 +624,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   onClick={() => {
                     if (currentSlug) {
                       router.push(`/w/${currentSlug}/settings`)
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (currentSlug) {
+                      router.prefetch(`/w/${currentSlug}/settings`)
                     }
                   }}
                   className={`w-full justify-start gap-2 ${

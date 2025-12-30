@@ -53,22 +53,21 @@ export default function PeoplePage() {
   // Set page title
   usePageTitle("People - Portal");
 
-  // Get members with reactive query
+  // Get members with reactive query - handle undefined gracefully
   const membersResult = useQuery(
     api.organizations.getOrganizationMembersQuery,
     organization?._id ? { organizationId: organization._id } : "skip"
   );
 
   const rawMembers = membersResult?.members ?? [];
-  const isLoading = membersResult === undefined;
 
   // Fetch user data for all members
   React.useEffect(() => {
-    if (rawMembers.length > 0) {
+    if (rawMembers.length > 0 && organization?._id) {
       const userIds = rawMembers.map((m) => m.userId);
       fetchUserData(userIds);
     }
-  }, [rawMembers, fetchUserData]);
+  }, [rawMembers, fetchUserData, organization?._id]);
 
   // Transform members with cached user data
   const members: MemberWithUserData[] = React.useMemo(() => {
@@ -123,11 +122,6 @@ export default function PeoplePage() {
     router.push(`/w/${slug}/people/${member.userId}`);
   };
 
-  // Show loading spinner while context is loading
-  if (contextLoading) {
-    return <LoadingSpinner fullScreen />;
-  }
-
   return (
     <main className="flex-1 overflow-hidden">
       <div className="flex h-full flex-col bg-[#F7F7F4]">
@@ -149,10 +143,8 @@ export default function PeoplePage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center py-12">
-              <LoadingSpinner text="Loading members..." />
-            </div>
+          {contextLoading ? (
+            <LoadingSpinner fullScreen />
           ) : (
             <div className="mx-auto max-w-3xl py-6 sm:py-12 px-4 sm:px-6">
               <div className="space-y-4 sm:space-y-6">

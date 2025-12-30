@@ -33,12 +33,16 @@ export function WorkspaceSettingsPage({
   organizationId,
 }: WorkspaceSettingsPageProps) {
   const router = useRouter()
-  const organization = useQuery(api.organizations.getOrganization, {
-    id: organizationId,
-  })
-  const membership = useQuery(api.organizations.getUserMembership, {
-    organizationId,
-  })
+  
+  // Handle undefined organizationId gracefully to prevent blocking
+  const organization = useQuery(
+    api.organizations.getOrganization,
+    organizationId ? { id: organizationId } : "skip"
+  )
+  const membership = useQuery(
+    api.organizations.getUserMembership,
+    organizationId ? { organizationId } : "skip"
+  )
   const userOrgs = useQuery(api.organizations.getUserOrganizations)
   const updateOrganization = useMutation(api.organizations.updateOrganization)
   const deleteOrganization = useMutation(api.organizations.deleteOrganization)
