@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/lib/convex-provider";
 import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
+import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
   },
   title: "Portal",
   description: "Team chat, reimagined.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -34,13 +36,20 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={inter.variable}>
+        <head>
+          <meta name="theme-color" content="#26251E" />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning
         >
           <PostHogProvider>
             <DatabuddyProvider>
-              <ConvexClientProvider>{children}</ConvexClientProvider>
+              <ConvexClientProvider>
+                <RootNotificationProvider>
+                  {children}
+                </RootNotificationProvider>
+              </ConvexClientProvider>
             </DatabuddyProvider>
           </PostHogProvider>
         </body>

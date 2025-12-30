@@ -40,6 +40,7 @@ import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { replaceMentionsInText } from "./mention"
 
 // Context for attachment URLs (batch loaded at MessageList level)
 const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
@@ -193,9 +194,18 @@ const MarkdownComponents = {
   ol: ({ children }: { children?: React.ReactNode }) => (
     <ol className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
   ),
-  strong: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="font-semibold text-[#26251E]">{children}</strong>
-  ),
+  strong: ({ children }: { children?: React.ReactNode }) => {
+    // Check if this is a mention (starts with @)
+    const text = typeof children === 'string' ? children : String(children)
+    if (text.startsWith('@')) {
+      return (
+        <span className="inline-flex items-center rounded px-1 py-0.5 font-medium bg-[#26251E]/10 text-[#26251E]/80 hover:bg-[#26251E]/15 transition-colors">
+          {children}
+        </span>
+      )
+    }
+    return <strong className="font-semibold text-[#26251E]">{children}</strong>
+  },
   em: ({ children }: { children?: React.ReactNode }) => (
     <em className="italic text-[#26251E]/85">{children}</em>
   ),
@@ -206,17 +216,40 @@ const MarkdownComponents = {
   ),
 }
 
-// Highlight mentions in content
-function highlightMentions(content: string, mentions?: string[], userNames?: Record<string, string>): string {
-  if (!mentions || mentions.length === 0) return content
+// Replace mention user IDs with user names in content
+function processMentions(content: string, mentions?: string[], userNames?: Record<string, string>): string {
+  if (!mentions || mentions.length === 0 || !userNames) return content
   
-  let highlighted = content
-  for (const userId of mentions) {
-    const userName = userNames?.[userId] || userId
-    const mentionPattern = new RegExp(`@${userId}`, "g")
-    highlighted = highlighted.replace(mentionPattern, `**@${userName}**`)
+  // Build a map of userId -> userName for quick lookup
+  const mentionMap: Record<string, string> = {}
+  mentions.forEach(userId => {
+    const userName = userNames[userId]
+    if (userName) {
+      mentionMap[userId] = userName
+    }
+  })
+  
+  // First replace @userId with @userName
+  let processedContent = replaceMentionsInText(content, mentionMap)
+  
+  // Then wrap each @userName mention in ** for markdown bold styling
+  // We need to match exact display names, not greedy patterns
+  // Sort display names by length (longest first) to avoid partial matches
+  const displayNames = Object.values(mentionMap).sort((a, b) => b.length - a.length)
+  
+  for (const displayName of displayNames) {
+    // Escape special regex characters in the display name
+    const escapedName = displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Match @displayName and ensure it's followed by either:
+    // - End of string ($)
+    // - A non-word character (space, punctuation, etc.)
+    // This prevents matching "@greg heffley hello" when we only want "@greg heffley"
+    // The negative lookahead (?!\w) ensures we don't continue matching into the next word
+    const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w])`, 'g')
+    processedContent = processedContent.replace(pattern, `**@${displayName}**`)
   }
-  return highlighted
+  
+  return processedContent
 }
 
 function MessageItem({ 
@@ -298,8 +331,8 @@ function MessageItem({
     }
   }
 
-  // Process content to highlight mentions
-  const processedContent = highlightMentions(message.content, message.mentions, userNames)
+  // Process content to replace mention IDs with names
+  const processedContent = processMentions(message.content, message.mentions, userNames)
 
   return (
     <div

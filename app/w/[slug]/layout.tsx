@@ -3,6 +3,8 @@
 import * as React from "react";
 import { WorkspaceProvider, useWorkspace, useWorkspaceData } from "@/components/workspace-context";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
+import { NotificationProvider } from "@/components/notifications/notification-provider";
+import { NotificationPermissionPrompt } from "@/components/notifications/permission-prompt";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
 import { TopNav } from "@/components/preview/top-nav";
@@ -156,7 +158,10 @@ export default function Layout({
   return (
     <WorkspaceProvider slug={slug}>
       <UserDataCacheProvider>
-        <WorkspaceLayoutContent>{children}</WorkspaceLayoutContent>
+        <NotificationProvider>
+          <WorkspaceLayoutContent>{children}</WorkspaceLayoutContent>
+          <NotificationPermissionPrompt delay={5000} />
+        </NotificationProvider>
       </UserDataCacheProvider>
     </WorkspaceProvider>
   );

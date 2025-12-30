@@ -1,0 +1,17 @@
+{
+  "name": "Portal",
+  "short_name": "Portal",
+  "description": "Team chat, reimagined.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F7F4",
+  "theme_color": "#26251E",
+  "icons": [
+    {
+      "src": "/portal.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

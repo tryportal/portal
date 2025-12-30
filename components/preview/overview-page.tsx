@@ -19,6 +19,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { getIconComponent } from "@/components/icon-picker"
 import type { Message } from "@/components/preview/message-list"
+import { parseMentions } from "./mention"
 
 interface OverviewPageProps {
   organizationId: Id<"organizations">
@@ -64,7 +65,10 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
       ...(mentionsRaw || [])
     ]
 
-    const uniqueUserIds = Array.from(new Set(allMessages.map(msg => msg.userId)))
+    const uniqueUserIds = Array.from(new Set([
+      ...allMessages.map(msg => msg.userId),
+      ...allMessages.flatMap(msg => msg.mentions || [])
+    ]))
     const missingUserIds = uniqueUserIds.filter(userId => !userDataCache[userId])
 
     if (missingUserIds.length === 0) return
@@ -90,7 +94,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   }, [savedMessagesRaw, mentionsRaw, getUserDataAction, userDataCache])
 
   // Format messages
-  const formatMessage = (msg: { _id: Id<"messages">; channelId?: Id<"channels">; userId: string; content: string; createdAt: number; editedAt?: number; attachments?: Array<{ storageId: Id<"_storage">; name: string; size: number; type: string }> }): Message | null => {
+  const formatMessage = (msg: { _id: Id<"messages">; channelId?: Id<"channels">; userId: string; content: string; createdAt: number; editedAt?: number; attachments?: Array<{ storageId: Id<"_storage">; name: string; size: number; type: string }>; mentions?: string[] }): Message | null => {
     const cachedUserData = userDataCache[msg.userId]
     const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null)
     const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null)
@@ -103,6 +107,20 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     const initials = firstName && lastName
       ? `${firstName[0]}${lastName[0]}`
       : firstName?.[0] || "?"
+
+    // Build mention user names map
+    const mentionUserNames: Record<string, string> = {}
+    if (msg.mentions) {
+      msg.mentions.forEach((userId: string) => {
+        const mentionedUserData = userDataCache[userId]
+        if (mentionedUserData) {
+          const mentionedName = mentionedUserData.firstName && mentionedUserData.lastName
+            ? `${mentionedUserData.firstName} ${mentionedUserData.lastName}`
+            : mentionedUserData.firstName || "Unknown User"
+          mentionUserNames[userId] = mentionedName
+        }
+      })
+    }
 
     return {
       id: msg._id,
@@ -124,7 +142,9 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
         type: att.type,
       })),
       editedAt: msg.editedAt,
-    }
+      mentions: msg.mentions,
+      mentionUserNames,
+    } as Message & { mentionUserNames: Record<string, string> }
   }
 
   const savedMessages = (savedMessagesRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null)
@@ -200,6 +220,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                   {savedMessages.map((message) => {
                     const channel = savedMessagesRaw?.find(m => m._id === message.id)
                     const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
+                    const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
                     return (
                       <div
                         key={message.id}
@@ -222,7 +243,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             )}
                             <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">{message.content}</p>
+                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
+                            {msgWithMentions.mentionUserNames 
+                              ? parseMentions(message.content, msgWithMentions.mentionUserNames)
+                              : message.content
+                            }
+                          </p>
                         </div>
                       </div>
                     )
@@ -262,6 +288,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                   {mentions.map((message) => {
                     const channel = mentionsRaw?.find(m => m._id === message.id)
                     const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
+                    const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
                     return (
                       <div
                         key={message.id}
@@ -284,7 +311,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             )}
                             <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">{message.content}</p>
+                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
+                            {msgWithMentions.mentionUserNames 
+                              ? parseMentions(message.content, msgWithMentions.mentionUserNames)
+                              : message.content
+                            }
+                          </p>
                         </div>
                       </div>
                     )

@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { parseMentions } from "./mention"
 
 interface InboxPageProps {
   organizationId: Id<"organizations">
@@ -65,6 +66,12 @@ export function InboxPage({ organizationId }: InboxPageProps) {
     // Add mention authors
     unreadMentions?.forEach((mention) => {
       userIds.add(mention.userId)
+      // Add mentioned users if available
+      if (mention.mentions) {
+        mention.mentions.forEach((mentionedUserId: string) => {
+          userIds.add(mentionedUserId)
+        })
+      }
     })
 
     // Add DM participants
@@ -256,6 +263,14 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                     const authorInitials = getUserInitials(mention.userId)
                     const authorImage = getUserImage(mention.userId)
 
+                    // Build mention user names map
+                    const mentionUserNames: Record<string, string> = {}
+                    if (mention.mentions) {
+                      mention.mentions.forEach((userId: string) => {
+                        mentionUserNames[userId] = getUserName(userId)
+                      })
+                    }
+
                     return (
                       <div
                         key={mention._id}
@@ -282,7 +297,7 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                             </span>
                           </div>
                           <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
-                            {mention.content}
+                            {parseMentions(mention.content, mentionUserNames)}
                           </p>
                         </div>
 

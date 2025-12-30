@@ -98,6 +98,8 @@ export function MessageInput({
   isDirectMessage = false,
 }: MessageInputProps) {
   const [message, setMessage] = React.useState("")
+  const [displayMessage, setDisplayMessage] = React.useState("") // Display value with names
+  const [mentionMap, setMentionMap] = React.useState<Record<string, string>>({}) // Map userId -> userName
   const [emojiOpen, setEmojiOpen] = React.useState(false)
   const [attachments, setAttachments] = React.useState<PendingAttachment[]>([])
   const [isUploading, setIsUploading] = React.useState(false)
@@ -149,12 +151,15 @@ export function MessageInput({
       }))
 
     if (message.trim() || uploadedAttachments.length > 0) {
+      // Send the backend message (with user IDs)
       onSendMessage(
         message.trim(), 
         uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         replyingTo?.messageId
       )
       setMessage("")
+      setDisplayMessage("")
+      setMentionMap({})
       setAttachments([])
       onCancelReply?.()
       // Reset textarea height
@@ -241,10 +246,22 @@ export function MessageInput({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
-    setMessage(value)
+    setDisplayMessage(value)
+    
+    // Convert display message back to backend format for processing
+    // Replace @userName with @userId using the mention map
+    // Sort by length (longest first) to prevent partial matches
+    let backendValue = value
+    const sortedEntries = Object.entries(mentionMap).sort(([, a], [, b]) => b.length - a.length)
+    sortedEntries.forEach(([userId, userName]) => {
+      const userNamePattern = new RegExp(`@${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+      backendValue = backendValue.replace(userNamePattern, `@${userId}`)
+    })
+    
+    setMessage(backendValue)
     handleTyping()
 
-    // Check for mention trigger
+    // Check for mention trigger using the display value
     const cursorPos = e.target.selectionStart || 0
     checkMentionTrigger(value, cursorPos)
   }
@@ -254,9 +271,20 @@ export function MessageInput({
 
     const beforeMention = message.slice(0, mentionStartPos)
     const afterMention = message.slice(mentionStartPos + 1 + mentionQuery.length)
-    const newMessage = `${beforeMention}@${user.userId} ${afterMention}`
+    const userName = user.firstName && user.lastName 
+      ? `${user.firstName} ${user.lastName}` 
+      : user.firstName || "User"
     
-    setMessage(newMessage)
+    // Backend message uses userId
+    const backendMessage = `${beforeMention}@${user.userId} ${afterMention}`
+    // Display message uses userName
+    const displayMsg = `${beforeMention}@${userName} ${afterMention}`
+    
+    // Update mention map
+    setMentionMap(prev => ({ ...prev, [user.userId]: userName }))
+    
+    setMessage(backendMessage)
+    setDisplayMessage(displayMsg)
     setMentionVisible(false)
     setMentionQuery("")
     setMentionStartPos(null)
@@ -267,6 +295,7 @@ export function MessageInput({
 
   const insertEmoji = (emoji: string) => {
     setMessage((prev) => prev + emoji)
+    setDisplayMessage((prev) => prev + emoji)
     setEmojiOpen(false)
     textareaRef.current?.focus()
   }
@@ -455,7 +484,7 @@ export function MessageInput({
         <div className="px-3 pt-2">
           <Textarea
             ref={textareaRef}
-            value={message}
+            value={displayMessage}
             onChange={(e) => {
               handleInputChange(e)
               // Auto-resize textarea
