@@ -471,6 +471,25 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }
 
+  // Prefetch sidebar navigation routes on hover for faster navigation
+  const handleOverviewPrefetch = () => {
+    if (currentSlug) {
+      router.prefetch(`/w/${currentSlug}`)
+    }
+  }
+
+  const handlePeoplePrefetch = () => {
+    if (currentSlug) {
+      router.prefetch(`/w/${currentSlug}/people`)
+    }
+  }
+
+  const handleSettingsPrefetch = () => {
+    if (currentSlug) {
+      router.prefetch(`/w/${currentSlug}/settings`)
+    }
+  }
+
   const handleEditChannel = (channelId: Id<"channels">) => {
     setEditChannelId(channelId)
   }
@@ -574,6 +593,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     router.push(`/w/${currentSlug}`)
                   }
                 }}
+                onMouseEnter={handleOverviewPrefetch}
                 className={`w-full justify-start gap-2 ${
                   isOverviewActive
                     ? "bg-[#26251E]/10 text-[#26251E]"
@@ -594,6 +614,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     router.push(`/w/${currentSlug}/people`)
                   }
                 }}
+                onMouseEnter={handlePeoplePrefetch}
                 className={`w-full justify-start gap-2 ${
                   isPeoplePage
                     ? "bg-[#26251E]/10 text-[#26251E]"
@@ -615,6 +636,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       router.push(`/w/${currentSlug}/settings`)
                     }
                   }}
+                  onMouseEnter={handleSettingsPrefetch}
                   className={`w-full justify-start gap-2 ${
                     isSettingsPage
                       ? "bg-[#26251E]/10 text-[#26251E]"
