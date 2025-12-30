@@ -131,6 +131,13 @@ export function ConversationsSidebar() {
     router.push(`/w/${slug}/messages/${id}`)
   }
 
+  // Prefetch conversation on hover for faster navigation
+  const handleConversationPrefetch = (id: string) => {
+    if (slug) {
+      router.prefetch(`/w/${slug}/messages/${id}`)
+    }
+  }
+
   // Filter conversations by search query
   const filteredConversations = React.useMemo(() => {
     if (!conversations) return []
@@ -214,6 +221,7 @@ export function ConversationsSidebar() {
                 <button
                   key={conversation._id}
                   onClick={() => handleConversationClick(conversation._id)}
+                  onMouseEnter={() => handleConversationPrefetch(conversation._id)}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
                     isActive

@@ -123,6 +123,13 @@ export default function PeoplePage() {
     router.push(`/w/${slug}/people/${member.userId}`);
   };
 
+  // Prefetch member profile on hover for faster navigation
+  const handleMemberPrefetch = (member: MemberWithUserData) => {
+    if (slug) {
+      router.prefetch(`/w/${slug}/people/${member.userId}`);
+    }
+  };
+
   // Show loading spinner while context is loading
   if (contextLoading) {
     return <LoadingSpinner fullScreen />;
@@ -190,6 +197,7 @@ export default function PeoplePage() {
                       <button
                         key={member._id}
                         onClick={() => handleMemberClick(member)}
+                        onMouseEnter={() => handleMemberPrefetch(member)}
                         className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl border border-[#26251E]/10 hover:border-[#26251E]/20 hover:shadow-sm transition-all text-center group"
                       >
                         <Avatar className="size-14 sm:size-20 mb-3 sm:mb-4">
