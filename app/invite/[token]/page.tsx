@@ -86,14 +86,14 @@ export default function InvitePage({
   // Loading state
   if (!authLoaded || (token && invitationData === undefined)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <div className="size-12 rounded-xl bg-[#26251E] flex items-center justify-center shadow-lg">
+          <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
             <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
           </div>
           <div className="flex flex-col items-center gap-2">
-            <Spinner className="size-5 animate-spin text-[#26251E]/40" />
-            <p className="text-sm font-medium text-[#26251E]/60">Loading invitation...</p>
+            <Spinner className="size-5 animate-spin text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">Loading invitation...</p>
           </div>
         </div>
       </div>
@@ -103,19 +103,19 @@ export default function InvitePage({
   // Invalid or expired invitation
   if (!invitationData || !invitationData.invitation || !invitationData.organization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
               <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Invalid Invitation</h1>
-            <p className="text-sm sm:text-base text-[#26251E]/60">
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Invalid Invitation</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               This invitation link is invalid or has expired. Please request a new invitation from your team admin.
             </p>
             <Button
               onClick={() => router.push("/")}
-              className="mt-4 bg-[#26251E] text-white hover:bg-[#26251E]/90"
+              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
             >
               Go to Homepage
             </Button>
@@ -130,23 +130,23 @@ export default function InvitePage({
   // Already accepted or revoked
   if (invitation.status !== "pending") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
               <EnvelopeSimple className="size-5 sm:size-8 text-amber-500" weight="fill" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
               Invitation {invitation.status === "accepted" ? "Already Accepted" : "No Longer Valid"}
             </h1>
-            <p className="text-sm sm:text-base text-[#26251E]/60">
+            <p className="text-sm sm:text-base text-muted-foreground">
               {invitation.status === "accepted"
                 ? "This invitation has already been accepted. You can access the organization from your dashboard."
                 : "This invitation has been revoked. Please request a new invitation from your team admin."}
             </p>
             <Button
               onClick={() => router.push(`/w/${organization.slug}`)}
-              className="mt-4 bg-[#26251E] text-white hover:bg-[#26251E]/90"
+              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
             >
               Go to {organization.name}
             </Button>
@@ -159,19 +159,19 @@ export default function InvitePage({
   // Expired
   if (invitation.expiresAt < Date.now()) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
               <XCircle className="size-5 sm:size-8 text-amber-500" weight="fill" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Invitation Expired</h1>
-            <p className="text-sm sm:text-base text-[#26251E]/60">
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Invitation Expired</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               This invitation has expired. Please request a new invitation from your team admin.
             </p>
             <Button
               onClick={() => router.push("/")}
-              className="mt-4 bg-[#26251E] text-white hover:bg-[#26251E]/90"
+              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
             >
               Go to Homepage
             </Button>
@@ -184,17 +184,17 @@ export default function InvitePage({
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-green-50 flex items-center justify-center">
               <CheckCircle className="size-5 sm:size-8 text-green-500" weight="fill" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Welcome to {organization.name}!</h1>
-            <p className="text-sm sm:text-base text-[#26251E]/60">
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Welcome to {organization.name}!</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               You&apos;ve successfully joined the team. Redirecting you to the workspace...
             </p>
-            <Spinner className="size-5 animate-spin text-[#26251E]/40 mt-4" />
+            <Spinner className="size-5 animate-spin text-muted-foreground mt-4" />
           </div>
         </div>
       </div>
@@ -204,17 +204,17 @@ export default function InvitePage({
   // Show sign-in if not authenticated
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-[95%] sm:max-w-md w-full">
-          <div className="bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5 mb-6">
+          <div className="bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border mb-6">
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="size-12 sm:size-16 rounded-full bg-[#26251E]/5 flex items-center justify-center">
-                <EnvelopeSimple className="size-5 sm:size-8 text-[#26251E]" weight="fill" />
+              <div className="size-12 sm:size-16 rounded-full bg-muted flex items-center justify-center">
+                <EnvelopeSimple className="size-5 sm:size-8 text-foreground" weight="fill" />
               </div>
-              <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">
+              <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
                 You&apos;re invited to join {organization.name}
               </h1>
-              <p className="text-sm sm:text-base text-[#26251E]/60">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Sign in or create an account to accept this invitation and join the team as {invitation.role === "admin" ? "an admin" : "a member"}.
               </p>
             </div>
@@ -232,14 +232,14 @@ export default function InvitePage({
   // Accepting state
   if (isAccepting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <div className="size-12 rounded-xl bg-[#26251E] flex items-center justify-center shadow-lg">
+          <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
             <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
           </div>
           <div className="flex flex-col items-center gap-2">
-            <Spinner className="size-5 animate-spin text-[#26251E]/40" />
-            <p className="text-sm font-medium text-[#26251E]/60">Joining {organization.name}...</p>
+            <Spinner className="size-5 animate-spin text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">Joining {organization.name}...</p>
           </div>
         </div>
       </div>
@@ -249,19 +249,19 @@ export default function InvitePage({
   // Error state with retry option
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-[#26251E]/5">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
               <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#26251E]">Something went wrong</h1>
-            <p className="text-sm sm:text-base text-[#26251E]/60">{error}</p>
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Something went wrong</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">{error}</p>
             <div className="flex gap-3 mt-4">
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
-                className="border-[#26251E]/10"
+                className="border-border"
               >
                 Go Home
               </Button>
@@ -270,7 +270,7 @@ export default function InvitePage({
                   setError(null);
                   handleAccept();
                 }}
-                className="bg-[#26251E] text-white hover:bg-[#26251E]/90"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 Try Again
               </Button>
@@ -283,9 +283,9 @@ export default function InvitePage({
 
   // Default: accepting invitation (should auto-trigger)
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4]">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-        <Spinner className="size-6 animate-spin text-[#26251E]/20" />
+        <Spinner className="size-6 animate-spin text-foreground/20" />
       </div>
     </div>
   );

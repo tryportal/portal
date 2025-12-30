@@ -161,18 +161,18 @@ export function InvitePeopleDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={handleClose}>
-      <AlertDialogContent className="max-w-md p-0 gap-0 bg-white">
+      <AlertDialogContent className="max-w-md p-0 gap-0 bg-card">
         {/* Header */}
-        <AlertDialogHeader className="border-b border-[#26251E]/10 px-6 py-4 text-left place-items-start">
+        <AlertDialogHeader className="border-b border-border px-6 py-4 text-left place-items-start">
           <div className="flex items-center gap-2">
-            <div className="size-8 bg-[#26251E] rounded-lg flex items-center justify-center">
-              <UserPlusIcon className="size-4 text-white" weight="bold" />
+            <div className="size-8 bg-foreground rounded-lg flex items-center justify-center">
+              <UserPlusIcon className="size-4 text-background" weight="bold" />
             </div>
             <div>
-              <AlertDialogTitle className="text-base font-semibold text-[#26251E]">
+              <AlertDialogTitle className="text-base font-semibold text-foreground">
                 Invite People
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-xs text-[#26251E]/60 mt-0.5">
+              <AlertDialogDescription className="text-xs text-muted-foreground mt-0.5">
                 Add new members to your workspace
               </AlertDialogDescription>
             </div>
@@ -182,14 +182,14 @@ export function InvitePeopleDialog({
         {/* Content */}
         <div className="px-6 py-4">
           {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-[#26251E]/5 rounded-lg mb-4">
+          <div className="flex gap-1 p-1 bg-muted rounded-lg mb-4">
             <button
               onClick={() => setActiveTab("email")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
                 activeTab === "email"
-                  ? "bg-white text-[#26251E] shadow-sm"
-                  : "text-[#26251E]/60 hover:text-[#26251E]"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <EnvelopeIcon className="size-4" weight="bold" />
@@ -200,8 +200,8 @@ export function InvitePeopleDialog({
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
                 activeTab === "link"
-                  ? "bg-white text-[#26251E] shadow-sm"
-                  : "text-[#26251E]/60 hover:text-[#26251E]"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LinkIcon className="size-4" weight="bold" />
@@ -211,7 +211,7 @@ export function InvitePeopleDialog({
 
           {/* Role Selection */}
           <div className="mb-4">
-            <Label className="text-xs font-medium text-[#26251E]/80 mb-2 block">
+            <Label className="text-xs font-medium text-foreground/80 mb-2 block">
               Role
             </Label>
             <div className="flex gap-2">
@@ -220,8 +220,8 @@ export function InvitePeopleDialog({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
                   role === "member"
-                    ? "border-[#26251E] bg-[#26251E]/5 text-[#26251E]"
-                    : "border-[#26251E]/10 text-[#26251E]/60 hover:border-[#26251E]/20"
+                    ? "border-primary bg-muted text-foreground"
+                    : "border-border text-muted-foreground hover:border-border/80"
                 )}
               >
                 <UserIcon className="size-4" weight="bold" />
@@ -232,8 +232,8 @@ export function InvitePeopleDialog({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
                   role === "admin"
-                    ? "border-[#26251E] bg-[#26251E]/5 text-[#26251E]"
-                    : "border-[#26251E]/10 text-[#26251E]/60 hover:border-[#26251E]/20"
+                    ? "border-primary bg-muted text-foreground"
+                    : "border-border text-muted-foreground hover:border-border/80"
                 )}
               >
                 <ShieldIcon className="size-4" weight="fill" />
@@ -246,7 +246,7 @@ export function InvitePeopleDialog({
           {activeTab === "email" && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="email" className="text-xs font-medium text-[#26251E]/80 mb-2 block">
+                <Label htmlFor="email" className="text-xs font-medium text-foreground/80 mb-2 block">
                   Email Address
                 </Label>
                 <Input
@@ -264,7 +264,7 @@ export function InvitePeopleDialog({
                     }
                   }}
                   disabled={isLoading}
-                  className="bg-white border-[#26251E]/10"
+                  className="bg-card border-border"
                 />
               </div>
 
@@ -281,7 +281,7 @@ export function InvitePeopleDialog({
                 </div>
               )}
 
-              <p className="text-xs text-[#26251E]/50">
+              <p className="text-xs text-muted-foreground">
                 An email will be sent with an invitation link. The invitation expires in 7 days.
               </p>
             </div>
@@ -293,14 +293,14 @@ export function InvitePeopleDialog({
               {inviteLink ? (
                 <>
                   <div>
-                    <Label className="text-xs font-medium text-[#26251E]/80 mb-2 block">
+                    <Label className="text-xs font-medium text-foreground/80 mb-2 block">
                       Share this link
                     </Label>
                     <div className="flex gap-2">
                       <Input
                         value={inviteLink}
                         readOnly
-                        className="bg-[#26251E]/5 border-[#26251E]/10 font-mono text-xs"
+                        className="bg-muted border-border font-mono text-xs"
                       />
                       <Button
                         onClick={handleCopyLink}
@@ -317,8 +317,8 @@ export function InvitePeopleDialog({
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#26251E]/5 rounded-lg">
-                    <p className="text-xs text-[#26251E]/70">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-foreground/70">
                       Anyone with this link can join as{" "}
                       <span className="font-medium">
                         {role === "admin" ? "an admin" : "a member"}
@@ -345,10 +345,10 @@ export function InvitePeopleDialog({
                 </>
               ) : (
                 <>
-                  <div className="p-4 bg-[#26251E]/5 rounded-lg text-center">
-                    <LinkIcon className="size-8 mx-auto mb-2 text-[#26251E]/40" weight="bold" />
-                    <p className="text-sm text-[#26251E]/80 mb-1">No active invite link</p>
-                    <p className="text-xs text-[#26251E]/50">
+                  <div className="p-4 bg-muted rounded-lg text-center">
+                    <LinkIcon className="size-8 mx-auto mb-2 text-muted-foreground" weight="bold" />
+                    <p className="text-sm text-foreground/80 mb-1">No active invite link</p>
+                    <p className="text-xs text-muted-foreground">
                       Create a shareable link that anyone can use to join your workspace
                     </p>
                   </div>
@@ -362,7 +362,7 @@ export function InvitePeopleDialog({
                   <Button
                     onClick={handleCreateLink}
                     disabled={isLoading}
-                    className="w-full bg-[#26251E] hover:bg-[#26251E]/90"
+                    className="w-full bg-foreground hover:bg-foreground/90"
                   >
                     Create Invite Link
                   </Button>
@@ -373,14 +373,14 @@ export function InvitePeopleDialog({
         </div>
 
         {/* Footer */}
-        <AlertDialogFooter className="border-t border-[#26251E]/10 px-6 py-4">
+        <AlertDialogFooter className="border-t border-border px-6 py-4">
           {activeTab === "email" ? (
             <>
               <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
               <Button
                 onClick={handleSendInvitation}
                 disabled={isLoading || !email.trim()}
-                className="bg-[#26251E] hover:bg-[#26251E]/90"
+                className="bg-foreground hover:bg-foreground/90"
               >
                 {isLoading ? (
                   "Sending..."

@@ -79,7 +79,7 @@ export function CreateCategoryDialog({
 
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="category-name" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Category Name</Label>
+              <Label htmlFor="category-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
               <Input
                 id="category-name"
                 placeholder="e.g., Engineering"

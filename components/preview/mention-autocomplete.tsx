@@ -55,7 +55,7 @@ export function MentionAutocomplete({
   }
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border border-[#26251E]/10 bg-white shadow-lg overflow-hidden z-50">
+    <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden z-50">
       <ScrollArea className="max-h-48">
         <div ref={listRef} className="py-1">
           {filteredUsers.map((user, index) => {
@@ -74,19 +74,19 @@ export function MentionAutocomplete({
                 onMouseEnter={() => onSelectedIndexChange(index)}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
                   index === selectedIndex
-                    ? "bg-[#26251E]/5"
-                    : "hover:bg-[#26251E]/[0.02]"
+                    ? "bg-muted"
+                    : "hover:bg-muted/50"
                 }`}
               >
                 <Avatar className="size-6">
                   {user.imageUrl && (
                     <AvatarImage src={user.imageUrl} alt={name} />
                   )}
-                  <AvatarFallback className="text-[10px] bg-[#26251E]/10 text-[#26251E]">
+                  <AvatarFallback className="text-[10px] bg-secondary text-foreground">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-[#26251E]">{name}</span>
+                <span className="text-sm font-medium text-foreground">{name}</span>
               </button>
             )
           })}

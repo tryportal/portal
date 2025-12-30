@@ -46,15 +46,15 @@ export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 text-xs text-[#26251E]/60">
+    <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
       {/* Avatars */}
       <div className="flex -space-x-1.5">
         {typingUsers.slice(0, 3).map((user) => (
-          <Avatar key={user.userId} className="size-5 border-2 border-[#F7F7F4]">
+          <Avatar key={user.userId} className="size-5 border-2 border-background">
             {user.imageUrl ? (
               <AvatarImage src={user.imageUrl} alt={getDisplayName(user)} />
             ) : null}
-            <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-[8px]">
+            <AvatarFallback className="bg-secondary text-foreground text-[8px]">
               {getInitials(user.firstName, user.lastName)}
             </AvatarFallback>
           </Avatar>

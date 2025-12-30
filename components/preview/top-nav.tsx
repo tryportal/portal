@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface TopNavProps {
   activeTab: string
@@ -78,19 +79,19 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4 sm:grid sm:grid-cols-3">
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-3 sm:px-4 sm:grid sm:grid-cols-3">
       {/* Left: Mobile menu button + Portal Logo */}
       <div className="flex items-center gap-2">
         {/* Mobile sidebar toggle - only show when sidebar would be visible (not on messages) */}
         {activeTab !== "messages" && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="sm:hidden text-[#26251E]/70 hover:text-[#26251E]"
-          >
-            <ListIcon className="size-5" weight="bold" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="sm:hidden text-muted-foreground hover:text-foreground"
+            >
+              <ListIcon className="size-5" weight="bold" />
+            </Button>
         )}
         <Image
           src="/portal-full.svg"
@@ -110,17 +111,17 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               className="rounded"
             />
           ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
               <Image
                 src="/portal.svg"
                 alt="Workspace"
                 width={12}
                 height={12}
-                className="invert"
+                className="invert dark:invert-0"
               />
             </div>
           )}
-          <span className="text-sm font-medium text-[#26251E] max-w-[100px] truncate">
+          <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
             {currentOrg?.name || "Portal"}
           </span>
         </div>
@@ -130,7 +131,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       <div className="hidden sm:flex items-center justify-center gap-2">
         {/* Organization Switcher */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="gap-2 px-2 text-[#26251E] hover:bg-[#26251E]/5 h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
+          <DropdownMenuTrigger className="gap-2 px-2 text-foreground hover:bg-muted h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
             {currentOrg?.logoUrl ? (
               <Image
                 src={currentOrg.logoUrl}
@@ -140,20 +141,20 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                 className="rounded"
               />
             ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
                 <Image
                   src="/portal.svg"
                   alt="Workspace"
                   width={12}
                   height={12}
-                  className="invert"
+                  className="invert dark:invert-0"
                 />
               </div>
             )}
             <span className="text-sm font-medium">
               {currentOrg?.name || "Organization"}
             </span>
-            <CaretDownIcon className="ml-1 size-3 text-[#26251E]/50" />
+            <CaretDownIcon className="ml-1 size-3 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[200px]">
             {userOrgs && userOrgs.length > 0 ? (
@@ -174,26 +175,26 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                         className="rounded"
                       />
                     ) : (
-                      <div className="flex h-4 w-4 items-center justify-center rounded bg-[#26251E]">
+                      <div className="flex h-4 w-4 items-center justify-center rounded bg-foreground">
                         <Image
                           src="/portal.svg"
                           alt="Workspace"
                           width={10}
                           height={10}
-                          className="invert"
+                          className="invert dark:invert-0"
                         />
                       </div>
                     )}
                     <span className="text-sm flex-1">{org.name || "Organization"}</span>
                     {isActive && (
-                      <CheckIcon className="size-3.5 text-[#26251E]" />
+                      <CheckIcon className="size-3.5 text-foreground" />
                     )}
                   </DropdownMenuItem>
                 )
               })
             ) : (
               <DropdownMenuItem disabled className="px-2 py-1.5">
-                <span className="text-sm text-[#26251E]/50">No organizations</span>
+                <span className="text-sm text-muted-foreground">No organizations</span>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -201,13 +202,13 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               onClick={handleCreateOrganization}
               className="gap-2 px-2 py-1.5 cursor-pointer"
             >
-              <PlusIcon className="size-3.5 text-[#26251E]" />
+              <PlusIcon className="size-3.5 text-foreground" />
               <span className="text-sm">Create Organization</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Separator orientation="vertical" className="mr-2 bg-[#26251E]/10" />
+          <Separator orientation="vertical" className="mr-2 bg-border" />
 
         {/* Tab Navigation */}
         <nav className="flex items-center gap-1">
@@ -217,7 +218,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             const showMessagesBadge = tab.id === "messages" && totalUnreadCount > 0
             const showInboxBadge = tab.id === "inbox" && (inboxCount?.total ?? 0) > 0
             const badgeCount = tab.id === "messages" ? totalUnreadCount : (inboxCount?.total ?? 0)
-            return (
+              return (
               <Button
                 key={tab.id}
                 variant={isActive ? "secondary" : "ghost"}
@@ -225,8 +226,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                 onClick={() => handleTabChange(tab.id)}
                 className={`gap-1.5 relative ${
                   isActive
-                    ? "bg-[#26251E]/10 text-[#26251E]"
-                    : "text-[#26251E]/70 hover:text-[#26251E]"
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon weight={isActive ? "fill" : "regular"} className="size-4" />
@@ -242,8 +243,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </nav>
       </div>
 
-      {/* Right: User Account */}
-      <div className="flex justify-end">
+      {/* Right: Theme Toggle + User Account */}
+      <div className="flex justify-end items-center gap-2">
+        <ThemeToggle variant="icon" className="hidden sm:flex" />
         <UserButton
         appearance={{
           elements: {
@@ -251,7 +253,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             avatarBox: "h-7 w-7 sm:h-8 sm:w-8",
             userButtonPopoverCard: "shadow-lg",
             userButtonPopoverActions: "p-2",
-            userButtonPopoverActionButton: "text-[#26251E] hover:bg-[#26251E]/5",
+            userButtonPopoverActionButton: "text-foreground hover:bg-muted",
             userButtonPopoverFooter: "hidden",
           },
         }}
@@ -259,7 +261,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       </div>
 
       {/* Mobile Bottom Tab Navigation */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#26251E]/10 bg-[#F7F7F4] px-2 py-1 safe-area-pb">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-2 py-1 safe-area-pb">
         <div className="flex items-center justify-around">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -267,14 +269,14 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             const showMessagesBadge = tab.id === "messages" && totalUnreadCount > 0
             const showInboxBadge = tab.id === "inbox" && (inboxCount?.total ?? 0) > 0
             const badgeCount = tab.id === "messages" ? totalUnreadCount : (inboxCount?.total ?? 0)
-            return (
+              return (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={`relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-colors ${
                   isActive
-                    ? "text-[#26251E]"
-                    : "text-[#26251E]/50"
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 }`}
               >
                 <div className="relative">

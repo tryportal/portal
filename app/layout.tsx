@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/lib/convex-provider";
 import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
+import { ThemeProvider } from "@/lib/theme-provider";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import "./globals.css";
 
@@ -35,23 +36,42 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={inter.variable}>
+      <html lang="en" className={inter.variable} suppressHydrationWarning>
         <head>
           <meta name="theme-color" content="#26251E" />
+          {/* Prevent flash of wrong theme */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  try {
+                    var theme = localStorage.getItem('portal-theme');
+                    var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var resolved = theme === 'dark' || (theme === 'system' && systemDark) || (!theme && systemDark);
+                    if (resolved) {
+                      document.documentElement.classList.add('dark');
+                    }
+                  } catch (e) {}
+                })();
+              `,
+            }}
+          />
         </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning
         >
-          <PostHogProvider>
-            <DatabuddyProvider>
-              <ConvexClientProvider>
-                <RootNotificationProvider>
-                  {children}
-                </RootNotificationProvider>
-              </ConvexClientProvider>
-            </DatabuddyProvider>
-          </PostHogProvider>
+          <ThemeProvider defaultTheme="system" storageKey="portal-theme">
+            <PostHogProvider>
+              <DatabuddyProvider>
+                <ConvexClientProvider>
+                  <RootNotificationProvider>
+                    {children}
+                  </RootNotificationProvider>
+                </ConvexClientProvider>
+              </DatabuddyProvider>
+            </PostHogProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

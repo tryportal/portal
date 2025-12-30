@@ -36,15 +36,15 @@ export function ChannelHeader({
   const [searchQuery, setSearchQuery] = React.useState("")
 
   return (
-    <header className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
+    <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
       {/* Left: Channel info */}
       <div className="flex items-center gap-2">
-        <Icon className="size-5 text-[#26251E]" weight="fill" />
-        <h1 className="text-base font-semibold text-[#26251E]">{channelName}</h1>
+        <Icon className="size-5 text-foreground" weight="fill" />
+        <h1 className="text-base font-semibold text-foreground">{channelName}</h1>
         {pinnedCount > 0 && (
           <button
             onClick={onViewPinnedMessages}
-            className="flex items-center gap-1 text-xs text-[#26251E]/50 hover:text-[#26251E] transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <PushPinIcon className="size-3.5" />
             <span>{pinnedCount}</span>
@@ -56,13 +56,13 @@ export function ChannelHeader({
       <div className="flex items-center gap-2">
         {/* Search bar */}
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search messages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 w-56 bg-[#26251E]/5 pl-8 text-sm placeholder:text-[#26251E]/40 border-transparent focus-visible:border-[#26251E]/20"
+            className="h-8 w-56 bg-muted pl-8 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
           />
         </div>
 
@@ -72,7 +72,7 @@ export function ChannelHeader({
             render={<Button
               variant="ghost"
               size="icon"
-              className="text-[#26251E]/60 hover:text-[#26251E]"
+              className="text-muted-foreground hover:text-foreground"
             />}
           >
             <DotsThreeIcon className="size-5" weight="bold" />

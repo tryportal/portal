@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useAction } from "convex/react"
 import {
   PlusIcon,
   SmileyIcon,
@@ -11,6 +12,7 @@ import {
   SpinnerIcon,
   ArrowBendUpLeftIcon,
 } from "@phosphor-icons/react"
+import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -30,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
+import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
 
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -57,7 +60,7 @@ interface MessageInputProps {
     name: string
     size: number
     type: string
-  }>, parentMessageId?: string) => void
+  }>, parentMessageId?: string, linkEmbed?: LinkEmbedData) => void
   channelName: string
   disabled?: boolean
   disabledReason?: string
@@ -76,6 +79,9 @@ const EMOJI_LIST = [
   "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
   "🎉", "🎊", "🎈", "🎁", "🏆", "⭐", "💡", "📌",
 ]
+
+// URL detection regex - matches http(s) URLs
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B"
@@ -106,6 +112,13 @@ export function MessageInput({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // Link embed state
+  const [linkEmbed, setLinkEmbed] = React.useState<LinkEmbedData | null>(null)
+  const [linkEmbedLoading, setLinkEmbedLoading] = React.useState(false)
+  const [fetchedUrls, setFetchedUrls] = React.useState<Set<string>>(new Set())
+  const [removedUrls, setRemovedUrls] = React.useState<Set<string>>(new Set())
+  const fetchLinkMetadata = useAction(api.messages.fetchLinkMetadata)
 
   // Mention autocomplete state
   const [mentionVisible, setMentionVisible] = React.useState(false)
@@ -140,6 +153,55 @@ export function MessageInput({
     }
   }, [])
 
+  // Detect URLs and fetch metadata
+  React.useEffect(() => {
+    const detectAndFetchUrl = async () => {
+      // Find URLs in the message
+      const urls = message.match(URL_REGEX)
+      if (!urls || urls.length === 0) {
+        // No URLs found, clear embed if it was from a URL no longer in message
+        if (linkEmbed && !message.includes(linkEmbed.url)) {
+          setLinkEmbed(null)
+        }
+        return
+      }
+
+      // Get the first URL that hasn't been fetched or removed
+      const urlToFetch = urls.find(
+        (url) => !fetchedUrls.has(url) && !removedUrls.has(url)
+      )
+
+      if (!urlToFetch) return
+
+      // Mark as fetched to prevent duplicate requests
+      setFetchedUrls((prev) => new Set(prev).add(urlToFetch))
+      setLinkEmbedLoading(true)
+
+      try {
+        const metadata = await fetchLinkMetadata({ url: urlToFetch })
+        if (metadata) {
+          setLinkEmbed(metadata)
+        }
+      } catch {
+        // Silently fail on fetch errors
+      } finally {
+        setLinkEmbedLoading(false)
+      }
+    }
+
+    // Debounce URL detection
+    const timeoutId = setTimeout(detectAndFetchUrl, 500)
+    return () => clearTimeout(timeoutId)
+  }, [message, fetchLinkMetadata, fetchedUrls, removedUrls, linkEmbed])
+
+  // Handle removing link preview
+  const handleRemoveLinkEmbed = React.useCallback(() => {
+    if (linkEmbed) {
+      setRemovedUrls((prev) => new Set(prev).add(linkEmbed.url))
+    }
+    setLinkEmbed(null)
+  }, [linkEmbed])
+
   const handleSend = async () => {
     const uploadedAttachments = attachments
       .filter(a => a.status === "uploaded" && a.storageId)
@@ -155,12 +217,16 @@ export function MessageInput({
       onSendMessage(
         message.trim(), 
         uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-        replyingTo?.messageId
+        replyingTo?.messageId,
+        linkEmbed || undefined
       )
       setMessage("")
       setDisplayMessage("")
       setMentionMap({})
       setAttachments([])
+      setLinkEmbed(null)
+      setFetchedUrls(new Set())
+      setRemovedUrls(new Set())
       onCancelReply?.()
       // Reset textarea height
       if (textareaRef.current) {
@@ -376,7 +442,7 @@ export function MessageInput({
             ? { ...a, status: "uploaded" as const, storageId } 
             : a
         ))
-      } catch (error) {
+      } catch {
         // Update status to error
         setAttachments(prev => prev.map(a => 
           a.id === attachment.id 
@@ -396,21 +462,21 @@ export function MessageInput({
   const canSend = (message.trim() || hasUploadedAttachments) && !disabled
 
   return (
-    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-4 py-2 shrink-0">
+    <div className="border-t border-border bg-background px-4 py-2 shrink-0">
       {/* Reply indicator */}
       {replyingTo && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#26251E]/10 bg-white px-3 py-2">
-          <ArrowBendUpLeftIcon className="size-4 text-[#26251E]/40" />
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <ArrowBendUpLeftIcon className="size-4 text-muted-foreground" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs text-[#26251E]/50">Replying to </span>
-            <span className="text-xs font-medium text-[#26251E]">{replyingTo.userName}</span>
-            <p className="text-xs text-[#26251E]/60 truncate">{replyingTo.content}</p>
+            <span className="text-xs text-muted-foreground">Replying to </span>
+            <span className="text-xs font-medium text-foreground">{replyingTo.userName}</span>
+            <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
           </div>
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={onCancelReply}
-            className="text-[#26251E]/40 hover:text-[#26251E]"
+            className="text-muted-foreground hover:text-foreground"
           >
             <XIcon className="size-3.5" />
           </Button>
@@ -427,23 +493,23 @@ export function MessageInput({
                 attachment.status === "error"
                   ? "border-red-300 bg-red-50"
                   : attachment.status === "uploading"
-                  ? "border-[#26251E]/20 bg-[#26251E]/5"
-                  : "border-[#26251E]/10 bg-white"
+                  ? "border-border bg-muted"
+                  : "border-border bg-card"
               }`}
             >
               {attachment.type.startsWith("image/") ? (
-                <ImageIcon className="size-4 text-[#26251E]/50" />
+                <ImageIcon className="size-4 text-muted-foreground" />
               ) : (
-                <FileIcon className="size-4 text-[#26251E]/50" />
+                <FileIcon className="size-4 text-muted-foreground" />
               )}
-              <span className="max-w-[120px] truncate text-[#26251E]/70">
+              <span className="max-w-[120px] truncate text-foreground/70">
                 {attachment.name}
               </span>
-              <span className="text-[#26251E]/40">
+              <span className="text-muted-foreground">
                 {formatFileSize(attachment.size)}
               </span>
               {attachment.status === "uploading" && (
-                <SpinnerIcon className="size-3 animate-spin text-[#26251E]/50" />
+                <SpinnerIcon className="size-3 animate-spin text-muted-foreground" />
               )}
               {attachment.status === "error" && (
                 <span className="text-red-500">{attachment.error}</span>
@@ -451,16 +517,28 @@ export function MessageInput({
               <button
                 type="button"
                 onClick={() => removeAttachment(attachment.id)}
-                className="ml-1 rounded p-0.5 hover:bg-[#26251E]/10"
+                className="ml-1 rounded p-0.5 hover:bg-secondary"
               >
-                <XIcon className="size-3 text-[#26251E]/50" />
+                <XIcon className="size-3 text-muted-foreground" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      <div className="relative flex flex-col rounded-xl border border-[#26251E]/15 bg-white shadow-sm">
+      {/* Link embed preview */}
+      {linkEmbedLoading && (
+        <div className="mb-2">
+          <LinkPreviewSkeleton onRemove={() => setLinkEmbedLoading(false)} />
+        </div>
+      )}
+      {linkEmbed && !linkEmbedLoading && (
+        <div className="mb-2">
+          <LinkPreview embed={linkEmbed} onRemove={handleRemoveLinkEmbed} />
+        </div>
+      )}
+
+      <div className="relative flex flex-col rounded-xl border border-border bg-card shadow-sm">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -504,7 +582,7 @@ export function MessageInput({
                   : `Message #${channelName}`
             }
             disabled={disabled}
-            className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
+            className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
             rows={1}
             style={{ height: '20px' }}
           />
@@ -522,7 +600,7 @@ export function MessageInput({
                     render={<Button
                       variant="ghost"
                       size="icon"
-                      className="shrink-0 size-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                      className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                       disabled={disabled}
                     />}
                   />}
@@ -551,7 +629,7 @@ export function MessageInput({
                     render={<Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-1 px-2"
+                      className="h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted gap-1 px-2"
                       disabled={disabled}
                     />}
                   />}
@@ -565,7 +643,7 @@ export function MessageInput({
                 align="start"
                 className="w-72 p-3"
               >
-                <div className="mb-2 text-xs font-medium text-[#26251E]/60">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
                   Quick reactions
                 </div>
                 <div className="grid grid-cols-8 gap-1">
@@ -573,7 +651,7 @@ export function MessageInput({
                     <button
                       key={emoji}
                       onClick={() => insertEmoji(emoji)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-[#26251E]/5 transition-colors"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-muted transition-colors"
                     >
                       {emoji}
                     </button>
@@ -590,7 +668,7 @@ export function MessageInput({
                 onClick={handleSend}
                 disabled={!canSend || isUploading}
                 size="icon"
-                className="size-7 rounded-full bg-[#26251E]/80 text-[#F7F7F4] hover:bg-[#26251E] disabled:bg-[#26251E]/30 disabled:text-[#F7F7F4]/50"
+                className="size-7 rounded-full bg-foreground/80 text-background hover:bg-foreground disabled:bg-foreground/30 disabled:text-background/50"
               />}
             >
               <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
@@ -598,8 +676,8 @@ export function MessageInput({
             <TooltipContent side="top">
               <div className="text-xs">
                 Send message
-                <div className="mt-1 text-[10px] text-[#26251E]/60">
-                  Press <kbd className="rounded bg-[#26251E]/10 px-1 py-0.5 font-mono">Enter</kbd> to send, <kbd className="rounded bg-[#26251E]/10 px-1 py-0.5 font-mono">Shift + Enter</kbd> for new line
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  Press <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Enter</kbd> to send, <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Shift + Enter</kbd> for new line
                 </div>
               </div>
             </TooltipContent>

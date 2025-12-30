@@ -110,14 +110,14 @@ export function EditChannelDialog({
           <div className="space-y-6 py-4">
             {/* Channel Name */}
             <div className="space-y-2">
-              <Label htmlFor="edit-channel-name" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Channel Name</Label>
+              <Label htmlFor="edit-channel-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#26251E]/5 hover:bg-[#26251E]/10 transition-colors border border-[#26251E]/5"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted hover:bg-secondary transition-colors border border-border"
                   onClick={() => {}}
                 >
-                  <SelectedIcon className="size-5 text-[#26251E]/70" />
+                  <SelectedIcon className="size-5 text-foreground/70" />
                 </button>
                 <Input
                   id="edit-channel-name"
@@ -132,8 +132,8 @@ export function EditChannelDialog({
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="edit-channel-description" className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">
-                Description <span className="font-normal text-[#26251E]/30">(optional)</span>
+              <Label htmlFor="edit-channel-description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Description <span className="font-normal text-foreground/30">(optional)</span>
               </Label>
               <Textarea
                 id="edit-channel-description"
@@ -146,17 +146,17 @@ export function EditChannelDialog({
 
             {/* Icon Picker */}
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Icon</Label>
-              <div className="rounded-lg border border-[#26251E]/10 p-3 bg-[#F7F7F4]/50">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Icon</Label>
+              <div className="rounded-lg border border-border p-3 bg-background/50">
                 <IconPicker value={icon} onChange={setIcon} />
               </div>
             </div>
 
             {/* Permissions */}
             <div className="space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-[#26251E]/50">Permissions</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissions</Label>
               <div className="grid gap-3">
-                <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "open" ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}>
+                <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "open" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
                   <div className="mt-1">
                     <input
                       type="radio"
@@ -166,18 +166,18 @@ export function EditChannelDialog({
                       onChange={() => setPermissions("open")}
                       className="sr-only"
                     />
-                    <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "open" ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
-                      {permissions === "open" && <div className="size-1.5 rounded-full bg-white" />}
+                    <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "open" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                      {permissions === "open" && <div className="size-1.5 rounded-full bg-card" />}
                     </div>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-[#26251E]">Open to everyone</div>
-                    <div className="mt-1 text-sm text-[#26251E]/60">
+                    <div className="font-medium text-foreground">Open to everyone</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
                       All members can send messages in this channel.
                     </div>
                   </div>
                 </label>
-                <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "readOnly" ? "border-[#26251E] bg-[#26251E]/5 shadow-sm" : "border-[#26251E]/10 hover:border-[#26251E]/30 hover:bg-[#26251E]/5"}`}>
+                <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "readOnly" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
                   <div className="mt-1">
                     <input
                       type="radio"
@@ -187,13 +187,13 @@ export function EditChannelDialog({
                       onChange={() => setPermissions("readOnly")}
                       className="sr-only"
                     />
-                    <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "readOnly" ? "border-[#26251E] bg-[#26251E]" : "border-[#26251E]/30"}`}>
-                      {permissions === "readOnly" && <div className="size-1.5 rounded-full bg-white" />}
+                    <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "readOnly" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                      {permissions === "readOnly" && <div className="size-1.5 rounded-full bg-card" />}
                     </div>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-[#26251E]">Read-only</div>
-                    <div className="mt-1 text-sm text-[#26251E]/60">
+                    <div className="font-medium text-foreground">Read-only</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
                       Only admins can send messages. Great for announcements.
                     </div>
                   </div>

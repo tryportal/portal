@@ -157,20 +157,20 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
   const formattedMessages = (savedMessages || []).map(formatMessage)
 
   return (
-    <div className="flex h-full flex-col bg-[#F7F7F4]">
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <header className="flex h-12 items-center gap-3 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+      <header className="flex h-12 items-center gap-3 border-b border-border bg-background px-4">
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => router.back()}
-          className="text-[#26251E]/60 hover:text-[#26251E]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <BookmarkIcon className="size-5 text-[#26251E]" weight="fill" />
-          <h1 className="text-base font-semibold text-[#26251E]">Saved Messages</h1>
+          <BookmarkIcon className="size-5 text-foreground" weight="fill" />
+          <h1 className="text-base font-semibold text-foreground">Saved Messages</h1>
         </div>
       </header>
 
@@ -179,9 +179,9 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
         <div className="p-4">
           {formattedMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <BookmarkIcon className="size-12 text-[#26251E]/20 mb-4" />
-              <p className="text-sm text-[#26251E]/60 mb-1">No saved messages</p>
-              <p className="text-xs text-[#26251E]/40">
+              <BookmarkIcon className="size-12 text-foreground/20 mb-4" />
+              <p className="text-sm text-muted-foreground mb-1">No saved messages</p>
+              <p className="text-xs text-muted-foreground">
                 Save messages to find them easily later
               </p>
             </div>
@@ -192,7 +192,7 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                 return (
                   <div
                     key={message.id}
-                    className="group relative rounded-lg border border-[#26251E]/10 bg-white p-3 hover:border-[#26251E]/20 transition-colors cursor-pointer"
+                    className="group relative rounded-lg border border-border bg-card p-3 hover:border-border/80 transition-colors cursor-pointer"
                     onClick={() => handleMessageClick(message.channelId)}
                   >
                     <div className="flex items-start gap-3">
@@ -200,26 +200,26 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                         {message.user.avatar && (
                           <AvatarImage src={message.user.avatar} alt={message.user.name} />
                         )}
-                        <AvatarFallback className="text-xs bg-[#26251E]/10 text-[#26251E]">
+                        <AvatarFallback className="text-xs bg-secondary text-foreground">
                           {message.user.initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-sm font-medium text-[#26251E]">
+                          <span className="text-sm font-medium text-foreground">
                             {message.user.name}
                           </span>
                           {channelInfo && (
-                            <span className="flex items-center gap-1 text-xs text-[#26251E]/40">
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <HashIcon className="size-3" />
                               {channelInfo.name}
                             </span>
                           )}
-                          <span className="text-xs text-[#26251E]/40 ml-auto">
+                          <span className="text-xs text-muted-foreground ml-auto">
                             {message.timestamp}
                           </span>
                         </div>
-                        <p className="text-sm text-[#26251E]/70 line-clamp-3">
+                        <p className="text-sm text-foreground/70 line-clamp-3">
                           {parseMentions(message.content, message.mentionUserNames)}
                         </p>
                       </div>
@@ -230,10 +230,10 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                         e.stopPropagation()
                         handleUnsave(message.id)
                       }}
-                      className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#26251E]/5 transition-all"
+                      className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
                       title="Remove from saved"
                     >
-                      <BookmarkIcon className="size-3.5 text-[#26251E]/40" weight="fill" />
+                      <BookmarkIcon className="size-3.5 text-muted-foreground" weight="fill" />
                     </button>
                   </div>
                 )

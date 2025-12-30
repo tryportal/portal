@@ -61,7 +61,7 @@ export default function Page() {
 
   // Show branded loading while redirecting
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F7F4]">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
         <Image
           src="/portal-full.svg"
@@ -71,7 +71,7 @@ export default function Page() {
           className="h-8 w-auto dark:invert"
           priority
         />
-        <div className="size-5 animate-spin rounded-full border-2 border-[#26251E]/10 border-t-[#26251E]/40" />
+        <div className="size-5 animate-spin rounded-full border-2 border-border border-t-foreground/40" />
       </div>
     </div>
   );

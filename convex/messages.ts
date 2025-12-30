@@ -9,6 +9,16 @@ const TYPING_EXPIRY_MS = 3000;
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+// Link embed type for Open Graph metadata
+export interface LinkEmbed {
+  url: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+  favicon?: string;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -323,6 +333,14 @@ export const sendMessage = mutation({
       size: v.number(),
       type: v.string(),
     }))),
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
     parentMessageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
@@ -374,6 +392,7 @@ export const sendMessage = mutation({
       userId,
       content: args.content.trim(),
       attachments: args.attachments,
+      linkEmbed: args.linkEmbed,
       createdAt: Date.now(),
       parentMessageId: args.parentMessageId,
       mentions: mentions.length > 0 ? mentions : undefined,
@@ -597,6 +616,132 @@ export const getBatchStorageUrls = query({
     );
     // Return as a map for easy lookup
     return Object.fromEntries(urls.map(({ storageId, url }) => [storageId, url]));
+  },
+});
+
+// ============================================================================
+// Link Embed Functions
+// ============================================================================
+
+/**
+ * Fetch Open Graph metadata for a URL
+ * Returns title, description, image, site name, and favicon
+ */
+export const fetchLinkMetadata = action({
+  args: { url: v.string() },
+  handler: async (_, args): Promise<LinkEmbed | null> => {
+    try {
+      // Validate URL
+      const urlObj = new URL(args.url);
+      
+      // Only allow http/https
+      if (!["http:", "https:"].includes(urlObj.protocol)) {
+        return null;
+      }
+
+      // Fetch the page with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(args.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; PortalBot/1.0; +https://portal.app)",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("text/html")) {
+        // Not HTML, return basic info
+        return {
+          url: args.url,
+          title: urlObj.hostname,
+          siteName: urlObj.hostname,
+        };
+      }
+
+      const html = await response.text();
+
+      // Parse meta tags using regex (lightweight approach)
+      const getMetaContent = (property: string): string | undefined => {
+        // Try og: first
+        const ogMatch = html.match(
+          new RegExp(`<meta[^>]*property=["']og:${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:${property}["']`, "i")
+        );
+        if (ogMatch) return ogMatch[1];
+
+        // Try twitter: cards
+        const twitterMatch = html.match(
+          new RegExp(`<meta[^>]*name=["']twitter:${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:${property}["']`, "i")
+        );
+        if (twitterMatch) return twitterMatch[1];
+
+        // Try standard meta tags
+        const metaMatch = html.match(
+          new RegExp(`<meta[^>]*name=["']${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*name=["']${property}["']`, "i")
+        );
+        return metaMatch?.[1];
+      };
+
+      // Get title
+      let title = getMetaContent("title");
+      if (!title) {
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        title = titleMatch?.[1];
+      }
+
+      // Get description
+      const description = getMetaContent("description");
+
+      // Get image
+      let image = getMetaContent("image");
+      if (image && !image.startsWith("http")) {
+        // Make relative URLs absolute
+        image = new URL(image, args.url).href;
+      }
+
+      // Get site name
+      const siteName = getMetaContent("site_name") || urlObj.hostname;
+
+      // Get favicon
+      let favicon: string | undefined;
+      const faviconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/i)
+        || html.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["'](?:shortcut )?icon["']/i);
+      if (faviconMatch) {
+        favicon = faviconMatch[1];
+        if (!favicon.startsWith("http")) {
+          favicon = new URL(favicon, args.url).href;
+        }
+      } else {
+        // Default to /favicon.ico
+        favicon = `${urlObj.origin}/favicon.ico`;
+      }
+
+      return {
+        url: args.url,
+        title: title?.trim(),
+        description: description?.trim(),
+        image,
+        siteName,
+        favicon,
+      };
+    } catch {
+      // Return null on any error
+      return null;
+    }
   },
 });
 
@@ -946,6 +1091,7 @@ export const forwardMessage = mutation({
         userId,
         content: message.content,
         attachments: message.attachments,
+        linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
       });
 
@@ -970,6 +1116,7 @@ export const forwardMessage = mutation({
         userId,
         content: message.content,
         attachments: message.attachments,
+        linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
       });
 
@@ -1515,6 +1662,14 @@ export const sendDirectMessage = mutation({
       size: v.number(),
       type: v.string(),
     }))),
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
     parentMessageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
@@ -1561,6 +1716,7 @@ export const sendDirectMessage = mutation({
       userId,
       content: args.content.trim(),
       attachments: args.attachments,
+      linkEmbed: args.linkEmbed,
       createdAt: Date.now(),
       parentMessageId: args.parentMessageId,
       mentions: mentions.length > 0 ? mentions : undefined,

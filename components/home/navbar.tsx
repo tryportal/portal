@@ -10,6 +10,7 @@ import { useState } from "react"
 import { List, X } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { GitHubLogo } from "./icons/github-logo"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function Navbar() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth()
@@ -42,6 +43,7 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden sm:flex items-center gap-6">
+          <ThemeToggle variant="icon" />
           <Link
             href="https://github.com/tryportal/portal"
             target="_blank"
@@ -104,6 +106,10 @@ export function Navbar() {
             className="sm:hidden border-t border-border bg-background/95 backdrop-blur-md"
           >
             <div className="px-4 py-4 space-y-3">
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm font-medium text-muted-foreground">Theme</span>
+                <ThemeToggle variant="dropdown" />
+              </div>
               <Link
                 href="https://github.com/tryportal/portal"
                 target="_blank"

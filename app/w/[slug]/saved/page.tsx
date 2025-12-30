@@ -40,14 +40,14 @@ export default function SavedPage({
   // Organization not found
   if (organization === null) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-[#F7F7F4]">
-        <p className="text-sm text-[#26251E]/60">Workspace not found</p>
+      <div className="flex flex-1 items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Workspace not found</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#F7F7F4]">
+    <div className="flex flex-1 flex-col bg-background">
       <SavedMessagesPage organizationId={organization._id} />
     </div>
   );

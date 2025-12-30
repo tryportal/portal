@@ -7,7 +7,7 @@ import { useUser } from "@clerk/nextjs"
 import { api } from "@/convex/_generated/api"
 import { useUserDataCache } from "@/components/user-data-cache"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { MessageList, type Message, type Attachment, type Reaction } from "@/components/preview/message-list"
+import { MessageList, type Message, type Attachment, type Reaction, type LinkEmbed } from "@/components/preview/message-list"
 import { MessageInput } from "@/components/preview/message-input"
 import { TypingIndicator } from "@/components/typing-indicator"
 import { DmHeader } from "@/components/messages/dm-header"
@@ -241,6 +241,7 @@ export default function ConversationPage({
           initials,
         },
         attachments: attachments.length > 0 ? attachments : undefined,
+        linkEmbed: msg.linkEmbed,
         editedAt: msg.editedAt,
         parentMessageId: msg.parentMessageId,
         parentMessage,
@@ -258,11 +259,11 @@ export default function ConversationPage({
   // Not found or not authorized
   if (conversation === null) {
     return (
-      <div className="flex flex-1 h-full flex-col items-center justify-center bg-[#F7F7F4]">
-        <p className="text-sm text-[#26251E]/60 mb-2">Conversation not found</p>
+      <div className="flex flex-1 h-full flex-col items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground mb-2">Conversation not found</p>
         <button
           onClick={() => router.push(`/w/${routeParams.slug}/messages`)}
-          className="text-sm text-[#26251E] hover:underline"
+          className="text-sm text-foreground hover:underline"
         >
           Select another conversation
         </button>
@@ -280,7 +281,8 @@ export default function ConversationPage({
       size: number
       type: string
     }>,
-    parentMessageId?: string
+    parentMessageId?: string,
+    linkEmbed?: LinkEmbed
   ) => {
     if (!conversationId) return
 
@@ -292,6 +294,7 @@ export default function ConversationPage({
           ...a,
           storageId: a.storageId as Id<"_storage">,
         })),
+        linkEmbed,
         parentMessageId: parentMessageId as Id<"messages"> | undefined,
       })
       analytics.messageSent({
@@ -409,7 +412,7 @@ export default function ConversationPage({
   }
 
   return (
-    <main className="flex flex-1 flex-col h-full bg-[#F7F7F4] overflow-hidden">
+    <main className="flex flex-1 flex-col h-full bg-background overflow-hidden">
       {/* DM Header */}
       <DmHeader
         participantName={participantName}

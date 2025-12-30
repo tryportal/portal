@@ -291,12 +291,12 @@ export default function MemberProfilePage({
 
   return (
     <main className="flex-1 overflow-hidden">
-      <div className="flex h-full flex-col bg-[#F7F7F4]">
+      <div className="flex h-full flex-col bg-background">
         {/* Header */}
-        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-background px-4">
           <button
             onClick={() => router.push(`/w/${slug}/people`)}
-            className="flex items-center gap-1.5 text-sm text-[#26251E]/60 hover:text-[#26251E] transition-colors"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeftIcon className="size-4" />
             <span>Back to People</span>
@@ -304,21 +304,21 @@ export default function MemberProfilePage({
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-white/50">
+        <div className="flex-1 overflow-y-auto bg-card/50">
           {isLoading ? (
             <div className="flex h-full items-center justify-center py-12">
               <LoadingSpinner text="Loading member..." />
             </div>
           ) : error ? (
             <div className="flex h-full items-center justify-center py-12">
-              <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm border border-[#26251E]/5 text-center">
+              <div className="w-full max-w-md rounded-xl bg-card p-8 shadow-sm border border-border text-center">
                 <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
                   <WarningCircleIcon className="size-6" weight="fill" />
                 </div>
-                <h2 className="text-lg font-semibold text-[#26251E] mb-2">
+                <h2 className="text-lg font-semibold text-foreground mb-2">
                   Member Not Found
                 </h2>
-                <p className="text-sm text-[#26251E]/60 mb-4">{error}</p>
+                <p className="text-sm text-muted-foreground mb-4">{error}</p>
                 <Button 
                   variant="outline"
                   onClick={() => router.push(`/w/${slug}/people`)}
@@ -332,7 +332,7 @@ export default function MemberProfilePage({
               {isEditing ? (
                 <div className="max-w-2xl mx-auto">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-[#26251E]">Edit Profile</h2>
+                    <h2 className="text-xl font-semibold text-foreground">Edit Profile</h2>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -353,7 +353,7 @@ export default function MemberProfilePage({
                     </Button>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6 space-y-6">
+                  <div className="bg-card rounded-xl border border-border shadow-sm p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="jobTitle">Job Title</Label>
@@ -402,7 +402,7 @@ export default function MemberProfilePage({
                         placeholder="Tell us a bit about yourself..."
                         className="min-h-[120px] resize-none"
                       />
-                      <p className="text-xs text-[#26251E]/40">
+                      <p className="text-xs text-muted-foreground">
                         Brief description for your profile.
                       </p>
                     </div>
@@ -440,14 +440,14 @@ export default function MemberProfilePage({
               ) : (
                 <div className="space-y-8">
                   {/* Profile Header Card */}
-                  <div className="bg-white rounded-2xl border border-[#26251E]/10 shadow-sm overflow-hidden">
-                    <div className="h-32 bg-gradient-to-r from-[#F7F7F4] to-[#E8E8E5] border-b border-[#26251E]/5 relative">
+                  <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                    <div className="h-32 bg-gradient-to-r from-background to-muted border-b border-border relative">
                       {canEdit && (
                         <Button 
                           variant="secondary" 
                           size="sm" 
                           onClick={() => setIsEditing(true)}
-                          className="absolute top-4 right-4 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
+                          className="absolute top-4 right-4 bg-card/80 hover:bg-card shadow-sm backdrop-blur-sm"
                         >
                           <PencilSimpleIcon className="size-4 mr-1.5" />
                           Edit Profile
@@ -463,7 +463,7 @@ export default function MemberProfilePage({
                               alt={getDisplayName(member)} 
                             />
                           ) : null}
-                          <AvatarFallback className="text-4xl bg-[#F7F7F4] text-[#26251E]/40">
+                          <AvatarFallback className="text-4xl bg-background text-muted-foreground">
                             {getInitials(member)}
                           </AvatarFallback>
                         </Avatar>
@@ -474,7 +474,7 @@ export default function MemberProfilePage({
                       
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <h1 className="text-2xl font-bold text-[#26251E]">
+                          <h1 className="text-2xl font-bold text-foreground">
                             {getDisplayName(member)}
                           </h1>
                           <Badge 
@@ -482,8 +482,8 @@ export default function MemberProfilePage({
                             className={cn(
                               "text-[10px] uppercase tracking-wider h-5",
                               member.role === "admin" 
-                                ? "bg-[#26251E] text-white" 
-                                : "bg-[#26251E]/5 text-[#26251E]/60"
+                                ? "bg-foreground text-background" 
+                                : "bg-muted text-muted-foreground"
                             )}
                           >
                             {member.role === "admin" && (
@@ -492,7 +492,7 @@ export default function MemberProfilePage({
                             {member.role}
                           </Badge>
                         </div>
-                        <p className="text-base text-[#26251E]/60 font-medium">
+                        <p className="text-base text-muted-foreground font-medium">
                           {member.jobTitle || "No job title"}
                         </p>
                       </div>
@@ -502,54 +502,54 @@ export default function MemberProfilePage({
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Info */}
                     <div className="space-y-6">
-                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
+                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
                           Contact & Info
                         </h3>
                         <div className="space-y-4">
                           <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                              <UserIcon className="size-4 text-[#26251E]/60" />
+                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                              <UserIcon className="size-4 text-muted-foreground" />
                             </div>
                             <div className="overflow-hidden">
-                              <p className="text-xs text-[#26251E]/40 mb-0.5">Email</p>
-                              <p className="text-sm text-[#26251E] truncate" title={member.emailAddress || ""}>
+                              <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                              <p className="text-sm text-foreground truncate" title={member.emailAddress || ""}>
                                 {member.emailAddress}
                               </p>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                              <MapPinIcon className="size-4 text-[#26251E]/60" />
+                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                              <MapPinIcon className="size-4 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-xs text-[#26251E]/40 mb-0.5">Location</p>
-                              <p className="text-sm text-[#26251E]">
+                              <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                              <p className="text-sm text-foreground">
                                 {member.location || "Not specified"}
                               </p>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                              <ClockIcon className="size-4 text-[#26251E]/60" />
+                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                              <ClockIcon className="size-4 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-xs text-[#26251E]/40 mb-0.5">Timezone</p>
-                              <p className="text-sm text-[#26251E]">
+                              <p className="text-xs text-muted-foreground mb-0.5">Timezone</p>
+                              <p className="text-sm text-foreground">
                                 {member.timezone || "Not specified"}
                               </p>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-[#F7F7F4] flex items-center justify-center shrink-0">
-                              <BuildingsIcon className="size-4 text-[#26251E]/60" />
+                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                              <BuildingsIcon className="size-4 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-xs text-[#26251E]/40 mb-0.5">Joined</p>
-                              <p className="text-sm text-[#26251E]">
+                              <p className="text-xs text-muted-foreground mb-0.5">Joined</p>
+                              <p className="text-sm text-foreground">
                                 {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-US", {
                                   month: "long",
                                   day: "numeric",
@@ -563,13 +563,13 @@ export default function MemberProfilePage({
 
                       {/* Admin Controls (Left Col) */}
                       {isAdmin && (
-                        <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                          <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                        <div className="bg-card rounded-xl border border-border shadow-sm p-6">
+                          <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
                             Admin Controls
                           </h3>
                           <div className="space-y-4">
                             <div>
-                              <Label className="mb-2 block text-xs font-medium text-[#26251E]/60">
+                              <Label className="mb-2 block text-xs font-medium text-muted-foreground">
                                 Role
                               </Label>
                               <Select 
@@ -599,7 +599,7 @@ export default function MemberProfilePage({
                               )}
                             </div>
                             
-                            <div className="pt-4 border-t border-[#26251E]/5">
+                            <div className="pt-4 border-t border-border">
                               <AlertDialog 
                                 open={removeDialogOpen} 
                                 onOpenChange={(open) => {
@@ -651,17 +651,17 @@ export default function MemberProfilePage({
 
                     {/* Right Column: Bio & Details */}
                     <div className="lg:col-span-2 space-y-6">
-                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-8 min-h-[200px]">
-                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                      <div className="bg-card rounded-xl border border-border shadow-sm p-8 min-h-[200px]">
+                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
                           About
                         </h3>
                         {member.bio ? (
-                          <p className="text-base text-[#26251E]/80 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">
                             {member.bio}
                           </p>
                         ) : (
                           <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <p className="text-sm text-[#26251E]/40 italic">
+                            <p className="text-sm text-muted-foreground italic">
                               No bio provided yet.
                             </p>
                             {canEdit && (
@@ -669,7 +669,7 @@ export default function MemberProfilePage({
                                 variant="link" 
                                 size="sm" 
                                 onClick={() => setIsEditing(true)}
-                                className="mt-2 text-[#26251E]/60"
+                                className="mt-2 text-muted-foreground"
                               >
                                 Add a bio
                               </Button>
@@ -678,26 +678,26 @@ export default function MemberProfilePage({
                         )}
                       </div>
 
-                      <div className="bg-white rounded-xl border border-[#26251E]/10 shadow-sm p-6">
-                        <h3 className="text-sm font-semibold text-[#26251E] mb-4 uppercase tracking-wider">
+                      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
+                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
                           Organization
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                           <div>
-                            <p className="text-xs text-[#26251E]/40 mb-1">Department</p>
+                            <p className="text-xs text-muted-foreground mb-1">Department</p>
                             <div className="flex items-center gap-2">
-                              <BriefcaseIcon className="size-4 text-[#26251E]/40" />
-                              <p className="text-sm font-medium text-[#26251E]">
+                              <BriefcaseIcon className="size-4 text-muted-foreground" />
+                              <p className="text-sm font-medium text-foreground">
                                 {member.department || "Not specified"}
                               </p>
                             </div>
                           </div>
                           {/* Placeholder for Manager or Team */}
                           <div>
-                            <p className="text-xs text-[#26251E]/40 mb-1">Role Type</p>
+                            <p className="text-xs text-muted-foreground mb-1">Role Type</p>
                             <div className="flex items-center gap-2">
-                              <ShieldIcon className="size-4 text-[#26251E]/40" />
-                              <p className="text-sm font-medium text-[#26251E] capitalize">
+                              <ShieldIcon className="size-4 text-muted-foreground" />
+                              <p className="text-sm font-medium text-foreground capitalize">
                                 {member.role}
                               </p>
                             </div>

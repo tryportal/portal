@@ -15,22 +15,22 @@ export function EmptyChannelState({
 }: EmptyChannelStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <div className="flex size-16 items-center justify-center rounded-full bg-[#26251E]/5 mb-4">
-        <Icon className="size-8 text-[#26251E]/40" weight="fill" />
+      <div className="flex size-16 items-center justify-center rounded-full bg-muted mb-4">
+        <Icon className="size-8 text-muted-foreground" weight="fill" />
       </div>
-      <h2 className="text-lg font-semibold text-[#26251E] mb-2">
+      <h2 className="text-lg font-semibold text-foreground mb-2">
         Welcome to #{channelName}
       </h2>
       {channelDescription ? (
-        <p className="text-sm text-[#26251E]/60 text-center max-w-md mb-4">
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
           {channelDescription}
         </p>
       ) : (
-        <p className="text-sm text-[#26251E]/60 text-center max-w-md mb-4">
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
           This is the beginning of the #{channelName} channel. Start the conversation!
         </p>
       )}
-      <p className="text-xs text-[#26251E]/40">
+      <p className="text-xs text-muted-foreground">
         Send a message to get things started
       </p>
     </div>

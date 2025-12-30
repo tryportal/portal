@@ -26,8 +26,8 @@ export function CTA() {
           className="bg-foreground text-background rounded-2xl sm:rounded-[2.5rem] p-8 sm:p-12 md:p-24 text-center relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
-          <div className="absolute -top-24 -right-24 w-32 sm:w-64 h-32 sm:h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute -bottom-24 -left-24 w-32 sm:w-64 h-32 sm:h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -top-24 -right-24 w-32 sm:w-64 h-32 sm:h-64 bg-card/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -left-24 w-32 sm:w-64 h-32 sm:h-64 bg-card/10 rounded-full blur-3xl pointer-events-none"></div>
           
           <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight relative z-10">Ready to try something better?</h2>
           <p className="mt-4 sm:mt-6 text-base sm:text-xl text-background/80 max-w-2xl mx-auto font-light relative z-10 px-2">

@@ -61,9 +61,9 @@ export function PinnedMessagesDialog({
         <ScrollArea className="flex-1 -mx-4 px-4">
           {pinnedMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <PushPinIcon className="size-10 text-[#26251E]/20 mb-3" />
-              <p className="text-sm text-[#26251E]/60">No pinned messages</p>
-              <p className="text-xs text-[#26251E]/40 mt-1">
+              <PushPinIcon className="size-10 text-foreground/20 mb-3" />
+              <p className="text-sm text-muted-foreground">No pinned messages</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 Pin important messages to find them easily
               </p>
             </div>
@@ -72,7 +72,7 @@ export function PinnedMessagesDialog({
               {pinnedMessages.map((message) => (
                 <div
                   key={message.id}
-                  className="group relative rounded-lg border border-[#26251E]/10 bg-white p-3 hover:border-[#26251E]/20 transition-colors cursor-pointer"
+                  className="group relative rounded-lg border border-border bg-card p-3 hover:border-border/80 transition-colors cursor-pointer"
                   onClick={() => onMessageClick?.(message.id)}
                 >
                   <div className="flex items-start gap-3">
@@ -80,20 +80,20 @@ export function PinnedMessagesDialog({
                       {message.user.avatar && (
                         <AvatarImage src={message.user.avatar} alt={message.user.name} />
                       )}
-                      <AvatarFallback className="text-xs bg-[#26251E]/10 text-[#26251E]">
+                      <AvatarFallback className="text-xs bg-secondary text-foreground">
                         {message.user.initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-[#26251E]">
+                        <span className="text-sm font-medium text-foreground">
                           {message.user.name}
                         </span>
-                        <span className="text-xs text-[#26251E]/40">
+                        <span className="text-xs text-muted-foreground">
                           {message.timestamp}
                         </span>
                       </div>
-                      <p className="text-sm text-[#26251E]/70 line-clamp-3">
+                      <p className="text-sm text-foreground/70 line-clamp-3">
                         {message.content}
                       </p>
                     </div>
@@ -105,9 +105,9 @@ export function PinnedMessagesDialog({
                         e.stopPropagation()
                         onUnpin(message.id)
                       }}
-                      className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#26251E]/5 transition-all"
+                      className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
                     >
-                      <PushPinIcon className="size-3.5 text-[#26251E]/40" />
+                      <PushPinIcon className="size-3.5 text-muted-foreground" />
                     </button>
                   )}
                 </div>

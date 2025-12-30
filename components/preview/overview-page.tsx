@@ -193,8 +193,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
       <div className="p-4 sm:p-6">
         {/* Header */}
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-lg sm:text-xl font-semibold text-[#26251E]">Overview</h1>
-          <p className="text-xs sm:text-sm text-[#26251E]/60">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground">Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Your saved messages and quick access to channels
           </p>
         </div>
@@ -212,8 +212,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
               {savedMessages.length === 0 ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
-                  <p className="text-xs sm:text-sm text-[#26251E]/40">No saved messages</p>
+                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
+                  <p className="text-xs sm:text-sm text-muted-foreground">No saved messages</p>
                 </div>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
@@ -224,7 +224,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     return (
                       <div
                         key={message.id}
-                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-[#26251E]/10 bg-white p-2.5 sm:p-3 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
+                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
@@ -237,13 +237,13 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
-                            <p className="text-xs sm:text-sm font-medium text-[#26251E] truncate">{message.user.name}</p>
+                            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-xs sm:text-sm text-[#26251E]/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-xs sm:text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-xs sm:text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames 
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
@@ -257,7 +257,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-xs sm:text-sm text-[#26251E]/60 hover:text-[#26251E]"
+                      className="w-full text-xs sm:text-sm text-muted-foreground hover:text-foreground"
                       onClick={handleViewAllSaved}
                     >
                       View all saved messages
@@ -280,8 +280,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
               {mentions.length === 0 ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
-                  <p className="text-xs sm:text-sm text-[#26251E]/40">No mentions</p>
+                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
+                  <p className="text-xs sm:text-sm text-muted-foreground">No mentions</p>
                 </div>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
@@ -292,7 +292,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     return (
                       <div
                         key={message.id}
-                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-[#26251E]/10 bg-white p-2.5 sm:p-3 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-colors cursor-pointer"
+                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
@@ -305,13 +305,13 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
-                            <p className="text-xs sm:text-sm font-medium text-[#26251E] truncate">{message.user.name}</p>
+                            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-xs sm:text-sm text-[#26251E]/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-xs sm:text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-xs sm:text-sm text-[#26251E]/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-xs sm:text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-[#26251E]/70 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames 
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
@@ -329,10 +329,10 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
 
         {/* Channels List */}
         <div>
-          <h2 className="mb-3 sm:mb-4 text-xs sm:text-sm font-medium text-[#26251E]">All Channels</h2>
+          <h2 className="mb-3 sm:mb-4 text-xs sm:text-sm font-medium text-muted-foreground">All Channels</h2>
           {allChannels.length === 0 ? (
-            <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
-              <p className="text-xs sm:text-sm text-[#26251E]/40">No channels available</p>
+            <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
+              <p className="text-xs sm:text-sm text-muted-foreground">No channels available</p>
             </div>
           ) : (
             <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -349,16 +349,16 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                         handleChannelClick(channel._id, catData.name, channel.name)
                       }
                     }}
-                    className="flex items-center gap-2.5 sm:gap-3 rounded-lg border border-[#26251E]/10 bg-white p-2.5 sm:p-3 text-left transition-colors hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02]"
+                    className="flex items-center gap-2.5 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 text-left transition-colors hover:border-border/80 hover:bg-muted/50"
                   >
-                    <div className="flex size-7 sm:size-8 items-center justify-center rounded-md bg-[#26251E]/5 flex-shrink-0">
-                      <Icon className="size-3.5 sm:size-4 text-[#26251E]/70" />
+                    <div className="flex size-7 sm:size-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                      <Icon className="size-3.5 sm:size-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs sm:text-sm font-medium text-[#26251E]">
+                      <p className="truncate text-xs sm:text-sm font-medium text-foreground">
                         {channel.name}
                       </p>
-                      <p className="truncate text-[10px] sm:text-xs text-[#26251E]/50">
+                      <p className="truncate text-[10px] sm:text-xs text-muted-foreground">
                         {channel.categoryName}
                       </p>
                     </div>

@@ -58,7 +58,7 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
             render={<Button
               variant="ghost"
               size="icon-xs"
-              className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
             />}
           />}
         >
@@ -68,7 +68,7 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
       </Tooltip>
       <PopoverContent side="top" align="start" className="w-72 p-0">
         {/* Quick reactions bar */}
-        <div className="flex items-center gap-1 border-b border-[#26251E]/10 p-2">
+        <div className="flex items-center gap-1 border-b border-border p-2">
           {QUICK_REACTIONS.map((emoji) => {
             const existing = existingReactions.find((r) => r.emoji === emoji)
             return (
@@ -77,8 +77,8 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
                 onClick={() => handleSelect(emoji)}
                 className={`flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors ${
                   existing?.hasReacted
-                    ? "bg-[#26251E]/10"
-                    : "hover:bg-[#26251E]/5"
+                    ? "bg-secondary"
+                    : "hover:bg-muted"
                 }`}
               >
                 {emoji}
@@ -91,7 +91,7 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
         <div className="max-h-48 overflow-y-auto p-2">
           {EMOJI_CATEGORIES.map((category) => (
             <div key={category.name} className="mb-3 last:mb-0">
-              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[#26251E]/40">
+              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 {category.name}
               </div>
               <div className="grid grid-cols-8 gap-0.5">
@@ -99,7 +99,7 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
                   <button
                     key={emoji}
                     onClick={() => handleSelect(emoji)}
-                    className="flex h-7 w-7 items-center justify-center rounded text-base hover:bg-[#26251E]/5 transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded text-base hover:bg-muted transition-colors"
                   >
                     {emoji}
                   </button>
@@ -166,8 +166,8 @@ export function ReactionDisplay({
                 onClick={() => onToggleReaction(emoji)}
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
                   hasReacted
-                    ? "border-[#26251E]/20 bg-[#26251E]/5 text-[#26251E]"
-                    : "border-[#26251E]/10 bg-white text-[#26251E]/70 hover:border-[#26251E]/20"
+                    ? "border-primary/20 bg-muted text-foreground"
+                    : "border-border bg-card text-foreground/70 hover:border-border/80"
                 }`}
               />}
             >

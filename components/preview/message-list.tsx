@@ -41,6 +41,9 @@ import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { replaceMentionsInText } from "./mention"
+import { LinkPreview, type LinkEmbedData } from "./link-preview"
+
+export type { LinkEmbedData as LinkEmbed }
 
 // Context for attachment URLs (batch loaded at MessageList level)
 const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
@@ -69,6 +72,7 @@ export interface Message {
     initials: string
   }
   attachments?: Attachment[]
+  linkEmbed?: LinkEmbedData
   editedAt?: number
   parentMessageId?: string
   parentMessage?: {
@@ -126,17 +130,17 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block max-w-xs rounded-md overflow-hidden border border-[#26251E]/10 hover:border-[#26251E]/20 transition-all hover:shadow-sm"
+        className="block max-w-xs rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm"
       >
         <img
           src={url}
           alt={attachment.name}
-          className="max-h-64 w-auto object-contain bg-[#26251E]/[0.02]"
+          className="max-h-64 w-auto object-contain bg-muted/30"
         />
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#26251E]/[0.04] text-xs text-[#26251E]/70">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <ImageIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium">{attachment.name}</span>
-          <span className="text-[#26251E]/50 font-medium">{formatFileSize(attachment.size)}</span>
+          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
     )
@@ -147,14 +151,14 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
       href={url || "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2.5 rounded-md border border-[#26251E]/10 px-2.5 py-2 hover:border-[#26251E]/20 hover:bg-[#26251E]/[0.02] transition-all hover:shadow-sm max-w-xs"
+      className="flex items-center gap-2.5 rounded-md border border-border px-2.5 py-2 hover:border-border/80 hover:bg-muted/30 transition-all hover:shadow-sm max-w-xs"
     >
-      <FileIcon className="size-8 text-[#26251E]/40 flex-shrink-0" weight="duotone" />
+      <FileIcon className="size-8 text-muted-foreground flex-shrink-0" weight="duotone" />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-[#26251E] truncate">{attachment.name}</div>
-        <div className="text-xs text-[#26251E]/50 font-medium">{formatFileSize(attachment.size)}</div>
+        <div className="text-sm font-medium text-foreground truncate">{attachment.name}</div>
+        <div className="text-xs text-muted-foreground font-medium">{formatFileSize(attachment.size)}</div>
       </div>
-      <DownloadSimpleIcon className="size-4 text-[#26251E]/40 flex-shrink-0" />
+      <DownloadSimpleIcon className="size-4 text-muted-foreground flex-shrink-0" />
     </a>
   )
 }
@@ -169,7 +173,7 @@ const MarkdownComponents = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium"
     >
       {children}
     </a>
@@ -177,14 +181,14 @@ const MarkdownComponents = {
   code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => {
     if (inline) {
       return (
-        <code className="px-1 py-0.5 bg-[#26251E]/8 rounded text-[13px] font-mono text-[#26251E]/95">
+        <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/95">
           {children}
         </code>
       )
     }
     return (
-      <pre className="p-2 bg-[#26251E]/6 rounded-md overflow-x-auto my-1.5 border border-[#26251E]/8">
-        <code className="text-[13px] font-mono text-[#26251E]/90">{children}</code>
+      <pre className="p-2 bg-muted/80 rounded-md overflow-x-auto my-1.5 border border-border">
+        <code className="text-[13px] font-mono text-foreground/90">{children}</code>
       </pre>
     )
   },
@@ -199,18 +203,18 @@ const MarkdownComponents = {
     const text = typeof children === 'string' ? children : String(children)
     if (text.startsWith('@')) {
       return (
-        <span className="inline-flex items-center rounded px-1 py-0.5 font-medium bg-[#26251E]/10 text-[#26251E]/80 hover:bg-[#26251E]/15 transition-colors">
+        <span className="inline-flex items-center rounded px-1 py-0.5 font-medium bg-primary/10 text-foreground/80 hover:bg-primary/15 transition-colors">
           {children}
         </span>
       )
     }
-    return <strong className="font-semibold text-[#26251E]">{children}</strong>
+    return <strong className="font-semibold text-foreground">{children}</strong>
   },
   em: ({ children }: { children?: React.ReactNode }) => (
-    <em className="italic text-[#26251E]/85">{children}</em>
+    <em className="italic text-foreground/85">{children}</em>
   ),
   blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="pl-2.5 py-0.5 my-1 border-l-2 border-[#26251E]/20 text-[#26251E]/70 italic">
+    <blockquote className="pl-2.5 py-0.5 my-1 border-l-2 border-border text-muted-foreground italic">
       {children}
     </blockquote>
   ),
@@ -336,17 +340,17 @@ function MessageItem({
 
   return (
     <div
-      className="group relative px-4 hover:bg-[#26251E]/[0.03] transition-colors"
+      className="group relative px-4 hover:bg-muted/50 transition-colors"
       style={{ paddingTop: isGrouped ? "1px" : "6px", paddingBottom: isGrouped ? "1px" : "6px" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Reply indicator */}
       {message.parentMessage && (
-        <div className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-[#26251E]/50">
+        <div className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-muted-foreground">
           <ArrowBendUpLeftIcon className="size-3" />
           <span>Replying to</span>
-          <span className="font-medium text-[#26251E]/70">{message.parentMessage.userName}</span>
+          <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
           <span className="truncate max-w-[200px]">{message.parentMessage.content}</span>
         </div>
       )}
@@ -369,13 +373,13 @@ function MessageItem({
             {message.user.avatar ? (
               <AvatarImage src={message.user.avatar} alt={message.user.name} />
             ) : null}
-            <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-[11px] font-medium">
+            <AvatarFallback className="bg-muted text-foreground text-[11px] font-medium">
               {message.user.initials}
             </AvatarFallback>
           </Avatar>
         ) : (
           <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
-            <span className="text-[8px] text-[#26251E]/0 group-hover:text-[#26251E]/50 transition-colors font-medium tabular-nums">
+            <span className="text-[8px] text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums">
               {message.timestamp}
             </span>
           </div>
@@ -387,15 +391,15 @@ function MessageItem({
             <div className="flex items-baseline gap-2 mb-0.5">
               <button
                 onClick={() => onNameClick?.(message.user.id)}
-                className="font-semibold text-sm text-[#26251E] hover:underline"
+                className="font-semibold text-sm text-foreground hover:underline"
               >
                 {message.user.name}
               </button>
-              <span className="text-[11px] text-[#26251E]/50 font-medium tabular-nums">
+              <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
                 {message.timestamp}
               </span>
               {message.editedAt && (
-                <span className="text-[10px] text-[#26251E]/40 font-medium">(edited)</span>
+                <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
               )}
             </div>
           )}
@@ -408,13 +412,13 @@ function MessageItem({
                 className="min-h-[80px] text-sm"
                 autoFocus
               />
-              <div className="flex gap-2 text-xs text-[#26251E]/70">
+                <div className="flex gap-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-[#26251E]/5 rounded border border-[#26251E]/10">Enter</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border">Enter</kbd>
                   <span>to save</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-[#26251E]/5 rounded border border-[#26251E]/10">Esc</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border">Esc</kbd>
                   <span>to cancel</span>
                 </div>
               </div>
@@ -440,7 +444,7 @@ function MessageItem({
           ) : (
             <>
               {message.content && (
-                <div className="text-sm text-[#26251E]/90 leading-[1.46] prose prose-sm max-w-none" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert" style={{ marginTop: isGrouped ? "0" : "0" }}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={MarkdownComponents}
@@ -461,6 +465,13 @@ function MessageItem({
             </div>
           )}
 
+          {/* Link Embed */}
+          {message.linkEmbed && (
+            <div className="mt-2 max-w-md">
+              <LinkPreview embed={message.linkEmbed} compact={false} />
+            </div>
+          )}
+
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
             <ReactionDisplay
@@ -475,13 +486,13 @@ function MessageItem({
 
       {/* Hover actions */}
       {isHovered && (
-        <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-[#26251E]/10 bg-white p-0.5 shadow-md">
+        <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md">
           <Tooltip>
             <TooltipTrigger
               render={<Button
                 variant="ghost"
                 size="icon-xs"
-                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => onReply?.(message.id)}
               />}
             >
@@ -495,7 +506,7 @@ function MessageItem({
               render={<Button
                 variant="ghost"
                 size="icon-xs"
-                className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => onForward?.(message.id)}
               />}
             >
@@ -527,7 +538,7 @@ function MessageItem({
                   render={<Button
                     variant="ghost"
                     size="icon-xs"
-                    className="text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted"
                   />}
                 />}
               >

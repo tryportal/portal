@@ -59,21 +59,21 @@ export function WorkspaceSettings({
   if (!isAdmin) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+        <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#26251E]">
+            <h2 className="text-lg font-semibold text-foreground">
               Workspace Settings
             </h2>
             <Button
               variant="ghost"
               size="icon-sm"
               onClick={onClose}
-              className="text-[#26251E]/50 hover:text-[#26251E]"
+              className="text-muted-foreground hover:text-foreground"
             >
               <XIcon className="size-4" />
             </Button>
           </div>
-          <p className="text-sm text-[#26251E]/60">
+          <p className="text-sm text-muted-foreground">
             Only workspace admins can access settings.
           </p>
         </div>
@@ -137,17 +137,17 @@ export function WorkspaceSettings({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
+      <div className="w-full max-w-lg rounded-lg bg-card shadow-lg">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#26251E]/10 px-6 py-4">
-          <h2 className="text-lg font-semibold text-[#26251E]">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Workspace Settings
           </h2>
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            className="text-[#26251E]/50 hover:text-[#26251E]"
+            className="text-muted-foreground hover:text-foreground"
           >
             <XIcon className="size-4" />
           </Button>
@@ -185,7 +185,7 @@ export function WorkspaceSettings({
             <div>
               <Label htmlFor="slug">Workspace URL</Label>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm text-[#26251E]/50">
+                <span className="text-sm text-muted-foreground">
                   {typeof window !== "undefined" ? window.location.origin : ""}/
                 </span>
                 <Input
@@ -196,7 +196,7 @@ export function WorkspaceSettings({
                   className="flex-1"
                 />
               </div>
-              <p className="mt-1 text-xs text-[#26251E]/50">
+              <p className="mt-1 text-xs text-muted-foreground">
                 This is your workspace's unique URL identifier
               </p>
             </div>
@@ -223,7 +223,7 @@ export function WorkspaceSettings({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-[#26251E]/10 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>

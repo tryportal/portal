@@ -16,7 +16,7 @@ export function Mention({ userId, displayName, className = "" }: MentionProps) {
   return (
     <span
       data-mention-user-id={userId}
-      className={`inline-flex items-center rounded px-1 py-0.5 text-sm font-medium bg-[#26251E]/10 text-[#26251E]/80 hover:bg-[#26251E]/15 transition-colors ${className}`}
+      className={`inline-flex items-center rounded px-1 py-0.5 text-sm font-medium bg-secondary text-foreground/80 hover:bg-foreground/15 transition-colors ${className}`}
     >
       @{displayName}
     </span>

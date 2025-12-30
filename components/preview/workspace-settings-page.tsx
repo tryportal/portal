@@ -155,23 +155,23 @@ export function WorkspaceSettingsPage({
 
   if (!organization || !membership) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#F7F7F4]">
-        <div className="text-sm text-[#26251E]/60">Loading...</div>
+      <div className="flex h-full items-center justify-center bg-background">
+        <div className="text-sm text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   if (!isAdmin) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#F7F7F4] p-6">
-        <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm border border-[#26251E]/5 text-center">
+      <div className="flex h-full items-center justify-center bg-background p-6">
+        <div className="w-full max-w-md rounded-xl bg-card p-8 shadow-sm border border-border text-center">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
             <WarningCircleIcon className="size-6" weight="fill" />
           </div>
-          <h2 className="text-lg font-semibold text-[#26251E] mb-2">
+          <h2 className="text-lg font-semibold text-foreground mb-2">
             Access Denied
           </h2>
-          <p className="text-sm text-[#26251E]/60">
+          <p className="text-sm text-muted-foreground">
             Only workspace admins can access settings.
           </p>
         </div>
@@ -180,12 +180,12 @@ export function WorkspaceSettingsPage({
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#F7F7F4]">
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <GearIcon className="size-4 sm:size-5 text-[#26251E]" weight="fill" />
-          <h1 className="text-sm sm:text-base font-semibold text-[#26251E]">Workspace Settings</h1>
+          <GearIcon className="size-4 sm:size-5 text-foreground" weight="fill" />
+          <h1 className="text-sm sm:text-base font-semibold text-foreground">Workspace Settings</h1>
         </div>
       </header>
 
@@ -197,15 +197,15 @@ export function WorkspaceSettingsPage({
             {/* Profile Section */}
             <section className="space-y-6">
               <div>
-                <h2 className="text-base sm:text-lg font-medium text-[#26251E]">Workspace Profile</h2>
-                <p className="text-xs sm:text-sm text-[#26251E]/60">Manage your workspace's public identity.</p>
+                <h2 className="text-base sm:text-lg font-medium text-foreground">Workspace Profile</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">Manage your workspace's public identity.</p>
               </div>
               
-              <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <div className="space-y-6">
                   {/* Image Upload */}
                   <div>
-                    <Label className="mb-3 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                    <Label className="mb-3 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Logo
                     </Label>
                     <LogoUpload
@@ -218,7 +218,7 @@ export function WorkspaceSettingsPage({
 
                   {/* Name Input */}
                   <div>
-                    <Label htmlFor="name" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                    <Label htmlFor="name" className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Workspace Name
                     </Label>
                     <Input
@@ -226,13 +226,13 @@ export function WorkspaceSettingsPage({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Acme Corp"
-                      className="bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                      className="bg-background border-transparent focus-visible:bg-card transition-all"
                     />
                   </div>
 
                   {/* Description Input */}
                   <div>
-                    <Label htmlFor="description" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                    <Label htmlFor="description" className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Description
                     </Label>
                     <Textarea
@@ -240,7 +240,7 @@ export function WorkspaceSettingsPage({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="What is this workspace about?"
-                      className="min-h-[100px] resize-none bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                      className="min-h-[100px] resize-none bg-background border-transparent focus-visible:bg-card transition-all"
                     />
                   </div>
                 </div>
@@ -250,17 +250,17 @@ export function WorkspaceSettingsPage({
             {/* URL Section */}
             <section className="space-y-6">
                <div>
-                <h2 className="text-base sm:text-lg font-medium text-[#26251E]">Workspace URL</h2>
-                <p className="text-xs sm:text-sm text-[#26251E]/60">The web address for your workspace.</p>
+                <h2 className="text-base sm:text-lg font-medium text-foreground">Workspace URL</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">The web address for your workspace.</p>
               </div>
 
-              <div className="rounded-xl border border-[#26251E]/10 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <div>
-                   <Label htmlFor="slug" className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                   <Label htmlFor="slug" className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Workspace Slug
                   </Label>
-                  <div className="flex items-center rounded-md border border-[#26251E]/10 bg-[#F7F7F4] px-3 focus-within:border-[#26251E]/20 focus-within:bg-white focus-within:ring-1 focus-within:ring-[#26251E]/20 transition-all">
-                    <span className="text-sm text-[#26251E]/40 select-none">
+                  <div className="flex items-center rounded-md border border-border bg-background px-3 focus-within:border-border focus-within:bg-card focus-within:ring-1 focus-within:ring-ring transition-all">
+                    <span className="text-sm text-muted-foreground select-none">
                       {typeof window !== "undefined" ? window.location.host : "portal.app"}/
                     </span>
                     <input
@@ -268,10 +268,10 @@ export function WorkspaceSettingsPage({
                       value={slug}
                       onChange={(e) => setSlug(e.target.value.toLowerCase())}
                       placeholder="acme-corp"
-                      className="flex-1 bg-transparent py-2 text-sm text-[#26251E] placeholder:text-[#26251E]/30 focus:outline-none"
+                      className="flex-1 bg-transparent py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none"
                     />
                   </div>
-                  <p className="mt-2 text-xs text-[#26251E]/50">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Changing this will update the URL for all members.
                   </p>
                 </div>
@@ -280,7 +280,7 @@ export function WorkspaceSettingsPage({
 
             {/* Save Actions */}
             <div className="flex items-center justify-between pt-4">
-              <div className="text-sm text-[#26251E]/60">
+              <div className="text-sm text-muted-foreground">
                 {hasChanges && "Unsaved changes"}
               </div>
               <div className="flex gap-3">
@@ -294,7 +294,7 @@ export function WorkspaceSettingsPage({
                     setRemoveLogo(false)
                   }} 
                   disabled={!hasChanges || isSaving}
-                  className="text-[#26251E]/60 hover:text-[#26251E]"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Discard
                 </Button>
@@ -303,7 +303,7 @@ export function WorkspaceSettingsPage({
                   disabled={isSaving || !hasChanges}
                   className={cn(
                     "gap-2 transition-all",
-                    hasChanges ? "bg-[#26251E] text-white hover:bg-[#26251E]/90" : "bg-[#26251E]/5 text-[#26251E]/30"
+                    hasChanges ? "bg-foreground text-background hover:bg-foreground/90" : "bg-muted text-foreground/30"
                   )}
                 >
                   {isSaving ? (
@@ -330,14 +330,14 @@ export function WorkspaceSettingsPage({
             <section className="space-y-6">
               <div>
                 <h2 className="text-base sm:text-lg font-medium text-red-600">Danger Zone</h2>
-                <p className="text-xs sm:text-sm text-[#26251E]/60">Irreversible and destructive actions.</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Irreversible and destructive actions.</p>
               </div>
 
-              <div className="rounded-xl border border-red-200 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-red-200 bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-[#26251E]">Delete Workspace</h3>
-                    <p className="text-xs text-[#26251E]/60">
+                    <h3 className="text-sm font-medium text-foreground">Delete Workspace</h3>
+                    <p className="text-xs text-muted-foreground">
                       Once you delete a workspace, there is no going back. Please be certain.
                     </p>
                   </div>
@@ -360,7 +360,7 @@ export function WorkspaceSettingsPage({
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <div className="space-y-3 py-4">
-                        <Label htmlFor="delete-confirm" className="text-xs font-medium uppercase tracking-wider text-[#26251E]/50">
+                        <Label htmlFor="delete-confirm" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Workspace Name
                         </Label>
                         <Input
@@ -371,7 +371,7 @@ export function WorkspaceSettingsPage({
                             setError(null)
                           }}
                           placeholder={organization?.name}
-                          className="bg-[#F7F7F4] border-transparent focus-visible:bg-white transition-all"
+                          className="bg-background border-transparent focus-visible:bg-card transition-all"
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && deleteConfirmName === organization?.name) {
                               handleDelete()
