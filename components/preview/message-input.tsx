@@ -157,6 +157,10 @@ export function MessageInput({
       setMessage("")
       setAttachments([])
       onCancelReply?.()
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '20px'
+      }
       textareaRef.current?.focus()
     }
   }
@@ -427,7 +431,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm min-h-[40px]">
+      <div className="relative flex flex-col rounded-xl border border-[#26251E]/15 bg-white shadow-sm">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -438,35 +442,6 @@ export function MessageInput({
           onSelectedIndexChange={setMentionSelectedIndex}
         />
 
-        {/* Attachment button */}
-        <DropdownMenu>
-          <Tooltip>
-          <TooltipTrigger
-          render={<DropdownMenuTrigger
-            render={<Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 size-8 sm:size-9 text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
-              disabled={disabled}
-            />}
-          />}
-          >
-          <PlusIcon className="size-4" />
-            </TooltipTrigger>
-            <TooltipContent side="top">Add attachment</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" className="w-44">
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-              <FileIcon className="size-4" />
-              Upload file
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-              <ImageIcon className="size-4" />
-              Upload image
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -476,76 +451,120 @@ export function MessageInput({
           className="hidden"
         />
 
-        {/* Message input */}
-        <Textarea
-          ref={textareaRef}
-          value={message}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            disabled && disabledReason
-              ? disabledReason
-              : isDirectMessage
-                ? `Message ${channelName}`
-                : `Message #${channelName}`
-          }
-          disabled={disabled}
-          className="min-h-[32px] max-h-[100px] h-9 sm:h-10 flex-1 resize-none border-0 bg-transparent py-1.5 px-2 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed"
-          rows={1}
-        />
+        {/* Message input area - top section */}
+        <div className="px-3 pt-2">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => {
+              handleInputChange(e)
+              // Auto-resize textarea
+              const textarea = e.target
+              textarea.style.height = 'auto'
+              const lineHeight = 20
+              const maxLines = 3
+              const maxHeight = lineHeight * maxLines
+              textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              disabled && disabledReason
+                ? disabledReason
+                : isDirectMessage
+                  ? `Message ${channelName}`
+                  : `Message #${channelName}`
+            }
+            disabled={disabled}
+            className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
+            rows={1}
+            style={{ height: '20px' }}
+          />
+        </div>
 
-        {/* Right side buttons */}
-        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-          {/* Emoji picker */}
-          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-            <Tooltip>
-              <TooltipTrigger
-                render={<PopoverTrigger
-                  render={<Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 sm:size-9 text-[#26251E]/50 hover:text-[#26251E] hover:bg-[#26251E]/5"
-                    disabled={disabled}
+        {/* Bottom toolbar */}
+        <div className="flex items-center justify-between px-1.5 py-1.5">
+          {/* Left side buttons */}
+          <div className="flex items-center gap-1">
+            {/* Attachment button */}
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<DropdownMenuTrigger
+                    render={<Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 size-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
+                      disabled={disabled}
+                    />}
                   />}
-                />}
-              >
-                <SmileyIcon className="size-4" />
-              </TooltipTrigger>
-              <TooltipContent side="top">Add emoji</TooltipContent>
-            </Tooltip>
-            <PopoverContent
-              side="top"
-              align="end"
-              className="w-72 p-3"
-            >
-              <div className="mb-2 text-xs font-medium text-[#26251E]/60">
-                Quick reactions
-              </div>
-              <div className="grid grid-cols-8 gap-1">
-                {EMOJI_LIST.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => insertEmoji(emoji)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-[#26251E]/5 transition-colors"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+                >
+                  <PlusIcon className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Add attachment</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <FileIcon className="size-4" />
+                  Upload file
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <ImageIcon className="size-4" />
+                  Upload image
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {/* Send button */}
+            {/* Emoji picker */}
+            <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<PopoverTrigger
+                    render={<Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-1 px-2"
+                      disabled={disabled}
+                    />}
+                  />}
+                >
+                  <SmileyIcon className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Add emoji</TooltipContent>
+              </Tooltip>
+              <PopoverContent
+                side="top"
+                align="start"
+                className="w-72 p-3"
+              >
+                <div className="mb-2 text-xs font-medium text-[#26251E]/60">
+                  Quick reactions
+                </div>
+                <div className="grid grid-cols-8 gap-1">
+                  {EMOJI_LIST.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => insertEmoji(emoji)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-[#26251E]/5 transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Send button - right side */}
           <Tooltip>
             <TooltipTrigger
               render={<Button
                 onClick={handleSend}
                 disabled={!canSend || isUploading}
                 size="icon"
-                className="size-8 sm:size-9 bg-[#26251E] text-[#F7F7F4] hover:bg-[#26251E]/80 disabled:opacity-30"
+                className="size-7 rounded-full bg-[#26251E]/80 text-[#F7F7F4] hover:bg-[#26251E] disabled:bg-[#26251E]/30 disabled:text-[#F7F7F4]/50"
               />}
             >
-              <PaperPlaneTiltIcon className="size-4" weight="fill" />
+              <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
             </TooltipTrigger>
             <TooltipContent side="top">
               <div className="text-xs">
