@@ -229,11 +229,27 @@ function processMentions(content: string, mentions?: string[], userNames?: Recor
     }
   })
   
-  // Replace @userId with **@userName** for markdown bold styling
-  return replaceMentionsInText(content, mentionMap).replace(
-    /@([\w\s]+)/g,
-    '**@$1**'
-  )
+  // First replace @userId with @userName
+  let processedContent = replaceMentionsInText(content, mentionMap)
+  
+  // Then wrap each @userName mention in ** for markdown bold styling
+  // We need to match exact display names, not greedy patterns
+  // Sort display names by length (longest first) to avoid partial matches
+  const displayNames = Object.values(mentionMap).sort((a, b) => b.length - a.length)
+  
+  for (const displayName of displayNames) {
+    // Escape special regex characters in the display name
+    const escapedName = displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Match @displayName and ensure it's followed by either:
+    // - End of string ($)
+    // - A non-word character (space, punctuation, etc.)
+    // This prevents matching "@greg heffley hello" when we only want "@greg heffley"
+    // The negative lookahead (?!\w) ensures we don't continue matching into the next word
+    const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w])`, 'g')
+    processedContent = processedContent.replace(pattern, `**@${displayName}**`)
+  }
+  
+  return processedContent
 }
 
 function MessageItem({ 
