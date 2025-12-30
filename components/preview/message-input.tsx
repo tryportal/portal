@@ -455,7 +455,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative flex flex-col rounded-xl border border-[#26251E]/15 bg-white shadow-sm">
+      <div className="relative flex flex-col rounded-md border border-[#26251E]/15 bg-white shadow-sm">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -540,7 +540,7 @@ export function MessageInput({
                 render={<Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 gap-1 px-2"
+                  className="h-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 p-1"
                   disabled={disabled}
                   title="Add emoji"
                 />}
