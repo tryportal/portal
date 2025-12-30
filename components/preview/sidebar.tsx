@@ -602,7 +602,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 onMouseEnter={() => {
                   if (currentSlug) {
                     router.prefetch(`/w/${currentSlug}/people`)
-                    router.prefetch(`/w/${currentSlug}/saved`)
                   }
                 }}
                 className={`w-full justify-start gap-2 ${
