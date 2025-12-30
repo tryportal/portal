@@ -16,7 +16,7 @@ export default function WorkspacePage() {
   // Remove the loading spinner - render immediately for instant navigation
   return (
     <main className="flex-1 overflow-hidden">
-      <OverviewPage organizationId={organization?._id || ("" as any)} />
+      <OverviewPage organizationId={organization?._id} />
     </main>
   );
 }
