@@ -22,7 +22,7 @@ import type { Message } from "@/components/preview/message-list"
 import { parseMentions } from "./mention"
 
 interface OverviewPageProps {
-  organizationId: Id<"organizations">
+  organizationId?: Id<"organizations">
 }
 
 export function OverviewPage({ organizationId }: OverviewPageProps) {

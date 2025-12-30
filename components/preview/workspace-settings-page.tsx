@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 interface WorkspaceSettingsPageProps {
-  organizationId: Id<"organizations">
+  organizationId?: Id<"organizations">
 }
 
 export function WorkspaceSettingsPage({
@@ -90,6 +90,11 @@ export function WorkspaceSettingsPage({
       return
     }
 
+    if (!organizationId) {
+      setError("Workspace not found")
+      return
+    }
+
     setIsSaving(true)
     setError(null)
 
@@ -141,6 +146,12 @@ export function WorkspaceSettingsPage({
       
       // Prioritize organization where user is admin, otherwise use first org
       const targetOrg = otherOrgs.find((org) => org.role === "admin") || otherOrgs[0]
+      
+      if (!organizationId) {
+        setError("Workspace not found")
+        setIsDeleting(false)
+        return
+      }
       
       await deleteOrganization({ organizationId })
       
