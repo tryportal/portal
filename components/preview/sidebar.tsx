@@ -527,7 +527,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {/* Sidebar - slides in on mobile */}
       <div className="fixed sm:relative z-50 sm:z-auto h-full w-[280px] sm:w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4] flex animate-in slide-in-from-left-full sm:animate-none duration-200">
         {/* Header with toggle */}
-        <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
+        <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
           <div className="flex items-center gap-2">
             {currentOrg?.logoUrl ? (
               <Image

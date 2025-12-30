@@ -159,7 +159,7 @@ function PreviewSidebar({
   return (
     <div className="hidden sm:flex h-full w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4]">
       {/* Header with toggle */}
-      <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 px-3">
+      <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
             <Image

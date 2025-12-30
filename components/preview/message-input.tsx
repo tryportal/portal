@@ -363,7 +363,7 @@ export function MessageInput({
   const canSend = (message.trim() || hasUploadedAttachments) && !disabled
 
   return (
-    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-2 sm:px-3 py-2">
+    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-4 py-2 shrink-0">
       {/* Reply indicator */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#26251E]/10 bg-white px-3 py-2">
@@ -427,7 +427,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm">
+      <div className="relative flex items-center gap-1.5 rounded-lg border border-[#26251E]/15 bg-white p-1 shadow-sm min-h-[40px]">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}

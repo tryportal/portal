@@ -36,7 +36,7 @@ export function ChannelHeader({
   const [searchQuery, setSearchQuery] = React.useState("")
 
   return (
-    <header className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4">
+    <header className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
       {/* Left: Channel info */}
       <div className="flex items-center gap-2">
         <Icon className="size-5 text-[#26251E]" weight="fill" />
