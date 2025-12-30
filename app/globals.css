@@ -124,3 +124,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix Clerk UserButton circular outline issue */
+@layer utilities {
+  /* Target Clerk UserButton elements that might receive focus */
+  [class*="cl-userButton"]:focus-visible,
+  [class*="cl-avatar"]:focus-visible,
+  [class*="cl-userButtonTrigger"]:focus-visible {
+    outline: none;
+    border-radius: 9999px !important;
+  }
+  
+  /* Add circular focus ring */
+  [class*="cl-userButton"]:focus-visible::after,
+  [class*="cl-avatar"]:focus-visible::after,
+  [class*="cl-userButtonTrigger"]:focus-visible::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    border: 2px solid var(--ring);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
