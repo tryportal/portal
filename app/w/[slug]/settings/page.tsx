@@ -13,7 +13,7 @@ export default function SettingsPage() {
   // Render immediately for instant navigation - handle loading in child component
   return (
     <main className="flex-1 overflow-hidden">
-      <WorkspaceSettingsPage organizationId={organization?._id || ("" as any)} />
+      <WorkspaceSettingsPage organizationId={organization?._id} />
     </main>
   );
 }
