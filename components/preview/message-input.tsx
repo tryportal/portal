@@ -251,9 +251,11 @@ export function MessageInput({
     // Convert display message back to backend format for processing
     // Replace @userName with @userId using the mention map
     // Sort by length (longest first) to prevent partial matches
+    let backendValue = value
     const sortedEntries = Object.entries(mentionMap).sort(([, a], [, b]) => b.length - a.length)
     sortedEntries.forEach(([userId, userName]) => {
       const userNamePattern = new RegExp(`@${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+      backendValue = backendValue.replace(userNamePattern, `@${userId}`)
     })
     
     setMessage(backendValue)
