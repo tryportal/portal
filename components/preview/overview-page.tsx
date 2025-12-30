@@ -203,14 +203,14 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
         <div className="mb-6 sm:mb-8 grid gap-4 md:grid-cols-2">
           {/* Saved Messages Card */}
           <Card>
-            <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <BookmarkIcon className="size-4" weight="fill" />
                 Saved Messages
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">Messages you've saved for later</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <CardContent>
               {savedMessages.length === 0 ? (
                 <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
                   <p className="text-xs sm:text-sm text-[#26251E]/40">No saved messages</p>
@@ -271,14 +271,14 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
 
           {/* Mentions Card */}
           <Card>
-            <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <AtIcon className="size-4" />
                 Mentions
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">Messages where you were mentioned</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <CardContent>
               {mentions.length === 0 ? (
                 <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-[#26251E]/10">
                   <p className="text-xs sm:text-sm text-[#26251E]/40">No mentions</p>
