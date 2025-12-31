@@ -67,6 +67,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useTheme } from "@/lib/theme-provider"
 
 interface SidebarProps {
   isOpen: boolean
@@ -312,6 +313,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const currentSlug = params?.slug as string | undefined
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
 
   // Use shared workspace data from context
   const { organization: currentOrg, membership } = useWorkspaceData()
@@ -540,11 +543,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             ) : (
               <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
                 <Image
-                  src="/portal.svg"
+                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                   alt="Workspace"
                   width={12}
                   height={12}
-                  className="invert dark:invert-0"
                 />
               </div>
             )}

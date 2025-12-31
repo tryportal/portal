@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useTheme } from "@/lib/theme-provider"
 
 interface TopNavProps {
   activeTab: string
@@ -41,6 +42,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const router = useRouter()
   const params = useParams()
   const currentSlug = params?.slug as string | undefined
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } = useWorkspaceData()
@@ -94,7 +97,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             </Button>
         )}
         <Image
-          src="/portal-full.svg"
+          src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
           alt="Portal"
           width={100}
           height={21}
@@ -113,11 +116,10 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           ) : (
             <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
               <Image
-                src="/portal.svg"
+                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                 alt="Workspace"
                 width={12}
                 height={12}
-                className="invert dark:invert-0"
               />
             </div>
           )}
@@ -143,11 +145,10 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             ) : (
               <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
                 <Image
-                  src="/portal.svg"
+                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                   alt="Workspace"
                   width={12}
                   height={12}
-                  className="invert dark:invert-0"
                 />
               </div>
             )}
@@ -177,11 +178,10 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                     ) : (
                       <div className="flex h-4 w-4 items-center justify-center rounded bg-foreground">
                         <Image
-                          src="/portal.svg"
+                          src={isDark ? "/portal-dark.svg" : "/portal.svg"}
                           alt="Workspace"
                           width={10}
                           height={10}
-                          className="invert dark:invert-0"
                         />
                       </div>
                     )}

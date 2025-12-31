@@ -8,6 +8,7 @@ import { Spinner, CheckCircle, XCircle, EnvelopeSimple } from "@phosphor-icons/r
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { analytics } from "@/lib/analytics";
+import { useTheme } from "@/lib/theme-provider";
 import * as React from "react";
 
 export default function InvitePage({
@@ -17,6 +18,8 @@ export default function InvitePage({
 }) {
   const router = useRouter();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [token, setToken] = useState<string>("");
   const [isAccepting, setIsAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +92,7 @@ export default function InvitePage({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
           <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
-            <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
+            <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
           </div>
           <div className="flex flex-col items-center gap-2">
             <Spinner className="size-5 animate-spin text-muted-foreground" />
@@ -235,7 +238,7 @@ export default function InvitePage({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
           <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
-            <img src="/portal.svg" alt="Portal" className="size-6 invert opacity-90" />
+            <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
           </div>
           <div className="flex flex-col items-center gap-2">
             <Spinner className="size-5 animate-spin text-muted-foreground" />

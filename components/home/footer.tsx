@@ -4,19 +4,23 @@ import Link from "next/link"
 import Image from "next/image"
 import { TwitterLogo } from "@phosphor-icons/react"
 import { GitHubLogo } from "./icons/github-logo"
+import { useTheme } from "@/lib/theme-provider"
 
 export function Footer() {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+  
   return (
     <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-border">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2">
             <Image
-              src="/portal-full.svg"
+              src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
               alt="Portal"
               width={100}
               height={32}
-              className="h-5 sm:h-6 w-auto dark:invert"
+              className="h-5 sm:h-6 w-auto"
             />
           </div>
 

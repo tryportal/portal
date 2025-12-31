@@ -25,6 +25,7 @@ import {
   TrayIcon,
 } from "@phosphor-icons/react"
 import Image from "next/image"
+import { useTheme } from "@/lib/theme-provider"
 
 // Local preview top nav that uses mock data
 function PreviewTopNav({
@@ -34,6 +35,8 @@ function PreviewTopNav({
   activeTab: string
   onTabChange: (tab: string) => void
 }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   const tabs = [
     { id: "home", label: "Home", icon: HouseIcon },
     { id: "messages", label: "Messages", icon: ChatCircleIcon },
@@ -45,7 +48,7 @@ function PreviewTopNav({
       {/* Left: Portal Logo */}
       <div className="flex items-center">
         <Image
-          src="/portal-full.svg"
+          src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
           alt="Portal"
           width={100}
           height={24}
@@ -55,11 +58,10 @@ function PreviewTopNav({
         <div className="sm:hidden flex items-center gap-1.5">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
           <span className="text-sm font-medium text-foreground">Preview</span>
@@ -72,11 +74,10 @@ function PreviewTopNav({
         <div className="gap-2 px-2 text-foreground h-8 inline-flex items-center justify-center">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
           <span className="text-sm font-medium">Preview Workspace</span>
@@ -163,11 +164,10 @@ function PreviewSidebar({
         <div className="flex items-center gap-2">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
           <span className="text-sm font-medium text-foreground">

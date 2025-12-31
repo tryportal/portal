@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
+import { useTheme } from "@/lib/theme-provider";
 
 export default function Page() {
   const router = useRouter();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Get user's organizations from Convex
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
@@ -64,11 +67,11 @@ export default function Page() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
         <Image
-          src="/portal-full.svg"
+          src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
           alt="Portal"
           width={120}
           height={32}
-          className="h-8 w-auto dark:invert"
+          className="h-8 w-auto"
           priority
         />
         <div className="size-5 animate-spin rounded-full border-2 border-border border-t-foreground/40" />

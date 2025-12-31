@@ -12,10 +12,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { SetupWizard } from "@/components/setup/setup-wizard";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/lib/theme-provider";
 
 function SetupContent() {
   const router = useRouter();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Get user's organizations from Convex
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
@@ -129,9 +132,9 @@ function SetupContent() {
         <div className="flex items-center gap-2">
           <div className="size-7 rounded-lg bg-primary flex items-center justify-center">
             <img
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Portal"
-              className="size-4 invert"
+              className="size-4"
             />
           </div>
           <span className="font-semibold text-xs sm:text-sm">Portal</span>

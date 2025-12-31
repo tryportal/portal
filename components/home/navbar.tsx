@@ -11,12 +11,15 @@ import { List, X } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { GitHubLogo } from "./icons/github-logo"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useTheme } from "@/lib/theme-provider"
 
 export function Navbar() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth()
   const router = useRouter()
   const userOrgs = useQuery(api.organizations.getUserOrganizations)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   
   // Get the first organization or admin org for signed-in users
   const targetOrg = userOrgs?.find((org: { role: string }) => org.role === "admin") || userOrgs?.[0]
@@ -32,11 +35,11 @@ export function Navbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/home" className="flex items-center gap-2">
           <Image
-            src="/portal-full.svg"
+            src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
             alt="Portal"
             width={100}
             height={32}
-            className="h-7 sm:h-8 w-auto dark:invert"
+            className="h-7 sm:h-8 w-auto"
             priority
           />
         </Link>
