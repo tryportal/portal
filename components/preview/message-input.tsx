@@ -26,11 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
 
@@ -574,7 +569,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative flex flex-col rounded-xl border border-border bg-card shadow-sm">
+      <div className="relative flex flex-col rounded-lg border border-border bg-card shadow-sm">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -630,21 +625,17 @@ export function MessageInput({
           <div className="flex items-center gap-1">
             {/* Attachment button */}
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger
-                  render={<DropdownMenuTrigger
-                    render={<Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                      disabled={disabled}
-                    />}
-                  />}
-                >
-                  <PlusIcon className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Add attachment</TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger
+                render={<Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  disabled={disabled}
+                  title="Add attachment"
+                />}
+              >
+                <PlusIcon className="size-3.5" />
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44">
                 <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                   <FileIcon className="size-4" />
@@ -659,21 +650,17 @@ export function MessageInput({
 
             {/* Emoji picker */}
             <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-              <Tooltip>
-                <TooltipTrigger
-                  render={<PopoverTrigger
-                    render={<Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted gap-1 px-2"
-                      disabled={disabled}
-                    />}
-                  />}
-                >
-                  <SmileyIcon className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Add emoji</TooltipContent>
-              </Tooltip>
+              <PopoverTrigger
+                render={<Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  disabled={disabled}
+                  title="Add emoji"
+                />}
+              >
+                <SmileyIcon className="size-3.5" />
+              </PopoverTrigger>
               <PopoverContent
                 side="top"
                 align="start"
@@ -698,26 +685,15 @@ export function MessageInput({
           </div>
 
           {/* Send button - right side */}
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button
-                onClick={handleSend}
-                disabled={!canSend || isUploading}
-                size="icon"
-                className="size-7 rounded-full bg-foreground/80 text-background hover:bg-foreground disabled:bg-foreground/30 disabled:text-background/50"
-              />}
-            >
-              <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <div className="text-xs">
-                Send message
-                <div className="mt-1 text-[10px] text-muted-foreground">
-                  Press <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Enter</kbd> to send, <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Shift + Enter</kbd> for new line
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            onClick={handleSend}
+            disabled={!canSend || isUploading}
+            size="icon"
+            className="size-7 rounded-full bg-foreground/80 text-background hover:bg-foreground disabled:bg-foreground/30 disabled:text-background/50"
+            title="Send message"
+          >
+            <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
+          </Button>
         </div>
       </div>
     </div>

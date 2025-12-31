@@ -30,11 +30,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
@@ -487,33 +482,25 @@ function MessageItem({
       {/* Hover actions */}
       {isHovered && (
         <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md">
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button
-                variant="ghost"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                onClick={() => onReply?.(message.id)}
-              />}
-            >
-              <ArrowBendUpLeftIcon className="size-3.5" />
-            </TooltipTrigger>
-            <TooltipContent>Reply</TooltipContent>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => onReply?.(message.id)}
+            title="Reply"
+          >
+            <ArrowBendUpLeftIcon className="size-3.5" />
+          </Button>
 
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button
-                variant="ghost"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                onClick={() => onForward?.(message.id)}
-              />}
-            >
-              <ShareIcon className="size-3.5" />
-            </TooltipTrigger>
-            <TooltipContent>Forward</TooltipContent>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => onForward?.(message.id)}
+            title="Forward"
+          >
+            <ShareIcon className="size-3.5" />
+          </Button>
 
           <ReactionPicker
             onSelectReaction={(emoji) => onReaction?.(message.id, emoji)}
@@ -532,20 +519,16 @@ function MessageItem({
           />
 
           <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger
-                render={<DropdownMenuTrigger
-                  render={<Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                  />}
-                />}
-              >
-                <DotsThreeIcon className="size-3.5" weight="bold" />
-              </TooltipTrigger>
-              <TooltipContent>More options</TooltipContent>
-            </Tooltip>
+            <DropdownMenuTrigger
+              render={<Button
+                variant="ghost"
+                size="icon-xs"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="More options"
+              />}
+            >
+              <DotsThreeIcon className="size-3.5" weight="bold" />
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={handleCopy}>
                 <CopyIcon className="size-4" />

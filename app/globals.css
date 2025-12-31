@@ -48,22 +48,22 @@
 }
 
 :root {
-  --background: #F7F7F4;
-  --foreground: #26251E;
-  --card: #F7F7F4;
-  --card-foreground: #26251E;
-  --popover: #F7F7F4;
-  --popover-foreground: #26251E;
-  --primary: #26251E;
-  --primary-foreground: #F7F7F4;
-  --secondary: #EBEBE9;
+  --background: #f7f7f4;
+  --foreground: #26251e;
+  --card: #f7f7f4;
+  --card-foreground: #26251e;
+  --popover: #f7f7f4;
+  --popover-foreground: #26251e;
+  --primary: #26251e;
+  --primary-foreground: #f7f7f4;
+  --secondary: #ebebe9;
   /* #26251E with ~5-10% opacity equivalent on #F7F7F4 */
-  --secondary-foreground: #26251E;
-  --muted: #EBEBE9;
-  --muted-foreground: #6A6965;
+  --secondary-foreground: #26251e;
+  --muted: #ebebe9;
+  --muted-foreground: #6a6965;
   /* #26251E with ~60-70% opacity */
-  --accent: #EBEBE9;
-  --accent-foreground: #26251E;
+  --accent: #ebebe9;
+  --accent-foreground: #26251e;
   --destructive: oklch(0.577 0.245 27.325);
   --border: rgba(38, 37, 30, 0.1);
   --input: rgba(38, 37, 30, 0.1);
@@ -74,12 +74,12 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.45rem;
-  --sidebar: #F7F7F4;
-  --sidebar-foreground: #26251E;
-  --sidebar-primary: #26251E;
-  --sidebar-primary-foreground: #F7F7F4;
-  --sidebar-accent: #EBEBE9;
-  --sidebar-accent-foreground: #26251E;
+  --sidebar: #f7f7f4;
+  --sidebar-foreground: #26251e;
+  --sidebar-primary: #26251e;
+  --sidebar-primary-foreground: #f7f7f4;
+  --sidebar-accent: #ebebe9;
+  --sidebar-accent-foreground: #26251e;
   --sidebar-border: rgba(38, 37, 30, 0.1);
   --sidebar-ring: rgba(38, 37, 30, 0.2);
 }
@@ -131,7 +131,10 @@
   *,
   *::before,
   *::after {
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.15s ease;
   }
 
   /* Disable transitions on page load to prevent flash */
@@ -144,7 +147,6 @@
 
 /* Fix Clerk UserButton circular outline issue */
 @layer utilities {
-
   /* Target Clerk UserButton elements that might receive focus */
   [class*="cl-userButton"]:focus-visible,
   [class*="cl-avatar"]:focus-visible,
@@ -157,7 +159,7 @@
   [class*="cl-userButton"]:focus-visible::after,
   [class*="cl-avatar"]:focus-visible::after,
   [class*="cl-userButtonTrigger"]:focus-visible::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: -2px;
     border-radius: 9999px;

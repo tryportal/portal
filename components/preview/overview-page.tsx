@@ -216,7 +216,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                   <p className="text-xs sm:text-sm text-muted-foreground">No saved messages</p>
                 </div>
               ) : (
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-3">
                   {savedMessages.map((message) => {
                     const channel = savedMessagesRaw?.find(m => m._id === message.id)
                     const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
@@ -224,26 +224,26 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     return (
                       <div
                         key={message.id}
-                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
                           }
                         }}
                       >
-                        <Avatar className="size-7 sm:size-8 flex-shrink-0">
+                        <Avatar className="size-8 flex-shrink-0">
                           <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-xs sm:text-sm">{message.user.initials}</AvatarFallback>
+                          <AvatarFallback className="text-sm">{message.user.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
-                            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="text-sm font-medium text-foreground truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-xs sm:text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-xs sm:text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-foreground/70 line-clamp-2">
+                          <p className="text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames 
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
@@ -257,11 +257,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                      className="w-full text-sm text-muted-foreground hover:text-foreground"
                       onClick={handleViewAllSaved}
                     >
                       View all saved messages
-                      <ArrowRightIcon className="size-3.5 sm:size-4 ml-1" />
+                      <ArrowRightIcon className="size-4 ml-1" />
                     </Button>
                   )}
                 </div>
@@ -284,7 +284,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                   <p className="text-xs sm:text-sm text-muted-foreground">No mentions</p>
                 </div>
               ) : (
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-3">
                   {mentions.map((message) => {
                     const channel = mentionsRaw?.find(m => m._id === message.id)
                     const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
@@ -292,26 +292,26 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                     return (
                       <div
                         key={message.id}
-                        className="flex items-start gap-2 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
                           }
                         }}
                       >
-                        <Avatar className="size-7 sm:size-8 flex-shrink-0">
+                        <Avatar className="size-8 flex-shrink-0">
                           <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-xs sm:text-sm">{message.user.initials}</AvatarFallback>
+                          <AvatarFallback className="text-sm">{message.user.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
-                            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="text-sm font-medium text-foreground truncate">{message.user.name}</p>
                             {channelInfo && (
-                              <p className="text-xs sm:text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
+                              <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-xs sm:text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
-                          <p className="text-xs sm:text-sm text-foreground/70 line-clamp-2">
+                          <p className="text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames 
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content

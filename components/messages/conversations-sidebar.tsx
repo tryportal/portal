@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery, useAction } from "convex/react"
 import { useRouter, useParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
@@ -218,9 +219,9 @@ export function ConversationsSidebar() {
               const hasUnread = unreadCount > 0
 
               return (
-                <button
+                <Link
                   key={conversation._id}
-                  onClick={() => handleConversationClick(conversation._id)}
+                  href={`/w/${slug}/messages/${conversation._id}`}
                   onMouseEnter={() => handleConversationPrefetch(conversation._id)}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
@@ -279,7 +280,7 @@ export function ConversationsSidebar() {
                       </p>
                     )}
                   </div>
-                </button>
+                </Link>
               )
             })}
           </div>

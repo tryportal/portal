@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   ChartBarIcon,
   UsersIcon,
@@ -588,69 +589,78 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {/* Sidebar Tabs */}
             <div className="mb-4 space-y-0.5">
               {/* Overview button */}
-              <Button
-                variant={isOverviewActive ? "secondary" : "ghost"}
-                onClick={() => {
-                  if (currentSlug) {
-                    router.push(`/w/${currentSlug}`)
-                  }
-                }}
+              <Link
+                href={currentSlug ? `/w/${currentSlug}` : "#"}
+                className="block"
                 onMouseEnter={handleOverviewPrefetch}
-                className={`w-full justify-start gap-2 ${
-                  isOverviewActive
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
               >
-                <ChartBarIcon
-                  className="size-4"
-                  weight={isOverviewActive ? "fill" : "regular"}
-                />
-                Overview
-              </Button>
-              {/* People button */}
-              <Button
-                variant={isPeoplePage ? "secondary" : "ghost"}
-                onClick={() => {
-                  if (currentSlug) {
-                    router.push(`/w/${currentSlug}/people`)
-                  }
-                }}
-                onMouseEnter={handlePeoplePrefetch}
-                className={`w-full justify-start gap-2 ${
-                  isPeoplePage
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <UsersIcon
-                  className="size-4"
-                  weight={isPeoplePage ? "fill" : "regular"}
-                />
-                People
-              </Button>
-              {/* Settings button for admins */}
-              {isAdmin && (
                 <Button
-                  variant={isSettingsPage ? "secondary" : "ghost"}
-                  onClick={() => {
-                    if (currentSlug) {
-                      router.push(`/w/${currentSlug}/settings`)
-                    }
-                  }}
-                  onMouseEnter={handleSettingsPrefetch}
+                  variant={isOverviewActive ? "secondary" : "ghost"}
                   className={`w-full justify-start gap-2 ${
-                    isSettingsPage
+                    isOverviewActive
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
+                  asChild
                 >
-                  <GearIcon
-                    className="size-4"
-                    weight={isSettingsPage ? "fill" : "regular"}
-                  />
-                  Settings
+                  <span className="flex items-center gap-2">
+                    <ChartBarIcon
+                      className="size-4"
+                      weight={isOverviewActive ? "fill" : "regular"}
+                    />
+                    Overview
+                  </span>
                 </Button>
+              </Link>
+              {/* People button */}
+              <Link
+                href={currentSlug ? `/w/${currentSlug}/people` : "#"}
+                className="block"
+                onMouseEnter={handlePeoplePrefetch}
+              >
+                <Button
+                  variant={isPeoplePage ? "secondary" : "ghost"}
+                  className={`w-full justify-start gap-2 ${
+                    isPeoplePage
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                  asChild
+                >
+                  <span className="flex items-center gap-2">
+                    <UsersIcon
+                      className="size-4"
+                      weight={isPeoplePage ? "fill" : "regular"}
+                    />
+                    People
+                  </span>
+                </Button>
+              </Link>
+              {/* Settings button for admins */}
+              {isAdmin && (
+                <Link
+                  href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
+                  className="block"
+                  onMouseEnter={handleSettingsPrefetch}
+                >
+                  <Button
+                    variant={isSettingsPage ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-2 ${
+                      isSettingsPage
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                    asChild
+                  >
+                    <span className="flex items-center gap-2">
+                      <GearIcon
+                        className="size-4"
+                        weight={isSettingsPage ? "fill" : "regular"}
+                      />
+                      Settings
+                    </span>
+                  </Button>
+                </Link>
               )}
             </div>
 
