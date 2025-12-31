@@ -119,11 +119,11 @@ function isImageType(type: string): boolean {
 
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
-  
+
   // Get URL from batch-loaded context instead of individual query
   const attachmentUrls = React.useContext(AttachmentUrlContext)
   const url = attachmentUrls[attachment.storageId] || null
-  
+
   if (isImage && url) {
     return (
       <a
@@ -223,7 +223,7 @@ const MarkdownComponents = {
 // Replace mention user IDs with user names in content
 function processMentions(content: string, mentions?: string[], userNames?: Record<string, string>): string {
   if (!mentions || mentions.length === 0 || !userNames) return content
-  
+
   // Build a map of userId -> userName for quick lookup
   const mentionMap: Record<string, string> = {}
   mentions.forEach(userId => {
@@ -232,15 +232,15 @@ function processMentions(content: string, mentions?: string[], userNames?: Recor
       mentionMap[userId] = userName
     }
   })
-  
+
   // First replace @userId with @userName
   let processedContent = replaceMentionsInText(content, mentionMap)
-  
+
   // Then wrap each @userName mention in ** for markdown bold styling
   // We need to match exact display names, not greedy patterns
   // Sort display names by length (longest first) to avoid partial matches
   const displayNames = Object.values(mentionMap).sort((a, b) => b.length - a.length)
-  
+
   for (const displayName of displayNames) {
     // Escape special regex characters in the display name
     const escapedName = displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -252,12 +252,12 @@ function processMentions(content: string, mentions?: string[], userNames?: Recor
     const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w])`, 'g')
     processedContent = processedContent.replace(pattern, `**@${displayName}**`)
   }
-  
+
   return processedContent
 }
 
-function MessageItem({ 
-  message, 
+function MessageItem({
+  message,
   currentUserId,
   onDeleteMessage,
   onEditMessage,
@@ -273,7 +273,7 @@ function MessageItem({
   userNames,
   isAdmin,
   isGrouped,
-}: { 
+}: {
   message: Message
   currentUserId?: string
   onDeleteMessage?: (messageId: string) => void
@@ -366,7 +366,7 @@ function MessageItem({
       <div className="flex gap-2.5">
         {/* Avatar - hidden when grouped */}
         {!isGrouped ? (
-          <Avatar 
+          <Avatar
             className="size-8 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
             onClick={() => onAvatarClick?.(message.user.id)}
           >
@@ -412,7 +412,7 @@ function MessageItem({
                 className="min-h-[80px] text-sm"
                 autoFocus
               />
-                <div className="flex gap-2 text-xs text-muted-foreground">
+              <div className="flex gap-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border">Enter</kbd>
                   <span>to save</span>
@@ -455,7 +455,7 @@ function MessageItem({
               )}
             </>
           )}
-          
+
           {/* Attachments */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
@@ -520,13 +520,13 @@ function MessageItem({
             existingReactions={
               message.reactions
                 ? Object.entries(
-                    message.reactions.reduce((acc, r) => {
-                      acc[r.emoji] = acc[r.emoji] || { count: 0, hasReacted: false }
-                      acc[r.emoji].count++
-                      if (r.userId === currentUserId) acc[r.emoji].hasReacted = true
-                      return acc
-                    }, {} as Record<string, { count: number; hasReacted: boolean }>)
-                  ).map(([emoji, data]) => ({ emoji, ...data }))
+                  message.reactions.reduce((acc, r) => {
+                    acc[r.emoji] = acc[r.emoji] || { count: 0, hasReacted: false }
+                    acc[r.emoji].count++
+                    if (r.userId === currentUserId) acc[r.emoji].hasReacted = true
+                    return acc
+                  }, {} as Record<string, { count: number; hasReacted: boolean }>)
+                ).map(([emoji, data]) => ({ emoji, ...data }))
                 : []
             }
           />
@@ -597,29 +597,29 @@ function MessageItem({
 // Helper function to check if a message should be grouped with the previous one
 function shouldGroupMessages(current: Message, previous: Message | undefined): boolean {
   if (!previous) return false
-  
+
   // Don't group if different users
   if (current.user.id !== previous.user.id) return false
-  
+
   // Don't group if there's a parent message (reply)
   if (current.parentMessageId || previous.parentMessageId) return false
-  
+
   // Don't group if either message is pinned
   if (current.pinned || previous.pinned) return false
-  
+
   // Check if within 1 minute (60000 milliseconds)
   if (current.createdAt && previous.createdAt) {
     const timeDiff = current.createdAt - previous.createdAt
     return timeDiff <= 60000 // 1 minute in milliseconds
   }
-  
+
   // If no timestamps available, don't group
   return false
 }
 
-export function MessageList({ 
-  messages, 
-  currentUserId, 
+export function MessageList({
+  messages,
+  currentUserId,
   onDeleteMessage,
   onEditMessage,
   onReply,
@@ -696,11 +696,11 @@ export function MessageList({
   React.useLayoutEffect(() => {
     if (messages.length > 0) {
       const isNewMessage = messages.length > previousMessageCount.current
-      
+
       // Always scroll on initial load, or when new messages arrive and user is near bottom
       if (isInitialLoad.current || (isNewMessage && isUserNearBottom.current)) {
         scrollToBottom()
-        
+
         // Multiple scroll attempts to handle async content on initial load
         if (isInitialLoad.current) {
           requestAnimationFrame(() => {
@@ -711,9 +711,9 @@ export function MessageList({
           })
         }
       }
-      
+
       previousMessageCount.current = messages.length
-      
+
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
         // Mark initial load as complete after a short delay
@@ -731,7 +731,7 @@ export function MessageList({
       const timeout1 = setTimeout(scrollToBottom, 50)
       const timeout2 = setTimeout(scrollToBottom, 200)
       const timeout3 = setTimeout(scrollToBottom, 500)
-      
+
       return () => {
         clearTimeout(timeout1)
         clearTimeout(timeout2)
@@ -758,8 +758,8 @@ export function MessageList({
 
   return (
     <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div 
-        ref={scrollRef} 
+      <div
+        ref={scrollRef}
         className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
         style={{ scrollBehavior: 'auto' }}
       >
@@ -771,11 +771,11 @@ export function MessageList({
               const previousMessage = index > 0 ? messages[index - 1] : undefined
               const isGrouped = shouldGroupMessages(message, previousMessage)
               const isLastMessage = index === messages.length - 1
-              
+
               return (
                 <div key={message.id} ref={isLastMessage ? lastMessageRef : undefined}>
-                  <MessageItem 
-                    message={message} 
+                  <MessageItem
+                    message={message}
                     currentUserId={currentUserId}
                     onDeleteMessage={onDeleteMessage}
                     onEditMessage={onEditMessage}
