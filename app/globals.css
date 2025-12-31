@@ -56,10 +56,12 @@
   --popover-foreground: #26251E;
   --primary: #26251E;
   --primary-foreground: #F7F7F4;
-  --secondary: #EBEBE9; /* #26251E with ~5-10% opacity equivalent on #F7F7F4 */
+  --secondary: #EBEBE9;
+  /* #26251E with ~5-10% opacity equivalent on #F7F7F4 */
   --secondary-foreground: #26251E;
   --muted: #EBEBE9;
-  --muted-foreground: #6A6965; /* #26251E with ~60-70% opacity */
+  --muted-foreground: #6A6965;
+  /* #26251E with ~60-70% opacity */
   --accent: #EBEBE9;
   --accent-foreground: #26251E;
   --destructive: oklch(0.577 0.245 27.325);
@@ -120,21 +122,47 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Smooth theme transitions */
   *,
   *::before,
   *::after {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
   }
-  
+
   /* Disable transitions on page load to prevent flash */
   .no-transitions *,
   .no-transitions *::before,
   .no-transitions *::after {
     transition: none !important;
+  }
+}
+
+/* Fix Clerk UserButton circular outline issue */
+@layer utilities {
+
+  /* Target Clerk UserButton elements that might receive focus */
+  [class*="cl-userButton"]:focus-visible,
+  [class*="cl-avatar"]:focus-visible,
+  [class*="cl-userButtonTrigger"]:focus-visible {
+    outline: none;
+    border-radius: 9999px !important;
+  }
+
+  /* Add circular focus ring */
+  [class*="cl-userButton"]:focus-visible::after,
+  [class*="cl-avatar"]:focus-visible::after,
+  [class*="cl-userButtonTrigger"]:focus-visible::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    border: 2px solid var(--ring);
+    pointer-events: none;
+    z-index: 1;
   }
 }

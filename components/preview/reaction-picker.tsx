@@ -7,12 +7,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { SmileyIcon } from "@phosphor-icons/react"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { SmileyIcon } from "@phosphor-icons/react"
 
 // Quick reactions for the reaction bar
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "😢"]
@@ -75,11 +75,10 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
               <button
                 key={emoji}
                 onClick={() => handleSelect(emoji)}
-                className={`flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors ${
-                  existing?.hasReacted
-                    ? "bg-secondary"
-                    : "hover:bg-muted"
-                }`}
+                className={`flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors ${existing?.hasReacted
+                  ? "bg-secondary"
+                  : "hover:bg-muted"
+                  }`}
               >
                 {emoji}
               </button>
@@ -129,7 +128,7 @@ export function ReactionDisplay({
   // Group reactions by emoji
   const groupedReactions = React.useMemo(() => {
     const groups: Record<string, { count: number; users: string[]; hasReacted: boolean }> = {}
-    
+
     for (const reaction of reactions) {
       if (!groups[reaction.emoji]) {
         groups[reaction.emoji] = { count: 0, users: [], hasReacted: false }
@@ -140,7 +139,7 @@ export function ReactionDisplay({
         groups[reaction.emoji].hasReacted = true
       }
     }
-    
+
     return Object.entries(groups).map(([emoji, data]) => ({
       emoji,
       ...data,
@@ -164,11 +163,10 @@ export function ReactionDisplay({
             <TooltipTrigger
               render={<button
                 onClick={() => onToggleReaction(emoji)}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                  hasReacted
-                    ? "border-primary/20 bg-muted text-foreground"
-                    : "border-border bg-card text-foreground/70 hover:border-border/80"
-                }`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${hasReacted
+                  ? "border-primary/20 bg-muted text-foreground"
+                  : "border-border bg-card text-foreground/70 hover:border-border/80"
+                  }`}
               />}
             >
               <span>{emoji}</span>

@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useWorkspaceData } from "@/components/workspace-context";
 import { useUserDataCache } from "@/components/user-data-cache";
-import { 
+import {
   UsersIcon,
   MagnifyingGlassIcon,
   ShieldIcon,
@@ -123,6 +123,13 @@ export default function PeoplePage() {
     router.push(`/w/${slug}/people/${member.userId}`);
   };
 
+  // Prefetch member profile on hover for faster navigation
+  const handleMemberPrefetch = (member: MemberWithUserData) => {
+    if (slug) {
+      router.prefetch(`/w/${slug}/people/${member.userId}`);
+    }
+  };
+
   // Show loading spinner while context is loading
   if (contextLoading) {
     return <LoadingSpinner fullScreen />;
@@ -190,6 +197,7 @@ export default function PeoplePage() {
                       <button
                         key={member._id}
                         onClick={() => handleMemberClick(member)}
+                        onMouseEnter={() => handleMemberPrefetch(member)}
                         className="flex flex-col items-center p-4 sm:p-6 bg-card rounded-xl border border-border hover:border-border/80 hover:shadow-sm transition-all text-center group"
                       >
                         <Avatar className="size-14 sm:size-20 mb-3 sm:mb-4">
@@ -210,12 +218,12 @@ export default function PeoplePage() {
                           )}
                         </div>
 
-                        <Badge 
+                        <Badge
                           variant={member.role === "admin" ? "default" : "secondary"}
                           className={cn(
                             "text-[9px] sm:text-[10px] uppercase tracking-wider",
-                            member.role === "admin" 
-                              ? "bg-foreground text-background" 
+                            member.role === "admin"
+                              ? "bg-foreground text-background"
                               : "bg-muted text-muted-foreground"
                           )}
                         >

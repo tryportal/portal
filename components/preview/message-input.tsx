@@ -91,9 +91,9 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
 }
 
-export function MessageInput({ 
-  onSendMessage, 
-  channelName, 
+export function MessageInput({
+  onSendMessage,
+  channelName,
   disabled,
   disabledReason,
   onTyping,
@@ -129,15 +129,15 @@ export function MessageInput({
   // Debounced typing indicator
   const handleTyping = React.useCallback(() => {
     if (!onTyping) return
-    
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
     }
-    
+
     // Trigger typing
     onTyping()
-    
+
     // Set new timeout to stop triggering after 500ms of no input
     typingTimeoutRef.current = setTimeout(() => {
       typingTimeoutRef.current = null
@@ -215,7 +215,7 @@ export function MessageInput({
     if (message.trim() || uploadedAttachments.length > 0) {
       // Send the backend message (with user IDs)
       onSendMessage(
-        message.trim(), 
+        message.trim(),
         uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         replyingTo?.messageId,
         linkEmbed || undefined
@@ -278,14 +278,14 @@ export function MessageInput({
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
-        setMentionSelectedIndex((prev) => 
+        setMentionSelectedIndex((prev) =>
           prev < filteredUsers.length - 1 ? prev + 1 : 0
         )
         return
       }
       if (e.key === "ArrowUp") {
         e.preventDefault()
-        setMentionSelectedIndex((prev) => 
+        setMentionSelectedIndex((prev) =>
           prev > 0 ? prev - 1 : filteredUsers.length - 1
         )
         return
@@ -313,7 +313,7 @@ export function MessageInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setDisplayMessage(value)
-    
+
     // Convert display message back to backend format for processing
     // Replace @userName with @userId using the mention map
     // Sort by length (longest first) to prevent partial matches
@@ -323,7 +323,7 @@ export function MessageInput({
       const userNamePattern = new RegExp(`@${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
       backendValue = backendValue.replace(userNamePattern, `@${userId}`)
     })
-    
+
     setMessage(backendValue)
     handleTyping()
 
@@ -337,24 +337,24 @@ export function MessageInput({
 
     const beforeMention = message.slice(0, mentionStartPos)
     const afterMention = message.slice(mentionStartPos + 1 + mentionQuery.length)
-    const userName = user.firstName && user.lastName 
-      ? `${user.firstName} ${user.lastName}` 
+    const userName = user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
       : user.firstName || "User"
-    
+
     // Backend message uses userId
     const backendMessage = `${beforeMention}@${user.userId} ${afterMention}`
     // Display message uses userName
     const displayMsg = `${beforeMention}@${userName} ${afterMention}`
-    
+
     // Update mention map
     setMentionMap(prev => ({ ...prev, [user.userId]: userName }))
-    
+
     setMessage(backendMessage)
     setDisplayMessage(displayMsg)
     setMentionVisible(false)
     setMentionQuery("")
     setMentionStartPos(null)
-    
+
     // Focus back on textarea
     textareaRef.current?.focus()
   }
@@ -369,9 +369,9 @@ export function MessageInput({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    
+
     await processFiles(Array.from(files))
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -385,7 +385,7 @@ export function MessageInput({
 
     for (const file of files) {
       const id = crypto.randomUUID()
-      
+
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         newAttachments.push({
@@ -418,7 +418,7 @@ export function MessageInput({
       if (attachment.status !== "pending") continue
 
       // Update status to uploading
-      setAttachments(prev => prev.map(a => 
+      setAttachments(prev => prev.map(a =>
         a.id === attachment.id ? { ...a, status: "uploading" as const } : a
       ))
 
@@ -437,16 +437,16 @@ export function MessageInput({
         const { storageId } = await response.json()
 
         // Update status to uploaded
-        setAttachments(prev => prev.map(a => 
-          a.id === attachment.id 
-            ? { ...a, status: "uploaded" as const, storageId } 
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "uploaded" as const, storageId }
             : a
         ))
       } catch {
         // Update status to error
-        setAttachments(prev => prev.map(a => 
-          a.id === attachment.id 
-            ? { ...a, status: "error" as const, error: "Upload failed" } 
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "error" as const, error: "Upload failed" }
             : a
         ))
       }
@@ -489,13 +489,12 @@ export function MessageInput({
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs ${
-                attachment.status === "error"
-                  ? "border-red-300 bg-red-50"
-                  : attachment.status === "uploading"
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs ${attachment.status === "error"
+                ? "border-red-300 bg-red-50"
+                : attachment.status === "uploading"
                   ? "border-border bg-muted"
                   : "border-border bg-card"
-              }`}
+                }`}
             >
               {attachment.type.startsWith("image/") ? (
                 <ImageIcon className="size-4 text-muted-foreground" />

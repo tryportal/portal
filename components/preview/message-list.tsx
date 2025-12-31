@@ -571,20 +571,20 @@ function MessageItem({
                 )}
               </DropdownMenuItem>
               {isOwner && (
-                <DropdownMenuItem onClick={handleEditClick}>
-                  <PencilIcon className="size-4" />
-                  Edit message
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              {isOwner && (
-                <DropdownMenuItem 
-                  variant="destructive"
-                  onClick={() => onDeleteMessage?.(message.id)}
-                >
-                  <TrashIcon className="size-4" />
-                  Delete message
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={handleEditClick}>
+                    <PencilIcon className="size-4" />
+                    Edit message
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => onDeleteMessage?.(message.id)}
+                  >
+                    <TrashIcon className="size-4" />
+                    Delete message
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
