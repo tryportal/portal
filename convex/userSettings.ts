@@ -4,6 +4,16 @@ import { mutation, query } from "./_generated/server";
 export const get = query({
     args: { userId: v.string() },
     handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return null; // Or throw, but null is often safer for queries that might run optimistically
+        }
+
+        // Security check: Ensure user can only read their own settings
+        if (identity.subject !== args.userId) {
+            throw new Error("Unauthorized: You can only view your own settings");
+        }
+
         return await ctx.db
             .query("userSettings")
             .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -21,6 +31,16 @@ export const update = mutation({
         zoomLevel: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Unauthenticated");
+        }
+
+        // Security check: Ensure user can only update their own settings
+        if (identity.subject !== args.userId) {
+            throw new Error("Unauthorized: You can only update your own settings");
+        }
+
         const { userId, ...settings } = args;
         const existing = await ctx.db
             .query("userSettings")
