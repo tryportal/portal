@@ -98,6 +98,7 @@ interface MessageListProps {
   channelDescription?: string
   channelIcon?: React.ElementType
   isAdmin?: boolean
+  searchQuery?: string
 }
 
 function formatFileSize(bytes: number): string {
@@ -213,6 +214,37 @@ const MarkdownComponents = {
       {children}
     </blockquote>
   ),
+  // Custom text renderer to handle highlight markers
+  text: ({ children }: { children?: React.ReactNode }) => {
+    if (typeof children !== 'string') return <>{children}</>;
+    
+    // Check for highlight markers
+    const parts = children.split(/(==HIGHLIGHT_START==|==HIGHLIGHT_END==)/);
+    let isHighlighted = false;
+    
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (part === '==HIGHLIGHT_START==') {
+            isHighlighted = true;
+            return null;
+          }
+          if (part === '==HIGHLIGHT_END==') {
+            isHighlighted = false;
+            return null;
+          }
+          if (isHighlighted) {
+            return (
+              <mark key={i} className="bg-yellow-200 dark:bg-yellow-800/40 text-foreground rounded px-0.5">
+                {part}
+              </mark>
+            );
+          }
+          return <React.Fragment key={i}>{part}</React.Fragment>;
+        })}
+      </>
+    );
+  },
 }
 
 // Replace mention user IDs with user names in content
@@ -268,6 +300,7 @@ function MessageItem({
   userNames,
   isAdmin,
   isGrouped,
+  searchQuery,
 }: {
   message: Message
   currentUserId?: string
@@ -285,6 +318,7 @@ function MessageItem({
   userNames?: Record<string, string>
   isAdmin?: boolean
   isGrouped?: boolean
+  searchQuery?: string
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
@@ -330,8 +364,13 @@ function MessageItem({
     }
   }
 
-  // Process content to replace mention IDs with names
-  const processedContent = processMentions(message.content, message.mentions, userNames)
+  // Process content to replace mention IDs with names and apply search highlighting
+  let processedContent = processMentions(message.content, message.mentions, userNames)
+  
+  // Apply search highlighting if there's a search query
+  if (searchQuery && searchQuery.trim()) {
+    processedContent = highlightSearchMatch(processedContent, searchQuery)
+  }
 
   return (
     <div
@@ -600,6 +639,24 @@ function shouldGroupMessages(current: Message, previous: Message | undefined): b
   return false
 }
 
+// Helper function to highlight search matches in text
+function highlightSearchMatch(text: string, searchQuery: string): string {
+  if (!searchQuery || !searchQuery.trim()) {
+    return text;
+  }
+
+  // Escape special regex characters in the search query
+  const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // Create case-insensitive regex
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  
+  // Replace matches with highlighted version
+  // We use ==HIGHLIGHT_START== and ==HIGHLIGHT_END== markers to avoid
+  // interfering with markdown parsing, then we'll handle these in rendering
+  return text.replace(regex, '==HIGHLIGHT_START==$1==HIGHLIGHT_END==');
+}
+
 export function MessageList({
   messages,
   currentUserId,
@@ -619,6 +676,7 @@ export function MessageList({
   channelDescription,
   channelIcon,
   isAdmin,
+  searchQuery = "",
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const previousMessageCount = React.useRef(0)

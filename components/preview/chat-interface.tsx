@@ -51,6 +51,8 @@ interface ChatInterfaceProps {
   mentionUsers?: MentionUser[]
   isAdmin?: boolean
   organizationId?: Id<"organizations">
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
 }
 
 export function ChatInterface({
@@ -81,6 +83,8 @@ export function ChatInterface({
   mentionUsers = [],
   isAdmin = false,
   organizationId,
+  searchQuery = "",
+  onSearchChange,
 }: ChatInterfaceProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
   const [pinnedDialogOpen, setPinnedDialogOpen] = React.useState(false)
@@ -150,6 +154,8 @@ export function ChatInterface({
         channelIcon={channelIcon}
         pinnedCount={pinnedMessages.length}
         onViewPinnedMessages={() => setPinnedDialogOpen(true)}
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
       />
 
       {/* Message List */}
@@ -172,6 +178,7 @@ export function ChatInterface({
         channelDescription={channelDescription}
         channelIcon={channelIcon}
         isAdmin={isAdmin}
+        searchQuery={searchQuery}
       />
 
       {/* Typing Indicator */}

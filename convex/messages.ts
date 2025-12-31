@@ -1635,6 +1635,100 @@ export const getConversationMessages = query({
 });
 
 /**
+ * Search messages in a channel or conversation
+ * Searches message content using case-insensitive matching
+ */
+export const searchMessages = query({
+  args: {
+    channelId: v.optional(v.id("channels")),
+    conversationId: v.optional(v.id("conversations")),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    // Validate that exactly one target is provided
+    if (!args.channelId && !args.conversationId) {
+      return [];
+    }
+    if (args.channelId && args.conversationId) {
+      return [];
+    }
+
+    // Empty query returns no results
+    if (!args.query.trim()) {
+      return [];
+    }
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 50;
+    const searchTerm = args.query.toLowerCase().trim();
+
+    // Search in channel
+    if (args.channelId) {
+      // Verify channel access
+      const channel = await ctx.db.get(args.channelId);
+      if (!channel) return [];
+
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
+
+      if (!membership) return [];
+
+      // Get all messages from channel
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId))
+        .order("desc")
+        .collect();
+
+      // Filter messages by search term (case-insensitive)
+      const matchingMessages = messages.filter((msg) =>
+        msg.content.toLowerCase().includes(searchTerm)
+      );
+
+      // Return limited results
+      return matchingMessages.slice(0, limit);
+    }
+
+    // Search in conversation
+    if (args.conversationId) {
+      // Verify conversation access
+      const conversation = await ctx.db.get(args.conversationId);
+      if (!conversation) return [];
+
+      // Verify user is a participant
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        return [];
+      }
+
+      // Get all messages from conversation
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) => q.eq("conversationId", args.conversationId))
+        .order("desc")
+        .collect();
+
+      // Filter messages by search term (case-insensitive)
+      const matchingMessages = messages.filter((msg) =>
+        msg.content.toLowerCase().includes(searchTerm)
+      );
+
+      // Return limited results
+      return matchingMessages.slice(0, limit);
+    }
+
+    return [];
+  },
+});
+
+/**
  * Send a direct message to a conversation
  */
 export const sendDirectMessage = mutation({

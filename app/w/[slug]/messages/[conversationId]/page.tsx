@@ -16,6 +16,23 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { usePageTitle } from "@/lib/use-page-title"
 import { analytics } from "@/lib/analytics"
 
+// Debounce hook for search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function ConversationPage({
   params,
 }: {
@@ -46,6 +63,10 @@ export default function ConversationPage({
     }
   }, [params])
 
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   // Get organization by slug for forward dialog
   const organization = useQuery(
     api.organizations.getOrganizationBySlug,
@@ -66,6 +87,49 @@ export default function ConversationPage({
     conversationId ? { conversationId, limit: 50 } : "skip"
   )
   const rawMessages = messagesData?.messages
+
+  // Server-side search (only if search query is long enough and we have a conversation)
+  const serverSearchResults = useQuery(
+    api.messages.searchMessages,
+    conversationId && debouncedSearchQuery.length > 2
+      ? { conversationId, query: debouncedSearchQuery, limit: 50 }
+      : "skip"
+  );
+
+  // Client-side filtering and hybrid search logic
+  const filteredMessages = React.useMemo(() => {
+    if (!rawMessages) return [];
+    
+    // No search query - return all loaded messages
+    if (!searchQuery.trim()) {
+      return rawMessages;
+    }
+
+    const searchTerm = searchQuery.toLowerCase().trim();
+
+    // First, filter loaded messages client-side
+    const clientResults = rawMessages.filter((msg) =>
+      msg.content.toLowerCase().includes(searchTerm)
+    );
+
+    // If we have client results OR search query is too short for server search, return client results
+    if (clientResults.length > 0 || searchQuery.length <= 2) {
+      return clientResults;
+    }
+
+    // No client results and query is long enough - use server results
+    if (serverSearchResults && serverSearchResults.length > 0) {
+      // Deduplicate by message ID
+      const messageMap = new Map();
+      serverSearchResults.forEach((msg) => {
+        messageMap.set(msg._id, msg);
+      });
+      return Array.from(messageMap.values());
+    }
+
+    // No results at all
+    return [];
+  }, [rawMessages, searchQuery, serverSearchResults]);
 
   // Real-time subscription for typing users
   const typingUsersQuery = useQuery(
@@ -99,10 +163,10 @@ export default function ConversationPage({
 
   // Mark conversation as read when viewing and when new messages arrive
   React.useEffect(() => {
-    if (conversationId && rawMessages && rawMessages.length > 0) {
+    if (conversationId && filteredMessages && filteredMessages.length > 0) {
       markAsRead({ conversationId })
     }
-  }, [conversationId, rawMessages?.length, markAsRead])
+  }, [conversationId, filteredMessages?.length, markAsRead])
 
   // Fetch user data for typing users
   React.useEffect(() => {
@@ -113,10 +177,10 @@ export default function ConversationPage({
 
   // Fetch user data for message authors
   React.useEffect(() => {
-    if (!rawMessages || rawMessages.length === 0) return
-    const uniqueUserIds = Array.from(new Set(rawMessages.map((msg) => msg.userId)))
+    if (!filteredMessages || filteredMessages.length === 0) return
+    const uniqueUserIds = Array.from(new Set(filteredMessages.map((msg) => msg.userId)))
     fetchUserData(uniqueUserIds)
-  }, [rawMessages, fetchUserData])
+  }, [filteredMessages, fetchUserData])
 
   // Transform typing users with cached user data
   const typingUsers = React.useMemo(() => {
@@ -162,11 +226,11 @@ export default function ConversationPage({
   // Build a map of message IDs to their data for parent message lookups
   const messageMap = React.useMemo(() => {
     const map = new Map<string, { content: string; userId: string }>()
-    ;(rawMessages || []).forEach((msg) => {
+    ;(filteredMessages || []).forEach((msg) => {
       map.set(msg._id, { content: msg.content, userId: msg.userId })
     })
     return map
-  }, [rawMessages])
+  }, [filteredMessages])
 
   // Build user names map for mentions and reactions
   const userNames: Record<string, string> = React.useMemo(() => {
@@ -188,7 +252,7 @@ export default function ConversationPage({
 
   // Transform messages for the MessageList component
   const messages: Message[] = React.useMemo(() => {
-    return (rawMessages || []).map((msg) => {
+    return (filteredMessages || []).map((msg) => {
       const cachedUserData = userDataCache[msg.userId]
       const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null)
       const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null)
@@ -249,7 +313,7 @@ export default function ConversationPage({
         mentions: msg.mentions,
       }
     })
-  }, [rawMessages, userDataCache, user, messageMap, userNames])
+  }, [filteredMessages, userDataCache, user, messageMap, userNames])
 
   // Loading state
   if (!routeParams || conversation === undefined || messagesData === undefined) {
@@ -418,6 +482,8 @@ export default function ConversationPage({
         participantName={participantName}
         participantImageUrl={participantData?.imageUrl}
         participantInitials={participantInitials}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
       {/* Message List - takes up available space */}
@@ -437,6 +503,7 @@ export default function ConversationPage({
           channelName={participantName}
           channelDescription="Direct message"
           isAdmin={false}
+          searchQuery={searchQuery}
         />
       </div>
 
