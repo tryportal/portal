@@ -152,7 +152,7 @@ export function ConversationsSidebar() {
   if (!organization?._id) {
     return (
       <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
-        <div className="flex h-14 items-center justify-center">
+        <div className="flex h-12 items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -162,7 +162,7 @@ export function ConversationsSidebar() {
   return (
     <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+      <div className="flex h-12 items-center justify-between border-b border-border px-4">
         <h2 className="text-sm font-semibold text-foreground">Messages</h2>
         <Button
           variant="ghost"
