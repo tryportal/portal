@@ -1,23 +1,28 @@
 "use client";
 
 import { useWorkspaceData } from "@/components/workspace-context";
-import { WorkspaceSettingsPage } from "@/components/preview/workspace-settings-page";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { usePageTitle } from "@/lib/use-page-title";
+import { useRouter, useParams } from "next/navigation";
+import { useEffect } from "react";
 
 export default function SettingsPage() {
-  const { organization, isLoading } = useWorkspaceData();
-  
+  const { membership, isLoading } = useWorkspaceData();
+  const router = useRouter();
+  const params = useParams();
+  const slug = params?.slug as string | undefined;
+
   usePageTitle("Settings - Portal");
 
-  // Show loading spinner while loading
-  if (isLoading || !organization?._id) {
-    return <LoadingSpinner fullScreen />;
-  }
+  useEffect(() => {
+    if (!isLoading && slug) {
+      // Redirect based on user role
+      const isAdmin = membership?.role === "admin";
+      const targetSection = isAdmin ? "workspace" : "customization";
+      router.replace(`/w/${slug}/settings/${targetSection}`);
+    }
+  }, [isLoading, membership, slug, router]);
 
-  return (
-    <main className="flex-1 overflow-hidden">
-      <WorkspaceSettingsPage organizationId={organization._id} />
-    </main>
-  );
+  // Show loading spinner while redirecting
+  return <LoadingSpinner fullScreen />;
 }
