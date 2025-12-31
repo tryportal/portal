@@ -48,10 +48,15 @@ export const update = mutation({
             .unique();
 
         if (existing) {
-            await ctx.db.patch(existing._id, {
-                ...settings,
-                updatedAt: Date.now(),
-            });
+            // Only patch fields that are actually provided (not undefined)
+            const updates: Record<string, unknown> = { updatedAt: Date.now() };
+            if (settings.density !== undefined) updates.density = settings.density;
+            if (settings.messageDisplay !== undefined) updates.messageDisplay = settings.messageDisplay;
+            if (settings.groupSpacing !== undefined) updates.groupSpacing = settings.groupSpacing;
+            if (settings.fontScaling !== undefined) updates.fontScaling = settings.fontScaling;
+            if (settings.zoomLevel !== undefined) updates.zoomLevel = settings.zoomLevel;
+
+            await ctx.db.patch(existing._id, updates);
         } else {
             await ctx.db.insert("userSettings", {
                 userId,

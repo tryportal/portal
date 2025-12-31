@@ -72,15 +72,17 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
     const updateSettings = React.useCallback(async (updates: Partial<UserSettings>) => {
         if (!user?.id) return;
+
+        // Filter out undefined values to prevent accidental field deletion
+        const filteredUpdates: Record<string, unknown> = { userId: user.id };
+        if (updates.density !== undefined) filteredUpdates.density = updates.density;
+        if (updates.messageDisplay !== undefined) filteredUpdates.messageDisplay = updates.messageDisplay;
+        if (updates.groupSpacing !== undefined) filteredUpdates.groupSpacing = updates.groupSpacing;
+        if (updates.fontScaling !== undefined) filteredUpdates.fontScaling = updates.fontScaling;
+        if (updates.zoomLevel !== undefined) filteredUpdates.zoomLevel = updates.zoomLevel;
+
         // The query will automatically refresh since it's a mutation
-        await updateSettingsMutation({
-            density: updates.density,
-            messageDisplay: updates.messageDisplay,
-            groupSpacing: updates.groupSpacing,
-            fontScaling: updates.fontScaling,
-            zoomLevel: updates.zoomLevel,
-            userId: user.id
-        });
+        await updateSettingsMutation(filteredUpdates as Parameters<typeof updateSettingsMutation>[0]);
     }, [user, updateSettingsMutation]);
 
     const value = React.useMemo(
