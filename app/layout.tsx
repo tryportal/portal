@@ -35,7 +35,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+        appearance={{
+          baseTheme: undefined,
+          variables: {
+            colorBackground: "var(--card)",
+            colorText: "var(--foreground)",
+            colorTextSecondary: "var(--muted-foreground)",
+            colorInputBackground: "var(--background)",
+            colorInputText: "var(--foreground)",
+            colorPrimary: "var(--primary)",
+          },
+        }}
+      >
       <html lang="en" className={inter.variable} suppressHydrationWarning>
         <head>
           <meta name="theme-color" content="#26251E" />
