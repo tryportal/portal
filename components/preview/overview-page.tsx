@@ -30,7 +30,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   const params = useParams()
   const { user } = useUser()
   const orgSlug = params?.slug as string | undefined
-  
+
   // Fetch categories and channels
   const categoriesData = useQuery(
     api.channels.getCategoriesAndChannels,
@@ -99,11 +99,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null)
     const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null)
     const imageUrl = cachedUserData?.imageUrl ?? (user?.id === msg.userId ? user?.imageUrl : null)
-    
-    const name = firstName && lastName 
+
+    const name = firstName && lastName
       ? `${firstName} ${lastName}`
       : firstName || "Unknown User"
-    
+
     const initials = firstName && lastName
       ? `${firstName[0]}${lastName[0]}`
       : firstName?.[0] || "?"
@@ -125,9 +125,9 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     return {
       id: msg._id,
       content: msg.content,
-      timestamp: new Date(msg.createdAt).toLocaleTimeString([], { 
-        hour: "numeric", 
-        minute: "2-digit" 
+      timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit"
       }),
       user: {
         id: msg.userId,
@@ -208,7 +208,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                 <BookmarkIcon className="size-4" weight="fill" />
                 Saved Messages
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Messages you've saved for later</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Messages you&apos;ve saved for later</CardDescription>
             </CardHeader>
             <CardContent>
               {savedMessages.length === 0 ? (
@@ -244,7 +244,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames 
+                            {msgWithMentions.mentionUserNames
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
                             }
@@ -312,7 +312,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames 
+                            {msgWithMentions.mentionUserNames
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
                             }
@@ -342,7 +342,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                   <button
                     key={channel._id}
                     onClick={() => {
-                      const catData = categoriesData?.find(cat => 
+                      const catData = categoriesData?.find(cat =>
                         cat.channels.some(ch => ch._id === channel._id)
                       )
                       if (catData) {

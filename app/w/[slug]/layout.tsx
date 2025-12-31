@@ -16,7 +16,7 @@ import { analytics } from "@/lib/analytics";
 // Helper to get the current tab from a pathname
 function getTabFromPathname(pathname: string | null, slug: string): "home" | "messages" | "inbox" {
   if (!pathname || !slug) return "home";
-  
+
   if (pathname.includes(`/w/${slug}/messages`)) {
     return "messages";
   } else if (pathname.includes(`/w/${slug}/inbox`)) {
@@ -33,10 +33,10 @@ function WorkspaceLayoutContent({
   const router = useRouter();
   const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  
-  const { 
-    sidebarOpen, 
-    setSidebarOpen, 
+
+  const {
+    sidebarOpen,
+    setSidebarOpen,
     activeTab,
     setActiveTab
   } = useWorkspace();
@@ -45,7 +45,7 @@ function WorkspaceLayoutContent({
 
   // Track the tab derived from the actual current pathname
   const currentPathTab = getTabFromPathname(pathname, slug);
-  
+
   // Track if we're transitioning between major tabs (home/messages/inbox)
   // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
   const isTransitioning = activeTab !== currentPathTab;
@@ -102,7 +102,7 @@ function WorkspaceLayoutContent({
   // Determine sidebar visibility based on destination tab during transitions
   // During transition: show sidebar based on the DESTINATION tab (activeTab)
   // Not transitioning: show sidebar based on current tab
-  const showSidebar = activeTab !== "messages";
+
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
@@ -111,13 +111,11 @@ function WorkspaceLayoutContent({
 
       {/* Main Content Area - add bottom padding on mobile for bottom nav */}
       <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
-        {/* Sidebar - hidden on messages tab */}
-        {showSidebar && (
-          <Sidebar
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen((prev) => !prev)}
-          />
-        )}
+        {/* Sidebar - hidden on activeTab='messages' previously, now universal */}
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen((prev) => !prev)}
+        />
 
         {/* Page Content - show loading state during tab transitions */}
         {isTransitioning ? (
