@@ -108,11 +108,14 @@ export const upsertUser = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
+    // If no firstName is provided, use email as the name
+    const firstName = args.firstName || args.email;
+
     if (existingUser) {
       // Update existing user
       await ctx.db.patch(existingUser._id, {
         email: args.email,
-        firstName: args.firstName,
+        firstName: firstName,
         lastName: args.lastName,
         imageUrl: args.imageUrl,
         updatedAt: Date.now(),
@@ -123,7 +126,7 @@ export const upsertUser = mutation({
       return await ctx.db.insert("users", {
         clerkId: args.clerkId,
         email: args.email,
-        firstName: args.firstName,
+        firstName: firstName,
         lastName: args.lastName,
         imageUrl: args.imageUrl,
         updatedAt: Date.now(),
@@ -149,10 +152,13 @@ export const syncUserFromClerk = internalMutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
+    // If no firstName is provided, use email as the name
+    const firstName = args.firstName || args.email;
+
     if (existingUser) {
       await ctx.db.patch(existingUser._id, {
         email: args.email,
-        firstName: args.firstName,
+        firstName: firstName,
         lastName: args.lastName,
         imageUrl: args.imageUrl,
         updatedAt: Date.now(),
@@ -162,7 +168,7 @@ export const syncUserFromClerk = internalMutation({
       const id = await ctx.db.insert("users", {
         clerkId: args.clerkId,
         email: args.email,
-        firstName: args.firstName,
+        firstName: firstName,
         lastName: args.lastName,
         imageUrl: args.imageUrl,
         updatedAt: Date.now(),
