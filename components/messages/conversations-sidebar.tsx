@@ -50,6 +50,8 @@ export function ConversationsSidebar() {
   const [newDmDialogOpen, setNewDmDialogOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [userDataCache, setUserDataCache] = React.useState<Record<string, UserData>>({})
+  const [isLoadingUserData, setIsLoadingUserData] = React.useState(false)
+  const [loadedImages, setLoadedImages] = React.useState<Set<string>>(new Set())
 
   // Fetch conversations
   const conversations = useQuery(
@@ -63,14 +65,21 @@ export function ConversationsSidebar() {
   const getUserDataAction = useAction(api.messages.getUserData)
 
   React.useEffect(() => {
-    if (!conversations || conversations.length === 0) return
+    if (!conversations || conversations.length === 0) {
+      setIsLoadingUserData(false)
+      return
+    }
 
     const participantIds = conversations.map((c) => c.otherParticipantId)
     const missingIds = participantIds.filter((id) => !userDataCache[id])
 
-    if (missingIds.length === 0) return
+    if (missingIds.length === 0) {
+      setIsLoadingUserData(false)
+      return
+    }
 
     const fetchUserData = async () => {
+      setIsLoadingUserData(true)
       try {
         const usersData = await getUserDataAction({ userIds: missingIds })
         const newCache: Record<string, UserData> = {}
@@ -78,8 +87,33 @@ export function ConversationsSidebar() {
           newCache[userData.userId] = userData
         })
         setUserDataCache((prev) => ({ ...prev, ...newCache }))
+        
+        // Preload images
+        const imagesToLoad = usersData
+          .filter((userData) => userData.imageUrl)
+          .map((userData) => userData.imageUrl!)
+        
+        if (imagesToLoad.length > 0) {
+          const imagePromises = imagesToLoad.map((url) => {
+            return new Promise<string>((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => resolve(url)
+              img.onerror = () => resolve(url) // Resolve even on error so we can show fallback
+              img.src = url
+            })
+          })
+          
+          const loadedUrls = await Promise.all(imagePromises)
+          setLoadedImages((prev) => {
+            const newSet = new Set(prev)
+            loadedUrls.forEach((url) => newSet.add(url))
+            return newSet
+          })
+        }
       } catch {
         // Ignore errors
+      } finally {
+        setIsLoadingUserData(false)
       }
     }
 
@@ -139,6 +173,20 @@ export function ConversationsSidebar() {
     }
   }
 
+  // Check if all user data is loaded
+  const allUserDataLoaded = React.useMemo(() => {
+    if (!conversations || conversations.length === 0) return true
+    return conversations.every((c) => {
+      const userData = userDataCache[c.otherParticipantId]
+      if (!userData) return false
+      // If user has an image, wait for it to load; otherwise, user data is enough
+      if (userData.imageUrl) {
+        return loadedImages.has(userData.imageUrl)
+      }
+      return true
+    })
+  }, [conversations, userDataCache, loadedImages])
+
   // Filter conversations by search query
   const filteredConversations = React.useMemo(() => {
     if (!conversations) return []
@@ -191,7 +239,14 @@ export function ConversationsSidebar() {
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
-        {filteredConversations.length === 0 ? (
+        {!conversations || isLoadingUserData || !allUserDataLoaded ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-6 w-6 border-2 border-muted-foreground/20 border-t-foreground rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading conversations...</p>
+            </div>
+          </div>
+        ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
             <p className="text-sm text-muted-foreground mb-3">
               {searchQuery ? "No conversations found" : "No conversations yet"}
