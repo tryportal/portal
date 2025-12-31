@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 interface UserData {
@@ -13,7 +13,7 @@ interface UserData {
 interface UserDataCacheContextType {
   cache: Record<string, UserData>;
   getUserData: (userId: string) => UserData | undefined;
-  fetchUserData: (userIds: string[]) => Promise<void>;
+  fetchUserData: (userIds: string[]) => void;
   isLoading: boolean;
 }
 
@@ -24,19 +24,42 @@ interface UserDataCacheProviderProps {
 }
 
 export function UserDataCacheProvider({ children }: UserDataCacheProviderProps) {
-  const [cache, setCache] = React.useState<Record<string, UserData>>({});
-  const [pendingUserIds, setPendingUserIds] = React.useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = React.useState(false);
-  const getUserDataAction = useAction(api.messages.getUserData);
+  const [requestedUserIds, setRequestedUserIds] = React.useState<string[]>([]);
+  
+  // Use Convex query instead of action - this is reactive and much faster
+  const usersData = useQuery(
+    api.users.getUserData,
+    requestedUserIds.length > 0 ? { userIds: requestedUserIds } : "skip"
+  );
 
-  // Debounce batch fetching
-  const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Build cache from query results
+  const cache = React.useMemo(() => {
+    if (!usersData) return {};
+    
+    const newCache: Record<string, UserData> = {};
+    usersData.forEach((user) => {
+      newCache[user.userId] = {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl,
+      };
+    });
+    return newCache;
+  }, [usersData]);
+
+  const isLoading = requestedUserIds.length > 0 && !usersData;
+
+  // Debounce adding new user IDs to prevent too many re-renders
   const pendingQueueRef = React.useRef<Set<string>>(new Set());
+  const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const fetchUserData = React.useCallback(async (userIds: string[]) => {
-    // Filter out already cached or pending user IDs
+  // Use a Set for O(1) lookup of already requested IDs
+  const requestedUserIdsSet = React.useMemo(() => new Set(requestedUserIds), [requestedUserIds]);
+
+  const fetchUserData = React.useCallback((userIds: string[]) => {
+    // Filter out already requested user IDs
     const newUserIds = userIds.filter(
-      (id) => !cache[id] && !pendingUserIds.has(id) && !pendingQueueRef.current.has(id)
+      (id) => !requestedUserIdsSet.has(id) && !pendingQueueRef.current.has(id)
     );
 
     if (newUserIds.length === 0) return;
@@ -49,46 +72,20 @@ export function UserDataCacheProvider({ children }: UserDataCacheProviderProps) 
       clearTimeout(fetchTimeoutRef.current);
     }
 
-    fetchTimeoutRef.current = setTimeout(async () => {
-      const idsToFetch = Array.from(pendingQueueRef.current);
+    fetchTimeoutRef.current = setTimeout(() => {
+      const idsToAdd = Array.from(pendingQueueRef.current);
       pendingQueueRef.current.clear();
 
-      if (idsToFetch.length === 0) return;
+      if (idsToAdd.length === 0) return;
 
-      // Mark as pending
-      setPendingUserIds((prev) => {
-        const next = new Set(prev);
-        idsToFetch.forEach((id) => next.add(id));
-        return next;
+      setRequestedUserIds((prev) => {
+        const prevSet = new Set(prev);
+        const newIds = idsToAdd.filter((id) => !prevSet.has(id));
+        if (newIds.length === 0) return prev;
+        return [...prev, ...newIds];
       });
-
-      setIsLoading(true);
-
-      try {
-        const usersData = await getUserDataAction({ userIds: idsToFetch });
-        
-        const newCache: Record<string, UserData> = {};
-        usersData.forEach((user) => {
-          newCache[user.userId] = {
-            firstName: user.firstName,
-            lastName: user.lastName,
-            imageUrl: user.imageUrl,
-          };
-        });
-
-        setCache((prev) => ({ ...prev, ...newCache }));
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-      } finally {
-        setIsLoading(false);
-        setPendingUserIds((prev) => {
-          const next = new Set(prev);
-          idsToFetch.forEach((id) => next.delete(id));
-          return next;
-        });
-      }
     }, 50); // 50ms debounce for batching
-  }, [cache, pendingUserIds, getUserDataAction]);
+  }, [requestedUserIdsSet]);
 
   const getUserData = React.useCallback(
     (userId: string): UserData | undefined => {

@@ -968,62 +968,18 @@ export const getTypingUsers = action({
       return [];
     }
 
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
-      return result.typingUsers.map((userId: string) => ({
-        userId,
-        firstName: null,
-        lastName: null,
-        imageUrl: null,
-      }));
-    }
+    // Fetch user data from local users table instead of Clerk API
+    const usersData = await ctx.runQuery(api.users.getUserData, {
+      userIds: result.typingUsers,
+    });
 
-    // Fetch user data from Clerk for each typing user
-    const typingUsersWithData = await Promise.all(
-      result.typingUsers.map(async (userId: string) => {
-        try {
-          const response = await fetch(
-            `https://api.clerk.com/v1/users/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${clerkSecretKey}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            return {
-              userId,
-              firstName: null,
-              lastName: null,
-              imageUrl: null,
-            };
-          }
-
-          const userData = await response.json();
-          return {
-            userId,
-            firstName: userData.first_name || null,
-            lastName: userData.last_name || null,
-            imageUrl: userData.image_url || null,
-          };
-        } catch {
-          return {
-            userId,
-            firstName: null,
-            lastName: null,
-            imageUrl: null,
-          };
-        }
-      })
-    );
-
-    return typingUsersWithData;
+    return usersData;
   },
 });
 
 /**
- * Get user data from Clerk for a list of user IDs
+ * Get user data for a list of user IDs
+ * Now uses local Convex users table instead of Clerk API
  */
 export const getUserData = action({
   args: { userIds: v.array(v.string()) },
@@ -1037,57 +993,10 @@ export const getUserData = action({
       return [];
     }
 
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
-      return args.userIds.map((userId: string) => ({
-        userId,
-        firstName: null,
-        lastName: null,
-        imageUrl: null,
-      }));
-    }
-
-    // Fetch user data from Clerk for each user ID
-    const usersWithData = await Promise.all(
-      args.userIds.map(async (userId: string) => {
-        try {
-          const response = await fetch(
-            `https://api.clerk.com/v1/users/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${clerkSecretKey}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            return {
-              userId,
-              firstName: null,
-              lastName: null,
-              imageUrl: null,
-            };
-          }
-
-          const userData = await response.json();
-          return {
-            userId,
-            firstName: userData.first_name || null,
-            lastName: userData.last_name || null,
-            imageUrl: userData.image_url || null,
-          };
-        } catch {
-          return {
-            userId,
-            firstName: null,
-            lastName: null,
-            imageUrl: null,
-          };
-        }
-      })
-    );
-
-    return usersWithData;
+    // Fetch user data from local users table
+    return await ctx.runQuery(api.users.getUserData, {
+      userIds: args.userIds,
+    });
   },
 });
 
@@ -1726,6 +1635,100 @@ export const getConversationMessages = query({
 });
 
 /**
+ * Search messages in a channel or conversation
+ * Searches message content using case-insensitive matching
+ */
+export const searchMessages = query({
+  args: {
+    channelId: v.optional(v.id("channels")),
+    conversationId: v.optional(v.id("conversations")),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    // Validate that exactly one target is provided
+    if (!args.channelId && !args.conversationId) {
+      return [];
+    }
+    if (args.channelId && args.conversationId) {
+      return [];
+    }
+
+    // Empty query returns no results
+    if (!args.query.trim()) {
+      return [];
+    }
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 50;
+    const searchTerm = args.query.toLowerCase().trim();
+
+    // Search in channel
+    if (args.channelId) {
+      // Verify channel access
+      const channel = await ctx.db.get(args.channelId);
+      if (!channel) return [];
+
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        )
+        .first();
+
+      if (!membership) return [];
+
+      // Get all messages from channel
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId))
+        .order("desc")
+        .collect();
+
+      // Filter messages by search term (case-insensitive)
+      const matchingMessages = messages.filter((msg) =>
+        msg.content.toLowerCase().includes(searchTerm)
+      );
+
+      // Return limited results
+      return matchingMessages.slice(0, limit);
+    }
+
+    // Search in conversation
+    if (args.conversationId) {
+      // Verify conversation access
+      const conversation = await ctx.db.get(args.conversationId);
+      if (!conversation) return [];
+
+      // Verify user is a participant
+      if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+        return [];
+      }
+
+      // Get all messages from conversation
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) => q.eq("conversationId", args.conversationId))
+        .order("desc")
+        .collect();
+
+      // Filter messages by search term (case-insensitive)
+      const matchingMessages = messages.filter((msg) =>
+        msg.content.toLowerCase().includes(searchTerm)
+      );
+
+      // Return limited results
+      return matchingMessages.slice(0, limit);
+    }
+
+    return [];
+  },
+});
+
+/**
  * Send a direct message to a conversation
  */
 export const sendDirectMessage = mutation({
@@ -2100,6 +2103,7 @@ export const getTypingUsersInConversationQuery = query({
 
 /**
  * Get users currently typing in a conversation with user data
+ * Now uses local Convex users table instead of Clerk API
  */
 export const getTypingUsersInConversation = action({
   args: { conversationId: v.id("conversations") },
@@ -2117,57 +2121,12 @@ export const getTypingUsersInConversation = action({
       return [];
     }
 
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
-      return result.typingUsers.map((userId: string) => ({
-        userId,
-        firstName: null,
-        lastName: null,
-        imageUrl: null,
-      }));
-    }
+    // Fetch user data from local users table instead of Clerk API
+    const usersData = await ctx.runQuery(api.users.getUserData, {
+      userIds: result.typingUsers,
+    });
 
-    // Fetch user data from Clerk for each typing user
-    const typingUsersWithData = await Promise.all(
-      result.typingUsers.map(async (userId: string) => {
-        try {
-          const response = await fetch(
-            `https://api.clerk.com/v1/users/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${clerkSecretKey}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            return {
-              userId,
-              firstName: null,
-              lastName: null,
-              imageUrl: null,
-            };
-          }
-
-          const userData = await response.json();
-          return {
-            userId,
-            firstName: userData.first_name || null,
-            lastName: userData.last_name || null,
-            imageUrl: userData.image_url || null,
-          };
-        } catch {
-          return {
-            userId,
-            firstName: null,
-            lastName: null,
-            imageUrl: null,
-          };
-        }
-      })
-    );
-
-    return typingUsersWithData;
+    return usersData;
   },
 });
 
@@ -2177,8 +2136,8 @@ export const getTypingUsersInConversation = action({
 
 /**
  * Search for users to start a DM with
- * - For organization members: search by name
- * - For external users: search by email via Clerk API
+ * - For organization members: search by name using local Convex users table
+ * - For external users: search by email via Clerk API (for users not yet in system)
  */
 export const searchUsersForDM = action({
   args: {
@@ -2199,14 +2158,9 @@ export const searchUsersForDM = action({
     }
 
     const currentUserId = identity.subject;
-    const query = args.query.trim().toLowerCase();
+    const searchQuery = args.query.trim().toLowerCase();
 
-    if (!query || query.length < 2) {
-      return [];
-    }
-
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
+    if (!searchQuery || searchQuery.length < 2) {
       return [];
     }
 
@@ -2220,57 +2174,15 @@ export const searchUsersForDM = action({
     }> = [];
 
     // Check if query looks like an email
-    const isEmailQuery = query.includes("@");
+    const isEmailQuery = searchQuery.includes("@");
 
     if (isEmailQuery) {
-      // Search Clerk for user by email
-      try {
-        const response = await fetch(
-          `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(query)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${clerkSecretKey}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const users = await response.json();
-          for (const user of users) {
-            if (user.id !== currentUserId) {
-              // Check if this user is an org member
-              const membership = await ctx.runQuery(api.organizations.checkUserMembership, {
-                organizationId: args.organizationId,
-                userId: user.id,
-              });
-
-              results.push({
-                userId: user.id,
-                email: user.email_addresses?.[0]?.email_address || null,
-                firstName: user.first_name || null,
-                lastName: user.last_name || null,
-                imageUrl: user.image_url || null,
-                isOrgMember: membership?.isMember ?? false,
-              });
-            }
-          }
-        }
-      } catch {
-        // Ignore errors
-      }
-    } else {
-      // Search organization members by name
-      const members = await ctx.runQuery(api.messages.getOrganizationMembers, {
-        organizationId: args.organizationId,
-      });
-
-      // Get user data for each member
-      const memberUserIds = members.map((m) => m.userId).filter((id) => id !== currentUserId);
-
-      for (const memberId of memberUserIds) {
+      // Search Clerk for user by email (needed for external users not in our system)
+      const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+      if (clerkSecretKey) {
         try {
           const response = await fetch(
-            `https://api.clerk.com/v1/users/${memberId}`,
+            `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(searchQuery)}`,
             {
               headers: {
                 Authorization: `Bearer ${clerkSecretKey}`,
@@ -2279,24 +2191,67 @@ export const searchUsersForDM = action({
           );
 
           if (response.ok) {
-            const userData = await response.json();
-            const fullName = `${userData.first_name || ""} ${userData.last_name || ""}`.toLowerCase();
-            const email = userData.email_addresses?.[0]?.email_address || "";
+            const users = await response.json();
+            for (const user of users) {
+              if (user.id !== currentUserId) {
+                // Check if this user is an org member
+                const membership = await ctx.runQuery(api.organizations.checkUserMembership, {
+                  organizationId: args.organizationId,
+                  userId: user.id,
+                });
 
-            // Match against name or email
-            if (fullName.includes(query) || email.toLowerCase().includes(query)) {
-              results.push({
-                userId: memberId,
-                email: email || null,
-                firstName: userData.first_name || null,
-                lastName: userData.last_name || null,
-                imageUrl: userData.image_url || null,
-                isOrgMember: true,
-              });
+                results.push({
+                  userId: user.id,
+                  email: user.email_addresses?.[0]?.email_address || null,
+                  firstName: user.first_name || null,
+                  lastName: user.last_name || null,
+                  imageUrl: user.image_url || null,
+                  isOrgMember: membership?.isMember ?? false,
+                });
+              }
             }
           }
         } catch {
-          // Ignore individual user fetch errors
+          // Ignore errors
+        }
+      }
+    } else {
+      // Search organization members by name using local Convex users table
+      const members = await ctx.runQuery(api.messages.getOrganizationMembers, {
+        organizationId: args.organizationId,
+      });
+
+      // Get user IDs excluding current user
+      const memberUserIds = members.map((m) => m.userId).filter((id) => id !== currentUserId);
+
+      if (memberUserIds.length > 0) {
+        // Fetch user data from local users table
+        const usersData = await ctx.runQuery(api.users.getUserData, {
+          userIds: memberUserIds,
+        });
+
+        // Also get emails
+        const users = await ctx.runQuery(api.users.getUsers, {
+          clerkIds: memberUserIds,
+        });
+        const userEmailMap = new Map(users.map((u) => [u.clerkId, u.email]));
+
+        // Filter by search query
+        for (const userData of usersData) {
+          const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.toLowerCase();
+          const email = userEmailMap.get(userData.userId) || "";
+
+          // Match against name or email
+          if (fullName.includes(searchQuery) || email.toLowerCase().includes(searchQuery)) {
+            results.push({
+              userId: userData.userId,
+              email: email || null,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              imageUrl: userData.imageUrl,
+              isOrgMember: true,
+            });
+          }
         }
       }
     }

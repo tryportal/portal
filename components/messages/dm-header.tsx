@@ -22,6 +22,8 @@ interface DmHeaderProps {
   participantImageUrl?: string | null
   participantInitials: string
   onBack?: () => void
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
 }
 
 export function DmHeader({
@@ -29,8 +31,9 @@ export function DmHeader({
   participantImageUrl,
   participantInitials,
   onBack,
+  searchQuery = "",
+  onSearchChange,
 }: DmHeaderProps) {
-  const [searchQuery, setSearchQuery] = React.useState("")
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -67,7 +70,7 @@ export function DmHeader({
             type="text"
             placeholder="Search messages..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange?.(e.target.value)}
             className="h-8 w-56 bg-muted pl-8 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
           />
         </div>

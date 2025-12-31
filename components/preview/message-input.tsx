@@ -109,6 +109,10 @@ export function MessageInput({
   const [removedUrls, setRemovedUrls] = React.useState<Set<string>>(new Set())
   const fetchLinkMetadata = useAction(api.messages.fetchLinkMetadata)
 
+  // Drag and drop state
+  const [isDraggingOver, setIsDraggingOver] = React.useState(false)
+  const dragCounterRef = React.useRef(0)
+
   // Mention autocomplete state
   const [mentionVisible, setMentionVisible] = React.useState(false)
   const [mentionQuery, setMentionQuery] = React.useState("")
@@ -293,6 +297,111 @@ export function MessageInput({
     setMentionStartPos(null)
   }
 
+  // Process files for upload (used by paste and drop handlers)
+  const processFiles = React.useCallback(async (files: File[]) => {
+    if (!generateUploadUrl) return
+
+    const newAttachments: PendingAttachment[] = []
+
+    for (const file of files) {
+      const id = crypto.randomUUID()
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        newAttachments.push({
+          id,
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          status: "error",
+          error: "File exceeds 5MB limit",
+        })
+        continue
+      }
+
+      newAttachments.push({
+        id,
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        status: "pending",
+      })
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments])
+
+    // Upload each pending file
+    setIsUploading(true)
+    for (const attachment of newAttachments) {
+      if (attachment.status !== "pending") continue
+
+      // Update status to uploading
+      setAttachments(prev => prev.map(a =>
+        a.id === attachment.id ? { ...a, status: "uploading" as const } : a
+      ))
+
+      try {
+        const uploadUrl = await generateUploadUrl()
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": attachment.file.type },
+          body: attachment.file,
+        })
+
+        if (!response.ok) {
+          throw new Error("Upload failed")
+        }
+
+        const { storageId } = await response.json()
+
+        // Update status to uploaded
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "uploaded" as const, storageId }
+            : a
+        ))
+      } catch {
+        // Update status to error
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "error" as const, error: "Upload failed" }
+            : a
+        ))
+      }
+    }
+    setIsUploading(false)
+  }, [generateUploadUrl])
+
+  // Handle pasting images from clipboard
+  const handlePaste = React.useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    const imageFiles: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile()
+        if (file) {
+          // Generate a filename for pasted images
+          const extension = item.type.split("/")[1] || "png"
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+          const namedFile = new File([file], `pasted-image-${timestamp}.${extension}`, {
+            type: file.type,
+          })
+          imageFiles.push(namedFile)
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault() // Prevent the image from being pasted as text/base64
+      await processFiles(imageFiles)
+    }
+  }, [processFiles])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle mention autocomplete navigation
     if (mentionVisible) {
@@ -404,81 +513,42 @@ export function MessageInput({
     }
   }
 
-  const processFiles = async (files: File[]) => {
-    if (!generateUploadUrl) return
-
-    const newAttachments: PendingAttachment[] = []
-
-    for (const file of files) {
-      const id = crypto.randomUUID()
-
-      // Validate file size
-      if (file.size > MAX_FILE_SIZE) {
-        newAttachments.push({
-          id,
-          file,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          status: "error",
-          error: "File exceeds 5MB limit",
-        })
-        continue
-      }
-
-      newAttachments.push({
-        id,
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        status: "pending",
-      })
+  // Drag and drop handlers
+  const handleDragEnter = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current++
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDraggingOver(true)
     }
+  }, [])
 
-    setAttachments(prev => [...prev, ...newAttachments])
-
-    // Upload each pending file
-    setIsUploading(true)
-    for (const attachment of newAttachments) {
-      if (attachment.status !== "pending") continue
-
-      // Update status to uploading
-      setAttachments(prev => prev.map(a =>
-        a.id === attachment.id ? { ...a, status: "uploading" as const } : a
-      ))
-
-      try {
-        const uploadUrl = await generateUploadUrl()
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": attachment.file.type },
-          body: attachment.file,
-        })
-
-        if (!response.ok) {
-          throw new Error("Upload failed")
-        }
-
-        const { storageId } = await response.json()
-
-        // Update status to uploaded
-        setAttachments(prev => prev.map(a =>
-          a.id === attachment.id
-            ? { ...a, status: "uploaded" as const, storageId }
-            : a
-        ))
-      } catch {
-        // Update status to error
-        setAttachments(prev => prev.map(a =>
-          a.id === attachment.id
-            ? { ...a, status: "error" as const, error: "Upload failed" }
-            : a
-        ))
-      }
+  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) {
+      setIsDraggingOver(false)
     }
-    setIsUploading(false)
-  }
+  }, [])
+
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDrop = React.useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current = 0
+    setIsDraggingOver(false)
+
+    const files = e.dataTransfer.files
+    if (!files || files.length === 0) return
+
+    // Process all file types
+    await processFiles(Array.from(files))
+  }, [processFiles])
 
   const removeAttachment = (id: string) => {
     setAttachments(prev => prev.filter(a => a.id !== id))
@@ -489,7 +559,7 @@ export function MessageInput({
 
   return (
     <div 
-      className="border-t border-border bg-background px-4 py-2 shrink-0"
+      className={`border-t border-border bg-background px-4 py-2 shrink-0 relative ${isDraggingOver ? "ring-2 ring-primary ring-inset" : ""}`}
       onClick={(e) => {
         // Focus textarea when clicking blank areas (not interactive elements)
         const target = e.target as HTMLElement
@@ -498,7 +568,20 @@ export function MessageInput({
           textareaRef.current.focus()
         }
       }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
+      {/* Drag overlay */}
+      {isDraggingOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg border-2 border-dashed border-primary pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <FileIcon className="size-8" />
+            <span className="text-sm font-medium">Drop files here</span>
+          </div>
+        </div>
+      )}
       {/* Reply indicator */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
@@ -619,6 +702,7 @@ export function MessageInput({
               textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
             }}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               disabled && disabledReason
                 ? disabledReason

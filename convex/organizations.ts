@@ -557,6 +557,7 @@ export const getOrganizationMembersQuery = query({
 
 /**
  * Get members of an organization with enriched user data
+ * Now uses local Convex users table instead of Clerk API
  */
 export const getOrganizationMembers = action({
   args: { organizationId: v.id("organizations") },
@@ -569,10 +570,28 @@ export const getOrganizationMembers = action({
 
     const members: Doc<"organizationMembers">[] = result.members;
 
-    // Fetch user data from Clerk for each member
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
-      return members.map((member: Doc<"organizationMembers">): MemberWithUserData => ({
+    // Get all user IDs
+    const userIds = members.map((m) => m.userId);
+
+    // Fetch user data from local Convex users table
+    const usersData = await ctx.runQuery(api.users.getUserData, {
+      userIds,
+    });
+
+    // Create a map for quick lookup
+    const userDataMap = new Map(usersData.map((u) => [u.userId, u]));
+
+    // Also get emails from users table
+    const users = await ctx.runQuery(api.users.getUsers, {
+      clerkIds: userIds,
+    });
+    const userEmailMap = new Map(users.map((u) => [u.clerkId, u.email]));
+
+    const membersWithUserData: MemberWithUserData[] = members.map((member): MemberWithUserData => {
+      const userData = userDataMap.get(member.userId);
+      const email = userEmailMap.get(member.userId);
+
+      return {
         _id: member._id,
         organizationId: member.organizationId,
         userId: member.userId,
@@ -583,77 +602,14 @@ export const getOrganizationMembers = action({
         location: member.location,
         timezone: member.timezone,
         bio: member.bio,
-        emailAddress: null,
-        publicUserData: undefined,
-      }));
-    }
-
-    const membersWithUserData: MemberWithUserData[] = await Promise.all(
-      members.map(async (member: Doc<"organizationMembers">): Promise<MemberWithUserData> => {
-        try {
-          const response = await fetch(
-            `https://api.clerk.com/v1/users/${member.userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${clerkSecretKey}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            return {
-              _id: member._id,
-              organizationId: member.organizationId,
-              userId: member.userId,
-              role: member.role,
-              joinedAt: member.joinedAt,
-              jobTitle: member.jobTitle,
-              department: member.department,
-              location: member.location,
-              timezone: member.timezone,
-              bio: member.bio,
-              emailAddress: null,
-              publicUserData: undefined,
-            };
-          }
-
-          const userData = await response.json();
-          return {
-            _id: member._id,
-            organizationId: member.organizationId,
-            userId: member.userId,
-            role: member.role,
-            joinedAt: member.joinedAt,
-            jobTitle: member.jobTitle,
-            department: member.department,
-            location: member.location,
-            timezone: member.timezone,
-            bio: member.bio,
-            emailAddress: userData.email_addresses?.[0]?.email_address || null,
-            publicUserData: {
-              firstName: userData.first_name || null,
-              lastName: userData.last_name || null,
-              imageUrl: userData.image_url || null,
-            },
-          };
-        } catch {
-          return {
-            _id: member._id,
-            organizationId: member.organizationId,
-            userId: member.userId,
-            role: member.role,
-            joinedAt: member.joinedAt,
-            jobTitle: member.jobTitle,
-            department: member.department,
-            location: member.location,
-            timezone: member.timezone,
-            bio: member.bio,
-            emailAddress: null,
-            publicUserData: undefined,
-          };
-        }
-      })
-    );
+        emailAddress: email || null,
+        publicUserData: userData ? {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          imageUrl: userData.imageUrl,
+        } : undefined,
+      };
+    });
 
     return membersWithUserData;
   },
@@ -1041,6 +997,7 @@ export const getOrganizationMemberQuery = query({
 
 /**
  * Get a single member of an organization with enriched user data
+ * Now uses local Convex users table instead of Clerk API
  */
 export const getOrganizationMember = action({
   args: {
@@ -1062,99 +1019,39 @@ export const getOrganizationMember = action({
 
     const member = result.member;
 
-    // Fetch user data from Clerk
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecretKey) {
-      return {
-        member: {
-          _id: member._id,
-          organizationId: member.organizationId,
-          userId: member.userId,
-          role: member.role,
-          joinedAt: member.joinedAt,
-          jobTitle: member.jobTitle,
-          department: member.department,
-          location: member.location,
-          timezone: member.timezone,
-          bio: member.bio,
-          emailAddress: null,
-          publicUserData: undefined,
-        },
-        isAdmin: result.isAdmin ?? false,
-      };
-    }
+    // Fetch user data from local Convex users table
+    const usersData = await ctx.runQuery(api.users.getUserData, {
+      userIds: [member.userId],
+    });
+    const userData = usersData[0];
 
-    try {
-      const response = await fetch(
-        `https://api.clerk.com/v1/users/${member.userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${clerkSecretKey}`,
-          },
-        }
-      );
+    // Get email from users table
+    const users = await ctx.runQuery(api.users.getUsers, {
+      clerkIds: [member.userId],
+    });
+    const email = users[0]?.email || null;
 
-      if (!response.ok) {
-        return {
-          member: {
-            _id: member._id,
-            organizationId: member.organizationId,
-            userId: member.userId,
-            role: member.role,
-            joinedAt: member.joinedAt,
-            jobTitle: member.jobTitle,
-            department: member.department,
-            location: member.location,
-            timezone: member.timezone,
-            bio: member.bio,
-            emailAddress: null,
-            publicUserData: undefined,
-          },
-          isAdmin: result.isAdmin ?? false,
-        };
-      }
-
-      const userData = await response.json();
-      return {
-        member: {
-          _id: member._id,
-          organizationId: member.organizationId,
-          userId: member.userId,
-          role: member.role,
-          joinedAt: member.joinedAt,
-          jobTitle: member.jobTitle,
-          department: member.department,
-          location: member.location,
-          timezone: member.timezone,
-          bio: member.bio,
-          emailAddress: userData.email_addresses?.[0]?.email_address || null,
-          publicUserData: {
-            firstName: userData.first_name || null,
-            lastName: userData.last_name || null,
-            imageUrl: userData.image_url || null,
-          },
-        },
-        isAdmin: result.isAdmin ?? false,
-      };
-    } catch {
-      return {
-        member: {
-          _id: member._id,
-          organizationId: member.organizationId,
-          userId: member.userId,
-          role: member.role,
-          joinedAt: member.joinedAt,
-          jobTitle: member.jobTitle,
-          department: member.department,
-          location: member.location,
-          timezone: member.timezone,
-          bio: member.bio,
-          emailAddress: null,
-          publicUserData: undefined,
-        },
-        isAdmin: result.isAdmin ?? false,
-      };
-    }
+    return {
+      member: {
+        _id: member._id,
+        organizationId: member.organizationId,
+        userId: member.userId,
+        role: member.role,
+        joinedAt: member.joinedAt,
+        jobTitle: member.jobTitle,
+        department: member.department,
+        location: member.location,
+        timezone: member.timezone,
+        bio: member.bio,
+        emailAddress: email,
+        publicUserData: userData ? {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          imageUrl: userData.imageUrl,
+        } : undefined,
+      },
+      isAdmin: result.isAdmin ?? false,
+    };
   },
 });
 

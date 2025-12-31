@@ -2,6 +2,19 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Users table - stores user profile data synced from Clerk for faster loading
+  // Note: clerkId should be unique per user - enforced at application level via upsert logic
+  users: defineTable({
+    clerkId: v.string(), // Clerk user ID (same as identity.subject) - unique per user
+    email: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
+
   // Direct message conversations between two users
   conversations: defineTable({
     participant1Id: v.string(), // Clerk user ID (always the lower ID alphabetically for consistency)
