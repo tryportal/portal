@@ -65,7 +65,7 @@ async function checkChannelAccess(
  * Get messages for a channel with pagination, ordered by creation time (newest first for initial load)
  */
 export const getMessages = query({
-  args: { 
+  args: {
     channelId: v.id("channels"),
     limit: v.optional(v.number()),
     cursor: v.optional(v.number()), // createdAt timestamp for cursor-based pagination
@@ -96,7 +96,7 @@ export const getMessages = query({
 
     // If we have a cursor, filter to get older messages
     if (args.cursor) {
-      messagesQuery = messagesQuery.filter((q) => 
+      messagesQuery = messagesQuery.filter((q) =>
         q.lt(q.field("createdAt"), args.cursor!)
       );
     }
@@ -108,19 +108,19 @@ export const getMessages = query({
 
     const hasMore = messages.length > limit;
     const resultMessages = hasMore ? messages.slice(0, limit) : messages;
-    
+
     // Reverse to get chronological order for display
     const chronologicalMessages = resultMessages.reverse();
-    
+
     // Next cursor is the oldest message's createdAt
-    const nextCursor = hasMore && resultMessages.length > 0 
-      ? resultMessages[resultMessages.length - 1].createdAt 
+    const nextCursor = hasMore && resultMessages.length > 0
+      ? resultMessages[resultMessages.length - 1].createdAt
       : null;
 
-    return { 
-      messages: chronologicalMessages, 
-      nextCursor, 
-      hasMore 
+    return {
+      messages: chronologicalMessages,
+      nextCursor,
+      hasMore
     };
   },
 });
@@ -205,7 +205,7 @@ export const getRecentMessages = query({
           .query("messages")
           .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
           .collect();
-        
+
         return messages.filter((m) => m.userId === userId);
       })
     );
@@ -272,7 +272,7 @@ export const getMentions = query({
           .query("messages")
           .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
           .collect();
-        
+
         return messages.filter((m) => {
           // Structured mentions stored in the message document
           const hasStructuredMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
@@ -379,7 +379,7 @@ export const sendMessage = mutation({
 
     // Parse mentions from content
     const mentions = parseMentions(args.content);
-    
+
     // If replying, add the parent message author to mentions
     if (parentMessage && parentMessage.userId !== userId) {
       if (!mentions.includes(parentMessage.userId)) {
@@ -563,7 +563,7 @@ export const deleteMessage = mutation({
       .query("savedMessages")
       .filter((q) => q.eq(q.field("messageId"), args.messageId))
       .collect();
-    
+
     for (const savedRef of savedRefs) {
       await ctx.db.delete(savedRef._id);
     }
@@ -624,6 +624,67 @@ export const getBatchStorageUrls = query({
 // ============================================================================
 
 /**
+ * Helper function to check if an IP address is in a private range
+ * Blocks SSRF attacks by preventing requests to internal/private IPs
+ */
+function isPrivateIP(hostname: string): boolean {
+  // Check if it's an IPv4 address
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = hostname.match(ipv4Regex);
+
+  if (ipv4Match) {
+    const octets = ipv4Match.slice(1).map(Number);
+
+    // Validate octets are in valid range
+    if (octets.some(octet => octet > 255)) {
+      return true; // Invalid IP, treat as private
+    }
+
+    // Check private IP ranges
+    // 10.0.0.0/8
+    if (octets[0] === 10) return true;
+
+    // 172.16.0.0/12
+    if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+
+    // 192.168.0.0/16
+    if (octets[0] === 192 && octets[1] === 168) return true;
+
+    // 127.0.0.0/8 (localhost)
+    if (octets[0] === 127) return true;
+
+    // 169.254.0.0/16 (link-local)
+    if (octets[0] === 169 && octets[1] === 254) return true;
+
+    // 0.0.0.0/8
+    if (octets[0] === 0) return true;
+
+    // 224.0.0.0/4 (multicast)
+    if (octets[0] >= 224 && octets[0] <= 239) return true;
+
+    // 240.0.0.0/4 (reserved)
+    if (octets[0] >= 240) return true;
+
+    return false;
+  }
+
+  // Check for IPv6 localhost and private ranges
+  const lowerHostname = hostname.toLowerCase();
+  if (
+    lowerHostname === "localhost" ||
+    lowerHostname === "::1" ||
+    lowerHostname.startsWith("fc") || // fc00::/7 (unique local)
+    lowerHostname.startsWith("fd") || // fc00::/7 (unique local)
+    lowerHostname.startsWith("fe80:") || // fe80::/10 (link-local)
+    lowerHostname === "::" // unspecified
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Fetch Open Graph metadata for a URL
  * Returns title, description, image, site name, and favicon
  */
@@ -633,9 +694,14 @@ export const fetchLinkMetadata = action({
     try {
       // Validate URL
       const urlObj = new URL(args.url);
-      
+
       // Only allow http/https
       if (!["http:", "https:"].includes(urlObj.protocol)) {
+        return null;
+      }
+
+      // SSRF Protection: Block private IP addresses
+      if (isPrivateIP(urlObj.hostname)) {
         return null;
       }
 
@@ -1399,9 +1465,9 @@ export const getPinnedMessages = query({
  * Get saved messages for the current user
  */
 export const getSavedMessages = query({
-  args: { 
+  args: {
     organizationId: v.id("organizations"),
-    limit: v.optional(v.number()) 
+    limit: v.optional(v.number())
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -2394,17 +2460,17 @@ export const getUnreadDMsGroupedBySender = query({
           unreadCount: unreadFromOther.length,
           lastMessage: lastMessage
             ? {
-                content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
-                userId: lastMessage.userId,
-              }
+              content: lastMessage.content,
+              createdAt: lastMessage.createdAt,
+              userId: lastMessage.userId,
+            }
             : null,
         });
       }
     }
 
     // Sort by last message time descending
-    groupedDMs.sort((a, b) => 
+    groupedDMs.sort((a, b) =>
       (b.lastMessage?.createdAt ?? 0) - (a.lastMessage?.createdAt ?? 0)
     );
 

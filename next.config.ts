@@ -15,12 +15,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.convex.cloud",
       },
-      // Local Convex development
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "3210",
-      },
+      // Local Convex development - only in development mode
+      ...(process.env.NODE_ENV === "development"
+        ? [
+          {
+            protocol: "http" as const,
+            hostname: "127.0.0.1",
+            port: "3210",
+          },
+        ]
+        : []),
     ],
   },
 };
