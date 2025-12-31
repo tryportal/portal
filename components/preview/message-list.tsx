@@ -37,6 +37,8 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
+import { useUserSettings } from "@/lib/user-settings-provider"
+import { cn } from "@/lib/utils"
 
 export type { LinkEmbedData as LinkEmbed }
 
@@ -290,6 +292,7 @@ function MessageItem({
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
   const isOwner = currentUserId === message.user.id
+  const { messageDisplay } = useUserSettings()
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -333,10 +336,143 @@ function MessageItem({
   // Process content to replace mention IDs with names
   const processedContent = processMentions(message.content, message.mentions, userNames)
 
+  if (messageDisplay === 'compact') {
+    return (
+      <div
+        className={cn(
+          "group relative px-4 hover:bg-muted/50 transition-colors",
+          isEditing ? "py-2" : ""
+        )}
+        style={{
+          paddingTop: isGrouped ? "2px" : "var(--chat-item-padding-y)",
+          paddingBottom: isGrouped ? "2px" : "var(--chat-item-padding-y)",
+          marginTop: isGrouped ? "0px" : "var(--message-group-spacing)"
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Compact View Structure */}
+        <div className="flex items-baseline gap-2">
+          {/* Timestamp Column */}
+          <div className="w-12 text-right tabular-nums flex-shrink-0">
+            {!isGrouped ? (
+              <span className="text-[10px] opacity-70 text-muted-foreground">{message.timestamp}</span>
+            ) : (
+              <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">{message.timestamp}</span>
+            )}
+          </div>
+
+          {/* Content Column */}
+          <div className="flex-1 min-w-0">
+            <div className="inline">
+              {!isGrouped && (
+                <span className={cn(
+                  "text-sm font-bold text-foreground mr-2 cursor-pointer hover:underline",
+                  "inline"
+                )} onClick={() => onNameClick?.(message.user.id)}>
+                  {message.user.name}
+                </span>
+              )}
+
+              {isEditing ? (
+                <div className="block mt-1">
+                  <Textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    onKeyDown={handleEditKeyDown}
+                    className="min-h-[80px] text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" onClick={handleEditSave} disabled={!editContent.trim()}>Save</Button>
+                    <Button size="sm" variant="outline" onClick={handleEditCancel}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="inline text-foreground/90 leading-[1.46]"
+                  style={{ fontSize: 'var(--chat-font-scaling)' }}
+                >
+                  <span className="[&>p]:inline">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        ...MarkdownComponents,
+                        p: ({ children }) => <span className="mr-1">{children}</span>
+                      }}
+                    >
+                      {processedContent}
+                    </ReactMarkdown>
+                  </span>
+                  {message.editedAt && (
+                    <span className="text-[10px] text-muted-foreground/70 font-medium ml-1">(edited)</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Attachments & Embeds (Block level below text) */}
+            {((message.attachments && message.attachments.length > 0) || message.linkEmbed || (message.reactions && message.reactions.length > 0)) && (
+              <div className="mt-1 ml-0">
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-1">
+                    {message.attachments.map((attachment, index) => (
+                      <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
+                    ))}
+                  </div>
+                )}
+                {message.linkEmbed && (
+                  <div className="mb-1 max-w-md">
+                    <LinkPreview embed={message.linkEmbed} compact={true} />
+                  </div>
+                )}
+                {message.reactions && message.reactions.length > 0 && (
+                  <ReactionDisplay
+                    reactions={message.reactions}
+                    currentUserId={currentUserId}
+                    onToggleReaction={(emoji) => onReaction?.(message.id, emoji)}
+                    userNames={userNames}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Hover Actions (Same as default) */}
+        {isHovered && (
+          <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10">
+            <Button variant="ghost" size="icon-xs" onClick={() => onReply?.(message.id)} title="Reply">
+              <ArrowBendUpLeftIcon className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon-xs" onClick={() => onForward?.(message.id)} title="Forward">
+              <ShareIcon className="size-3.5" />
+            </Button>
+            <ReactionPicker onSelectReaction={(emoji) => onReaction?.(message.id, emoji)} existingReactions={[]} />
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs"><DotsThreeIcon className="size-3.5" /></Button>}>
+                <DotsThreeIcon className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopy}><CopyIcon className="size-4 mr-2" />Copy text</DropdownMenuItem>
+                {isOwner && <DropdownMenuItem onClick={handleEditClick}><PencilIcon className="size-4 mr-2" />Edit</DropdownMenuItem>}
+                {isOwner && <DropdownMenuItem variant="destructive" onClick={() => onDeleteMessage?.(message.id)}><TrashIcon className="size-4 mr-2" />Delete</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div
       className="group relative px-4 hover:bg-muted/50 transition-colors"
-      style={{ paddingTop: isGrouped ? "1px" : "6px", paddingBottom: isGrouped ? "1px" : "6px" }}
+      style={{
+        paddingTop: isGrouped ? "2px" : "var(--chat-item-padding-y)",
+        paddingBottom: isGrouped ? "2px" : "var(--chat-item-padding-y)",
+        marginTop: isGrouped ? "0px" : "var(--message-group-spacing)"
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -439,7 +575,13 @@ function MessageItem({
           ) : (
             <>
               {message.content && (
-                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                <div
+                  className="text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert"
+                  style={{
+                    fontSize: 'var(--chat-font-scaling)',
+                    marginTop: "0"
+                  }}
+                >
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={MarkdownComponents}
@@ -576,6 +718,7 @@ function MessageItem({
     </div>
   )
 }
+
 
 // Helper function to check if a message should be grouped with the previous one
 function shouldGroupMessages(current: Message, previous: Message | undefined): boolean {
