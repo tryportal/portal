@@ -346,7 +346,7 @@ export default function ChannelPage({
       : firstName?.[0] || "?";
 
     // Transform attachments
-    const attachments: Attachment[] = msg.attachments?.map(att => ({
+    const attachments: Attachment[] = msg.attachments?.map((att: any) => ({
       storageId: att.storageId,
       name: att.name,
       size: att.size,
@@ -354,7 +354,7 @@ export default function ChannelPage({
     })) || [];
 
     // Transform reactions
-    const reactions: Reaction[] | undefined = msg.reactions?.map(r => ({
+    const reactions: Reaction[] | undefined = msg.reactions?.map((r: any) => ({
       userId: r.userId,
       emoji: r.emoji,
     }));
