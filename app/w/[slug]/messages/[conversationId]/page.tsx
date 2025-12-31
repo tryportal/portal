@@ -509,20 +509,20 @@ export default function ConversationPage({
         searchQuery={searchQuery}
       />
 
-      {/* Typing Indicator */}
-      <TypingIndicator typingUsers={typingUsers} />
-
-      {/* Message Input - stays at bottom */}
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        channelName={participantName}
-        onTyping={handleTyping}
-        generateUploadUrl={handleGenerateUploadUrl}
-        replyingTo={replyingTo}
-        onCancelReply={handleCancelReply}
-        mentionUsers={[]}
-        isDirectMessage
-      />
+      {/* Message Input with Typing Indicator overlay */}
+      <div className="relative">
+        <TypingIndicator typingUsers={typingUsers} />
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          channelName={participantName}
+          onTyping={handleTyping}
+          generateUploadUrl={handleGenerateUploadUrl}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
+          mentionUsers={[]}
+          isDirectMessage
+        />
+      </div>
 
       {/* Forward Message Dialog */}
       <ForwardMessageDialog
