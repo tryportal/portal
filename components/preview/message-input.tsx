@@ -20,12 +20,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
 
@@ -569,7 +563,17 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative flex flex-col rounded-lg border border-border bg-card shadow-sm">
+      <div 
+        className="relative flex flex-col rounded-lg border border-border bg-card shadow-sm"
+        onClick={(e) => {
+          // Focus textarea when clicking blank areas (not interactive elements)
+          const target = e.target as HTMLElement
+          const isInteractive = target.closest('button, input, textarea, a, [role="button"]')
+          if (!isInteractive && textareaRef.current) {
+            textareaRef.current.focus()
+          }
+        }}
+      >
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -624,29 +628,16 @@ export function MessageInput({
           {/* Left side buttons */}
           <div className="flex items-center gap-1">
             {/* Attachment button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  disabled={disabled}
-                  title="Add attachment"
-                />}
-              >
-                <PlusIcon className="size-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <FileIcon className="size-4" />
-                  Upload file
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <ImageIcon className="size-4" />
-                  Upload image
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 size-9 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+              disabled={disabled}
+              title="Add attachment"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <PlusIcon className="size-5" />
+            </Button>
 
             {/* Emoji picker */}
             <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
