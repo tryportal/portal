@@ -16,6 +16,7 @@ import {
   FileIcon,
   DownloadSimpleIcon,
   ImageIcon,
+  VideoCameraIcon,
   BookmarkSimpleIcon,
   CheckIcon,
   XIcon,
@@ -116,8 +117,13 @@ function isImageType(type: string): boolean {
   return type.startsWith("image/")
 }
 
+function isVideoType(type: string): boolean {
+  return type.startsWith("video/")
+}
+
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
+  const isVideo = isVideoType(attachment.type)
 
   // Get URL from batch-loaded context instead of individual query
   const attachmentUrls = React.useContext(AttachmentUrlContext)
@@ -142,6 +148,34 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
           <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
+    )
+  }
+
+  if (isVideo && url) {
+    return (
+      <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
+        <video
+          src={url}
+          controls
+          preload="metadata"
+          className="max-h-80 w-auto bg-black"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <VideoCameraIcon className="size-3.5 flex-shrink-0" />
+          <span className="truncate flex-1 font-medium">{attachment.name}</span>
+          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+          <a
+            href={url}
+            download={attachment.name}
+            className="hover:text-foreground transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DownloadSimpleIcon className="size-3.5 flex-shrink-0" />
+          </a>
+        </div>
+      </div>
     )
   }
 

@@ -545,11 +545,8 @@ export function MessageInput({
     const files = e.dataTransfer.files
     if (!files || files.length === 0) return
 
-    // Filter to only image files for drag and drop
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith("image/"))
-    if (imageFiles.length > 0) {
-      await processFiles(imageFiles)
-    }
+    // Process all file types
+    await processFiles(Array.from(files))
   }, [])
 
   const removeAttachment = (id: string) => {
@@ -579,8 +576,8 @@ export function MessageInput({
       {isDraggingOver && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg border-2 border-dashed border-primary pointer-events-none">
           <div className="flex flex-col items-center gap-2 text-primary">
-            <ImageIcon className="size-8" />
-            <span className="text-sm font-medium">Drop images here</span>
+            <FileIcon className="size-8" />
+            <span className="text-sm font-medium">Drop files here</span>
           </div>
         </div>
       )}
