@@ -160,4 +160,16 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_message", ["userId", "messageId"]),
+
+  // User-specific customization settings
+  userSettings: defineTable({
+    userId: v.string(), // Clerk user ID
+    density: v.union(v.literal("compact"), v.literal("default"), v.literal("spacious")),
+    messageDisplay: v.union(v.literal("default"), v.literal("compact")),
+    groupSpacing: v.number(),
+    fontScaling: v.number(),
+    zoomLevel: v.number(), // TODO: Do we even want this? Doesn't seem useful.
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
 });
