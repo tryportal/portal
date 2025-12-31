@@ -42,10 +42,22 @@ export const update = mutation({
         }
 
         const { userId, ...settings } = args;
-        const existing = await ctx.db
+
+        // Get all settings for this user (in case duplicates exist)
+        const allSettings = await ctx.db
             .query("userSettings")
             .withIndex("by_user", (q) => q.eq("userId", userId))
-            .unique();
+            .collect();
+
+        // If duplicates exist, delete all but the first one
+        if (allSettings.length > 1) {
+            const [, ...duplicates] = allSettings;
+            for (const duplicate of duplicates) {
+                await ctx.db.delete(duplicate._id);
+            }
+        }
+
+        const existing = allSettings[0];
 
         if (existing) {
             // Only patch fields that are actually provided (not undefined)

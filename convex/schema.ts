@@ -176,7 +176,7 @@ export default defineSchema({
 
   // User-specific customization settings
   userSettings: defineTable({
-    userId: v.string(), // Clerk user ID
+    userId: v.string(), // Clerk user ID - enforced as unique at application level via upsert logic
     density: v.union(v.literal("compact"), v.literal("default"), v.literal("spacious")),
     messageDisplay: v.union(v.literal("default"), v.literal("compact")),
     groupSpacing: v.number(),
