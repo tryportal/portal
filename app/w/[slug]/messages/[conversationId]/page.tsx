@@ -487,25 +487,23 @@ export default function ConversationPage({
       />
 
       {/* Message List - takes up available space */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageList
-          messages={messages}
-          currentUserId={currentUserId}
-          onDeleteMessage={handleDeleteMessage}
-          onEditMessage={handleEditMessage}
-          onReply={handleReply}
-          onForward={handleForward}
-          onReaction={handleReaction}
-          onAvatarClick={handleAvatarClick}
-          onNameClick={handleNameClick}
-          savedMessageIds={new Set()}
-          userNames={userNames}
-          channelName={participantName}
-          channelDescription="Direct message"
-          isAdmin={false}
-          searchQuery={searchQuery}
-        />
-      </div>
+      <MessageList
+        messages={messages}
+        currentUserId={currentUserId}
+        onDeleteMessage={handleDeleteMessage}
+        onEditMessage={handleEditMessage}
+        onReply={handleReply}
+        onForward={handleForward}
+        onReaction={handleReaction}
+        onAvatarClick={handleAvatarClick}
+        onNameClick={handleNameClick}
+        savedMessageIds={new Set()}
+        userNames={userNames}
+        channelName={participantName}
+        channelDescription="Direct message"
+        isAdmin={false}
+        searchQuery={searchQuery}
+      />
 
       {/* Typing Indicator */}
       <TypingIndicator typingUsers={typingUsers} />
