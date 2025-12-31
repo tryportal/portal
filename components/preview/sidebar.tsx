@@ -601,15 +601,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  asChild
                 >
-                  <span className="flex items-center gap-2">
-                    <ChartBarIcon
-                      className="size-4"
-                      weight={isOverviewActive ? "fill" : "regular"}
-                    />
-                    Overview
-                  </span>
+                  <ChartBarIcon
+                    className="size-4"
+                    weight={isOverviewActive ? "fill" : "regular"}
+                  />
+                  Overview
                 </Button>
               </Link>
               {/* People button */}
@@ -625,15 +622,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  asChild
                 >
-                  <span className="flex items-center gap-2">
-                    <UsersIcon
-                      className="size-4"
-                      weight={isPeoplePage ? "fill" : "regular"}
-                    />
-                    People
-                  </span>
+                  <UsersIcon
+                    className="size-4"
+                    weight={isPeoplePage ? "fill" : "regular"}
+                  />
+                  People
                 </Button>
               </Link>
               {/* Settings button for admins */}
@@ -650,15 +644,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
-                    asChild
                   >
-                    <span className="flex items-center gap-2">
-                      <GearIcon
-                        className="size-4"
-                        weight={isSettingsPage ? "fill" : "regular"}
-                      />
-                      Settings
-                    </span>
+                    <GearIcon
+                      className="size-4"
+                      weight={isSettingsPage ? "fill" : "regular"}
+                    />
+                    Settings
                   </Button>
                 </Link>
               )}
