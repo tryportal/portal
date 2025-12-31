@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { useParams } from "next/navigation"
-import { ConversationsSidebar } from "@/components/messages/conversations-sidebar"
 import { MobileConversationsList } from "@/components/messages/mobile-conversations-list"
 
 export default function MessagesLayout({
@@ -15,9 +14,6 @@ export default function MessagesLayout({
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      {/* Desktop: Conversations Sidebar */}
-      <ConversationsSidebar />
-
       {/* Mobile: Show full conversations list when no conversation selected */}
       {!hasActiveConversation && (
         <div className="sm:hidden flex-1 overflow-hidden">
