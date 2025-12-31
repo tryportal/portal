@@ -631,12 +631,12 @@ export function MessageInput({
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0 size-9 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+              className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               disabled={disabled}
               title="Add attachment"
               onClick={() => fileInputRef.current?.click()}
             >
-              <PlusIcon className="size-5" />
+              <PlusIcon className="size-3.5" />
             </Button>
 
             {/* Emoji picker */}
