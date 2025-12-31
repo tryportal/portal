@@ -169,7 +169,7 @@ export function ConversationsSidebar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
-          className="text-muted-foreground hover:text-foreground"
+          className="bg-foreground text-background hover:bg-foreground/90"
         >
           <PlusIcon className="size-4" weight="bold" />
         </Button>
