@@ -153,7 +153,7 @@ export function MessageInput({
     }
   }, [])
 
-  // Detect URLs and fetch metadata
+  // Detect URLs and fetch metadata - only when user intent is clear
   React.useEffect(() => {
     const detectAndFetchUrl = async () => {
       // Find URLs in the message
@@ -166,8 +166,18 @@ export function MessageInput({
         return
       }
 
-      // Get the first URL that hasn't been fetched or removed
-      const urlToFetch = urls.find(
+      // Only fetch for URLs that appear "complete" - followed by whitespace or at end of message
+      const completeUrls = urls.filter((url) => {
+        const urlIndex = message.indexOf(url)
+        const charAfterUrl = message[urlIndex + url.length]
+        // URL is complete if it's followed by whitespace/newline or is at the end
+        return !charAfterUrl || /\s/.test(charAfterUrl)
+      })
+
+      if (completeUrls.length === 0) return
+
+      // Get the first complete URL that hasn't been fetched or removed
+      const urlToFetch = completeUrls.find(
         (url) => !fetchedUrls.has(url) && !removedUrls.has(url)
       )
 
@@ -189,8 +199,8 @@ export function MessageInput({
       }
     }
 
-    // Debounce URL detection
-    const timeoutId = setTimeout(detectAndFetchUrl, 500)
+    // Longer debounce to ensure user has finished typing the URL
+    const timeoutId = setTimeout(detectAndFetchUrl, 2000)
     return () => clearTimeout(timeoutId)
   }, [message, fetchLinkMetadata, fetchedUrls, removedUrls, linkEmbed])
 
@@ -213,12 +223,39 @@ export function MessageInput({
       }))
 
     if (message.trim() || uploadedAttachments.length > 0) {
+      let embedToSend = linkEmbed
+
+      // If no embed yet, check for complete URLs and fetch metadata before sending
+      if (!embedToSend && !linkEmbedLoading) {
+        const urls = message.match(URL_REGEX)
+        if (urls && urls.length > 0) {
+          // Find first complete URL that hasn't been removed
+          const completeUrl = urls.find((url) => {
+            if (removedUrls.has(url)) return false
+            const urlIndex = message.indexOf(url)
+            const charAfterUrl = message[urlIndex + url.length]
+            return !charAfterUrl || /\s/.test(charAfterUrl)
+          })
+
+          if (completeUrl) {
+            try {
+              const metadata = await fetchLinkMetadata({ url: completeUrl })
+              if (metadata) {
+                embedToSend = metadata
+              }
+            } catch {
+              // Silently fail on fetch errors
+            }
+          }
+        }
+      }
+
       // Send the backend message (with user IDs)
       onSendMessage(
         message.trim(),
         uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         replyingTo?.messageId,
-        linkEmbed || undefined
+        embedToSend || undefined
       )
       setMessage("")
       setDisplayMessage("")
