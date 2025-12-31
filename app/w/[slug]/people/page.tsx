@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useWorkspaceData } from "@/components/workspace-context";
 import { useUserDataCache } from "@/components/user-data-cache";
-import { 
+import {
   UsersIcon,
   MagnifyingGlassIcon,
   ShieldIcon,
@@ -137,16 +137,16 @@ export default function PeoplePage() {
 
   return (
     <main className="flex-1 overflow-hidden">
-      <div className="flex h-full flex-col bg-[#F7F7F4]">
+      <div className="flex h-full flex-col bg-background">
         {/* Header */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4">
-          <UsersIcon className="size-4 sm:size-5 text-[#26251E]" weight="fill" />
-          <h1 className="text-sm sm:text-base font-semibold text-[#26251E]">People</h1>
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4">
+          <UsersIcon className="size-4 sm:size-5 text-foreground" weight="fill" />
+          <h1 className="text-sm sm:text-base font-semibold text-foreground">People</h1>
           <div className="ml-auto">
             <Button
               onClick={() => setInviteDialogOpen(true)}
               size="sm"
-              className="bg-[#26251E] hover:bg-[#26251E]/90 text-white text-xs sm:text-sm"
+              className="bg-foreground hover:bg-foreground/90 text-background text-xs sm:text-sm"
             >
               <UserIcon className="size-3.5 sm:size-4 mr-1.5 sm:mr-2" weight="bold" />
               Invite
@@ -166,7 +166,7 @@ export default function PeoplePage() {
                 {/* Header Info */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-[#26251E]/60">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {members.length} {members.length === 1 ? "member" : "members"} in this workspace
                     </p>
                   </div>
@@ -174,12 +174,12 @@ export default function PeoplePage() {
 
                 {/* Search */}
                 <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/40" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white border-[#26251E]/10 text-sm"
+                    className="pl-9 bg-card border-border text-sm"
                   />
                 </div>
 
@@ -187,8 +187,8 @@ export default function PeoplePage() {
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                   {filteredMembers.length === 0 ? (
                     <div className="col-span-full py-12 text-center">
-                      <UserIcon className="mx-auto size-6 sm:size-8 text-[#26251E]/20 mb-2" />
-                      <p className="text-xs sm:text-sm text-[#26251E]/60">
+                      <UserIcon className="mx-auto size-6 sm:size-8 text-foreground/20 mb-2" />
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {searchQuery ? "No members found matching your search" : "No members yet"}
                       </p>
                     </div>
@@ -198,7 +198,7 @@ export default function PeoplePage() {
                         key={member._id}
                         onClick={() => handleMemberClick(member)}
                         onMouseEnter={() => handleMemberPrefetch(member)}
-                        className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl border border-[#26251E]/10 hover:border-[#26251E]/20 hover:shadow-sm transition-all text-center group"
+                        className="flex flex-col items-center p-4 sm:p-6 bg-card rounded-xl border border-border hover:border-border/80 hover:shadow-sm transition-all text-center group"
                       >
                         <Avatar className="size-14 sm:size-20 mb-3 sm:mb-4">
                           {member.publicUserData?.imageUrl ? (
@@ -208,23 +208,23 @@ export default function PeoplePage() {
                         </Avatar>
 
                         <div className="space-y-0.5 sm:space-y-1 mb-3 sm:mb-4 w-full">
-                          <h3 className="font-medium text-[#26251E] truncate text-xs sm:text-base max-w-full">
+                          <h3 className="font-medium text-foreground truncate text-xs sm:text-base max-w-full">
                             {getDisplayName(member)}
                           </h3>
                           {member.jobTitle && (
-                            <p className="text-[10px] sm:text-xs font-medium text-[#26251E]/60 truncate max-w-full">
+                            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate max-w-full">
                               {member.jobTitle}
                             </p>
                           )}
                         </div>
 
-                        <Badge 
+                        <Badge
                           variant={member.role === "admin" ? "default" : "secondary"}
                           className={cn(
                             "text-[9px] sm:text-[10px] uppercase tracking-wider",
-                            member.role === "admin" 
-                              ? "bg-[#26251E] text-white" 
-                              : "bg-[#26251E]/5 text-[#26251E]/60"
+                            member.role === "admin"
+                              ? "bg-foreground text-background"
+                              : "bg-muted text-muted-foreground"
                           )}
                         >
                           {member.role === "admin" && (

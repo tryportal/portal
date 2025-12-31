@@ -144,9 +144,9 @@ export function NewDmDialog({
           {/* Search Input */}
           <div className="relative">
             {isEmailSearch ? (
-              <AtIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+              <AtIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             ) : (
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             )}
             <Input
               type="text"
@@ -157,7 +157,7 @@ export function NewDmDialog({
               autoFocus
             />
             {isSearching && (
-              <SpinnerIcon className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40 animate-spin" />
+              <SpinnerIcon className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground animate-spin" />
             )}
           </div>
 
@@ -165,8 +165,8 @@ export function NewDmDialog({
           <div className="min-h-[200px]">
             {searchQuery.length < 2 ? (
               <div className="flex flex-col items-center justify-center h-[200px] text-center">
-                <UserIcon className="size-10 text-[#26251E]/20 mb-3" />
-                <p className="text-sm text-[#26251E]/50">
+                <UserIcon className="size-10 text-foreground/20 mb-3" />
+                <p className="text-sm text-muted-foreground">
                   {isEmailSearch
                     ? "Enter a full email address to find someone"
                     : "Start typing to search for team members"}
@@ -174,14 +174,14 @@ export function NewDmDialog({
               </div>
             ) : searchResults.length === 0 && !isSearching ? (
               <div className="flex flex-col items-center justify-center h-[200px] text-center">
-                <MagnifyingGlassIcon className="size-10 text-[#26251E]/20 mb-3" />
-                <p className="text-sm text-[#26251E]/50">
+                <MagnifyingGlassIcon className="size-10 text-foreground/20 mb-3" />
+                <p className="text-sm text-muted-foreground">
                   {isEmailSearch
                     ? "No user found with that email"
                     : "No team members found"}
                 </p>
                 {!isEmailSearch && (
-                  <p className="text-xs text-[#26251E]/40 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Try searching by email to find users outside your team
                   </p>
                 )}
@@ -194,31 +194,31 @@ export function NewDmDialog({
                       key={user.userId}
                       onClick={() => handleSelectUser(user)}
                       disabled={isCreating}
-                      className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-[#26251E]/5 disabled:opacity-50"
+                      className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted disabled:opacity-50"
                     >
                       <Avatar size="default">
                         <AvatarImage
                           src={user.imageUrl || undefined}
                           alt={getName(user.firstName, user.lastName)}
                         />
-                        <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-sm">
+                        <AvatarFallback className="bg-secondary text-foreground text-sm">
                           {getInitials(user.firstName, user.lastName)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[#26251E] truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {getName(user.firstName, user.lastName)}
                           </p>
                           {user.isOrgMember && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#26251E]/10 px-2 py-0.5 text-[10px] text-[#26251E]/70">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] text-foreground/70">
                               <UsersIcon className="size-3" />
                               Team
                             </span>
                           )}
                         </div>
                         {user.email && (
-                          <p className="text-xs text-[#26251E]/50 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
                         )}

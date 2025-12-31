@@ -25,6 +25,7 @@ import {
   TrayIcon,
 } from "@phosphor-icons/react"
 import Image from "next/image"
+import { useTheme } from "@/lib/theme-provider"
 
 // Local preview top nav that uses mock data
 function PreviewTopNav({
@@ -34,6 +35,8 @@ function PreviewTopNav({
   activeTab: string
   onTabChange: (tab: string) => void
 }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   const tabs = [
     { id: "home", label: "Home", icon: HouseIcon },
     { id: "messages", label: "Messages", icon: ChatCircleIcon },
@@ -41,11 +44,11 @@ function PreviewTopNav({
   ]
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-3 sm:px-4 sm:grid sm:grid-cols-3">
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-3 sm:px-4 sm:grid sm:grid-cols-3">
       {/* Left: Portal Logo */}
       <div className="flex items-center">
         <Image
-          src="/portal-full.svg"
+          src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
           alt="Portal"
           width={100}
           height={24}
@@ -53,36 +56,34 @@ function PreviewTopNav({
         />
         {/* Mobile: Show workspace name */}
         <div className="sm:hidden flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
-          <span className="text-sm font-medium text-[#26251E]">Preview</span>
+          <span className="text-sm font-medium text-foreground">Preview</span>
         </div>
       </div>
 
       {/* Center: Workspace + Tabs (hidden on mobile) */}
       <div className="hidden sm:flex items-center justify-center gap-2">
         {/* Organization display */}
-        <div className="gap-2 px-2 text-[#26251E] h-8 inline-flex items-center justify-center">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+        <div className="gap-2 px-2 text-foreground h-8 inline-flex items-center justify-center">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
           <span className="text-sm font-medium">Preview Workspace</span>
         </div>
 
-        <Separator orientation="vertical" className="mr-2 bg-[#26251E]/10" />
+        <Separator orientation="vertical" className="mr-2 bg-secondary" />
 
         {/* Tab Navigation */}
         <nav className="flex items-center gap-1">
@@ -97,8 +98,8 @@ function PreviewTopNav({
                 onClick={() => onTabChange(tab.id)}
                 className={`gap-1.5 ${
                   isActive
-                    ? "bg-[#26251E]/10 text-[#26251E]"
-                    : "text-[#26251E]/70 hover:text-[#26251E]"
+                    ? "bg-secondary text-foreground"
+                    : "text-foreground/70 hover:text-foreground"
                 }`}
               >
                 <Icon weight={isActive ? "fill" : "regular"} className="size-4" />
@@ -111,7 +112,7 @@ function PreviewTopNav({
 
       {/* Right: Placeholder */}
       <div className="flex justify-end">
-        <div className="size-7 sm:size-8 rounded-full bg-[#26251E]/10" />
+        <div className="size-7 sm:size-8 rounded-full bg-secondary" />
       </div>
     </header>
   )
@@ -129,6 +130,8 @@ function PreviewSidebar({
   activeChannel: string | null
   onChannelSelect: (channelId: string | null) => void
 }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     mockCategories.map((c) => c.id)
   )
@@ -143,12 +146,12 @@ function PreviewSidebar({
 
   if (!isOpen) {
     return (
-      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
+      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-border bg-background py-3">
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={onToggle}
-          className="text-[#26251E]/70 hover:text-[#26251E]"
+          className="text-foreground/70 hover:text-foreground"
         >
           <SidebarIcon className="size-4" />
         </Button>
@@ -157,20 +160,19 @@ function PreviewSidebar({
   }
 
   return (
-    <div className="hidden sm:flex h-full w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4]">
+    <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
       {/* Header with toggle */}
-      <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
+      <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
             <Image
-              src="/portal.svg"
+              src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Workspace"
               width={12}
               height={12}
-              className="invert"
             />
           </div>
-          <span className="text-sm font-medium text-[#26251E]">
+          <span className="text-sm font-medium text-foreground">
             Preview Workspace
           </span>
         </div>
@@ -178,7 +180,7 @@ function PreviewSidebar({
           variant="ghost"
           size="icon-sm"
           onClick={onToggle}
-          className="text-[#26251E]/50 hover:text-[#26251E]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <SidebarIcon className="size-4" />
         </Button>
@@ -193,8 +195,8 @@ function PreviewSidebar({
               onClick={() => onChannelSelect(null)}
               className={`w-full justify-start gap-2 ${
                 !activeChannel
-                  ? "bg-[#26251E]/10 text-[#26251E]"
-                  : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                  ? "bg-secondary text-foreground"
+                  : "text-foreground/80 hover:bg-muted hover:text-foreground"
               }`}
             >
               <ChartBarIcon
@@ -205,14 +207,14 @@ function PreviewSidebar({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+              className="w-full justify-start gap-2 text-foreground/80 hover:bg-muted hover:text-foreground"
             >
               <UsersIcon className="size-4" />
               People
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+              className="w-full justify-start gap-2 text-foreground/80 hover:bg-muted hover:text-foreground"
             >
               <GearIcon className="size-4" />
               Settings
@@ -227,7 +229,7 @@ function PreviewSidebar({
                 <div key={category.id}>
                   <button
                     onClick={() => toggleCategory(category.id)}
-                    className="group flex w-full items-center gap-1 rounded px-1 py-1 text-xs font-medium text-[#26251E]/60 hover:text-[#26251E]"
+                    className="group flex w-full items-center gap-1 rounded px-1 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
                   >
                     {isExpanded ? (
                       <CaretDownIcon className="size-3" />
@@ -250,8 +252,8 @@ function PreviewSidebar({
                             variant={isActive ? "secondary" : "ghost"}
                             className={`w-full justify-start gap-2 ${
                               isActive
-                                ? "bg-[#26251E]/10 text-[#26251E]"
-                                : "text-[#26251E]/70 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                                ? "bg-secondary text-foreground"
+                                : "text-foreground/70 hover:bg-muted hover:text-foreground"
                             }`}
                             onClick={() => onChannelSelect(channel.id)}
                           >
@@ -313,7 +315,7 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
       {/* Top Navigation */}
       <PreviewTopNav activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -337,10 +339,10 @@ export default function PreviewPage() {
               onSendMessage={handleSendMessage}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center bg-[#F7F7F4] px-4">
+            <div className="flex flex-1 items-center justify-center bg-background px-4">
               <div className="text-center">
-                <h2 className="text-base sm:text-lg font-semibold text-[#26251E]">Welcome to Portal</h2>
-                <p className="mt-1 text-xs sm:text-sm text-[#26251E]/60">Select a channel from the sidebar to get started</p>
+                <h2 className="text-base sm:text-lg font-semibold text-foreground">Welcome to Portal</h2>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Select a channel from the sidebar to get started</p>
               </div>
             </div>
           )}

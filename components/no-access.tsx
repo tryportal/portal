@@ -25,18 +25,18 @@ export function NoAccess({ slug, organizationExists }: NoAccessProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F7F4] p-4">
-      <Card className="w-full max-w-md p-8 space-y-6 bg-white shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md p-8 space-y-6 bg-card shadow-sm">
         <div className="flex flex-col items-center space-y-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#26251E]/5 flex items-center justify-center">
-            <LockKey className="w-8 h-8 text-[#26251E]/40" />
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+            <LockKey className="w-8 h-8 text-muted-foreground" />
           </div>
           
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-[#26251E]">
+            <h1 className="text-2xl font-semibold text-foreground">
               {organizationExists ? "No Access" : "Workspace Not Found"}
             </h1>
-            <p className="text-sm text-[#26251E]/60">
+            <p className="text-sm text-muted-foreground">
               {organizationExists 
                 ? `You don't have access to the workspace "${slug}". Please contact an admin to get an invitation.`
                 : `The workspace "${slug}" doesn't exist or has been removed.`
@@ -48,7 +48,7 @@ export function NoAccess({ slug, organizationExists }: NoAccessProps) {
         <div className="space-y-3">
           {userOrgs && userOrgs.length > 0 ? (
             <>
-              <div className="text-xs font-medium text-[#26251E]/60 uppercase tracking-wider">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Your Workspaces
               </div>
               <div className="space-y-2">
@@ -56,7 +56,7 @@ export function NoAccess({ slug, organizationExists }: NoAccessProps) {
                   <button
                     key={org._id}
                     onClick={() => handleGoToOrganization(org.slug)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg border border-[#26251E]/10 hover:bg-[#26251E]/5 transition-colors text-left group"
+                    className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left group"
                   >
                     <div className="flex items-center gap-3">
                       {org.logoUrl ? (
@@ -66,34 +66,34 @@ export function NoAccess({ slug, organizationExists }: NoAccessProps) {
                           className="w-8 h-8 rounded object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-[#26251E]/10 flex items-center justify-center">
-                          <span className="text-sm font-medium text-[#26251E]">
+                        <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center">
+                          <span className="text-sm font-medium text-foreground">
                             {org.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-medium text-[#26251E]">
+                        <div className="text-sm font-medium text-foreground">
                           {org.name}
                         </div>
-                        <div className="text-xs text-[#26251E]/50">
+                        <div className="text-xs text-muted-foreground">
                           /{org.slug}
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-[#26251E]/30 group-hover:text-[#26251E]/60 transition-colors" />
+                    <ArrowRight className="w-5 h-5 text-foreground/30 group-hover:text-muted-foreground transition-colors" />
                   </button>
                 ))}
               </div>
             </>
           ) : (
             <>
-              <div className="text-xs font-medium text-[#26251E]/60 uppercase tracking-wider">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Get Started
               </div>
               <Button
                 onClick={handleSetup}
-                className="w-full bg-[#26251E] hover:bg-[#26251E]/90 text-white"
+                className="w-full bg-foreground hover:bg-foreground/90 text-background"
               >
                 Create a Workspace
               </Button>

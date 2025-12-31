@@ -254,8 +254,8 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
                 className={cn(
                   "flex size-8 items-center justify-center rounded transition-colors",
                   isSelected
-                    ? "bg-[#26251E] text-white"
-                    : "hover:bg-[#26251E]/10 text-[#26251E]/70"
+                    ? "bg-foreground text-background"
+                    : "hover:bg-secondary text-foreground/70"
                 )}
                 title={iconName}
               >

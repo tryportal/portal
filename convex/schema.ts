@@ -95,6 +95,15 @@ export default defineSchema({
       size: v.number(),
       type: v.string(),
     }))),
+    // Link embed preview (Open Graph metadata)
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
     createdAt: v.number(),
     editedAt: v.optional(v.number()),
     // New fields for chat features

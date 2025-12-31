@@ -145,39 +145,39 @@ export function MobileConversationsList() {
 
   if (!organization?._id) {
     return (
-      <div className="flex h-full flex-col bg-[#FAFAF8]">
+      <div className="flex h-full flex-col bg-background">
         <div className="flex h-14 items-center justify-center">
-          <p className="text-sm text-[#26251E]/40">Loading...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#FAFAF8]">
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-[#26251E]/10 px-4">
-        <h2 className="text-base font-semibold text-[#26251E]">Messages</h2>
+      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <h2 className="text-base font-semibold text-foreground">Messages</h2>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
-          className="text-[#26251E]/60 hover:text-[#26251E]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <PlusIcon className="size-5" weight="bold" />
         </Button>
       </div>
 
       {/* Search */}
-      <div className="p-3 border-b border-[#26251E]/5">
+      <div className="p-3 border-b border-border">
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 bg-[#26251E]/5 pl-9 text-sm placeholder:text-[#26251E]/40 border-transparent focus-visible:border-[#26251E]/20"
+            className="h-10 bg-muted pl-9 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
           />
         </div>
       </div>
@@ -186,7 +186,7 @@ export function MobileConversationsList() {
       <ScrollArea className="flex-1">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
-            <p className="text-sm text-[#26251E]/50 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {searchQuery ? "No conversations found" : "No conversations yet"}
             </p>
             {!searchQuery && (
@@ -214,7 +214,7 @@ export function MobileConversationsList() {
                 <button
                   key={conversation._id}
                   onClick={() => handleConversationClick(conversation._id)}
-                  className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-[#26251E]/5 active:bg-[#26251E]/10"
+                  className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted active:bg-secondary"
                 >
                   <div className="relative flex-shrink-0">
                     <Avatar className="size-12">
@@ -222,12 +222,12 @@ export function MobileConversationsList() {
                         src={participantImage || undefined}
                         alt={participantName}
                       />
-                      <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-sm font-medium">
+                      <AvatarFallback className="bg-secondary text-foreground text-sm font-medium">
                         {participantInitials}
                       </AvatarFallback>
                     </Avatar>
                     {hasUnread && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#FAFAF8] text-[10px] font-semibold text-white">
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 ring-2 ring-background text-[10px] font-semibold text-white">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -237,12 +237,12 @@ export function MobileConversationsList() {
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn(
                         "text-sm truncate",
-                        hasUnread ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
+                        hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
                       )}>
                         {participantName}
                       </p>
                       {conversation.lastMessage && (
-                        <span className="text-xs text-[#26251E]/40 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
                           {formatTime(conversation.lastMessage.createdAt)}
                         </span>
                       )}
@@ -250,15 +250,15 @@ export function MobileConversationsList() {
                     {conversation.lastMessage ? (
                       <p className={cn(
                         "text-xs truncate mt-0.5",
-                        hasUnread ? "text-[#26251E]/70 font-medium" : "text-[#26251E]/50"
+                        hasUnread ? "text-foreground/70 font-medium" : "text-muted-foreground"
                       )}>
                         {isOwnLastMessage && (
-                          <span className="text-[#26251E]/30">You: </span>
+                          <span className="text-foreground/30">You: </span>
                         )}
                         {conversation.lastMessage.content}
                       </p>
                     ) : (
-                      <p className="text-xs text-[#26251E]/30 italic mt-0.5">
+                      <p className="text-xs text-foreground/30 italic mt-0.5">
                         Start chatting
                       </p>
                     )}

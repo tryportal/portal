@@ -67,6 +67,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useTheme } from "@/lib/theme-provider"
 
 interface SidebarProps {
   isOpen: boolean
@@ -124,8 +125,8 @@ function SortableChannel({
         variant={isActive ? "secondary" : "ghost"}
         className={`w-full justify-start gap-2 pr-8 ${
           isActive
-            ? "bg-[#26251E]/10 text-[#26251E]"
-            : "text-[#26251E]/70 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+            ? "bg-secondary text-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         } ${isAdmin ? "pl-1" : ""}`}
         onClick={onSelect}
       >
@@ -133,7 +134,7 @@ function SortableChannel({
           <span
             {...attributes}
             {...listeners}
-            className="cursor-grab opacity-0 group-hover:opacity-100 text-[#26251E]/30 hover:text-[#26251E]/60"
+            className="cursor-grab opacity-0 group-hover:opacity-100 text-muted-foreground/50 hover:text-muted-foreground"
           >
             <DotsSixVerticalIcon className="size-4" />
           </span>
@@ -152,7 +153,7 @@ function SortableChannel({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-[#26251E]/50 hover:text-[#26251E]"
+              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
             />
           }
         >
@@ -242,14 +243,14 @@ function SortableCategory({
           <span
             {...attributes}
             {...listeners}
-            className="cursor-grab opacity-0 group-hover:opacity-100 text-[#26251E]/30 hover:text-[#26251E]/60 p-1"
+            className="cursor-grab opacity-0 group-hover:opacity-100 text-muted-foreground/50 hover:text-muted-foreground p-1"
           >
             <DotsSixVerticalIcon className="size-3" />
           </span>
         )}
         <button
           onClick={onToggle}
-          className="flex flex-1 items-center gap-1 rounded px-1 py-1 text-xs font-medium text-[#26251E]/60 hover:text-[#26251E]"
+          className="flex flex-1 items-center gap-1 rounded px-1 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           {isExpanded ? (
             <CaretDownIcon className="size-3" />
@@ -263,7 +264,7 @@ function SortableCategory({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <button className="opacity-0 group-hover:opacity-100 p-1 text-[#26251E]/40 hover:text-[#26251E] rounded hover:bg-[#26251E]/5" />
+                <button className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted" />
               }
             >
               <DotsThreeIcon className="size-3" />
@@ -312,6 +313,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const currentSlug = params?.slug as string | undefined
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
 
   // Use shared workspace data from context
   const { organization: currentOrg, membership } = useWorkspaceData()
@@ -522,12 +525,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   if (!isOpen) {
     return (
-      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-[#26251E]/10 bg-[#F7F7F4] py-3">
+      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-border bg-background py-3">
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={onToggle}
-          className="text-[#26251E]/70 hover:text-[#26251E]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <SidebarIcon className="size-4" />
         </Button>
@@ -544,9 +547,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       />
       
       {/* Sidebar - slides in on mobile */}
-      <div className="fixed sm:relative z-50 sm:z-auto h-full w-[280px] sm:w-60 flex-col border-r border-[#26251E]/10 bg-[#F7F7F4] flex animate-in slide-in-from-left-full sm:animate-none duration-200">
+      <div className="fixed sm:relative z-50 sm:z-auto h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full sm:animate-none duration-200">
         {/* Header with toggle */}
-        <div className="flex h-12 items-center justify-between border-b border-[#26251E]/10 bg-[#F7F7F4] px-4 shrink-0">
+        <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
           <div className="flex items-center gap-2">
             {currentOrg?.logoUrl ? (
               <Image
@@ -557,17 +560,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 className="rounded"
               />
             ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#26251E]">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
                 <Image
-                  src="/portal.svg"
+                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                   alt="Workspace"
                   width={12}
                   height={12}
-                  className="invert"
                 />
               </div>
             )}
-            <span className="text-sm font-medium text-[#26251E]">
+            <span className="text-sm font-medium text-foreground">
               {currentOrg?.name || "Organization"}
             </span>
           </div>
@@ -575,7 +577,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             variant="ghost"
             size="icon-sm"
             onClick={onToggle}
-            className="text-[#26251E]/50 hover:text-[#26251E]"
+            className="text-muted-foreground hover:text-foreground"
           >
             <SidebarIcon className="size-4" />
           </Button>
@@ -596,8 +598,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 onMouseEnter={handleOverviewPrefetch}
                 className={`w-full justify-start gap-2 ${
                   isOverviewActive
-                    ? "bg-[#26251E]/10 text-[#26251E]"
-                    : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <ChartBarIcon
@@ -617,8 +619,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 onMouseEnter={handlePeoplePrefetch}
                 className={`w-full justify-start gap-2 ${
                   isPeoplePage
-                    ? "bg-[#26251E]/10 text-[#26251E]"
-                    : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <UsersIcon
@@ -639,8 +641,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   onMouseEnter={handleSettingsPrefetch}
                   className={`w-full justify-start gap-2 ${
                     isSettingsPage
-                      ? "bg-[#26251E]/10 text-[#26251E]"
-                      : "text-[#26251E]/80 hover:bg-[#26251E]/5 hover:text-[#26251E]"
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   <GearIcon
@@ -683,7 +685,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               </div>
               <DragOverlay>
                 {activeId ? (
-                  <div className="rounded bg-white p-2 shadow-lg text-sm">
+                  <div className="rounded bg-card p-2 shadow-lg text-sm">
                     Dragging...
                   </div>
                 ) : null}
@@ -694,13 +696,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         {/* Bottom: Create button */}
         {isAdmin && (
-          <div className="border-t border-[#26251E]/5 p-2">
+          <div className="border-t border-border p-2">
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-2 text-[#26251E]/60 hover:text-[#26251E]"
+                    className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
                   />
                 }
               >

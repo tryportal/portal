@@ -9,6 +9,16 @@ const TYPING_EXPIRY_MS = 3000;
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+// Link embed type for Open Graph metadata
+export interface LinkEmbed {
+  url: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+  favicon?: string;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -55,7 +65,7 @@ async function checkChannelAccess(
  * Get messages for a channel with pagination, ordered by creation time (newest first for initial load)
  */
 export const getMessages = query({
-  args: { 
+  args: {
     channelId: v.id("channels"),
     limit: v.optional(v.number()),
     cursor: v.optional(v.number()), // createdAt timestamp for cursor-based pagination
@@ -86,7 +96,7 @@ export const getMessages = query({
 
     // If we have a cursor, filter to get older messages
     if (args.cursor) {
-      messagesQuery = messagesQuery.filter((q) => 
+      messagesQuery = messagesQuery.filter((q) =>
         q.lt(q.field("createdAt"), args.cursor!)
       );
     }
@@ -98,19 +108,19 @@ export const getMessages = query({
 
     const hasMore = messages.length > limit;
     const resultMessages = hasMore ? messages.slice(0, limit) : messages;
-    
+
     // Reverse to get chronological order for display
     const chronologicalMessages = resultMessages.reverse();
-    
+
     // Next cursor is the oldest message's createdAt
-    const nextCursor = hasMore && resultMessages.length > 0 
-      ? resultMessages[resultMessages.length - 1].createdAt 
+    const nextCursor = hasMore && resultMessages.length > 0
+      ? resultMessages[resultMessages.length - 1].createdAt
       : null;
 
-    return { 
-      messages: chronologicalMessages, 
-      nextCursor, 
-      hasMore 
+    return {
+      messages: chronologicalMessages,
+      nextCursor,
+      hasMore
     };
   },
 });
@@ -195,7 +205,7 @@ export const getRecentMessages = query({
           .query("messages")
           .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
           .collect();
-        
+
         return messages.filter((m) => m.userId === userId);
       })
     );
@@ -262,7 +272,7 @@ export const getMentions = query({
           .query("messages")
           .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))
           .collect();
-        
+
         return messages.filter((m) => {
           // Structured mentions stored in the message document
           const hasStructuredMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
@@ -323,6 +333,14 @@ export const sendMessage = mutation({
       size: v.number(),
       type: v.string(),
     }))),
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
     parentMessageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
@@ -361,7 +379,7 @@ export const sendMessage = mutation({
 
     // Parse mentions from content
     const mentions = parseMentions(args.content);
-    
+
     // If replying, add the parent message author to mentions
     if (parentMessage && parentMessage.userId !== userId) {
       if (!mentions.includes(parentMessage.userId)) {
@@ -374,6 +392,7 @@ export const sendMessage = mutation({
       userId,
       content: args.content.trim(),
       attachments: args.attachments,
+      linkEmbed: args.linkEmbed,
       createdAt: Date.now(),
       parentMessageId: args.parentMessageId,
       mentions: mentions.length > 0 ? mentions : undefined,
@@ -544,7 +563,7 @@ export const deleteMessage = mutation({
       .query("savedMessages")
       .filter((q) => q.eq(q.field("messageId"), args.messageId))
       .collect();
-    
+
     for (const savedRef of savedRefs) {
       await ctx.db.delete(savedRef._id);
     }
@@ -597,6 +616,208 @@ export const getBatchStorageUrls = query({
     );
     // Return as a map for easy lookup
     return Object.fromEntries(urls.map(({ storageId, url }) => [storageId, url]));
+  },
+});
+
+// ============================================================================
+// Link Embed Functions
+// ============================================================================
+
+/**
+ * Helper function to check if an IP address is in a private range
+ * Blocks SSRF attacks by preventing requests to internal/private IPs
+ */
+function isPrivateIP(hostname: string): boolean {
+  // Check if it's an IPv4 address
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = hostname.match(ipv4Regex);
+
+  if (ipv4Match) {
+    const octets = ipv4Match.slice(1).map(Number);
+
+    // Validate octets are in valid range
+    if (octets.some(octet => octet > 255)) {
+      return true; // Invalid IP, treat as private
+    }
+
+    // Check private IP ranges
+    // 10.0.0.0/8
+    if (octets[0] === 10) return true;
+
+    // 172.16.0.0/12
+    if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+
+    // 192.168.0.0/16
+    if (octets[0] === 192 && octets[1] === 168) return true;
+
+    // 127.0.0.0/8 (localhost)
+    if (octets[0] === 127) return true;
+
+    // 169.254.0.0/16 (link-local)
+    if (octets[0] === 169 && octets[1] === 254) return true;
+
+    // 0.0.0.0/8
+    if (octets[0] === 0) return true;
+
+    // 224.0.0.0/4 (multicast)
+    if (octets[0] >= 224 && octets[0] <= 239) return true;
+
+    // 240.0.0.0/4 (reserved)
+    if (octets[0] >= 240) return true;
+
+    return false;
+  }
+
+  // Check for IPv6 localhost and private ranges
+  const lowerHostname = hostname.toLowerCase();
+  if (
+    lowerHostname === "localhost" ||
+    lowerHostname === "::1" ||
+    lowerHostname.startsWith("fc") || // fc00::/7 (unique local)
+    lowerHostname.startsWith("fd") || // fc00::/7 (unique local)
+    lowerHostname.startsWith("fe80:") || // fe80::/10 (link-local)
+    lowerHostname === "::" // unspecified
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Fetch Open Graph metadata for a URL
+ * Returns title, description, image, site name, and favicon
+ * 
+ * Note: This action has basic protection against abuse through URL validation,
+ * SSRF protection, and timeouts. For production-grade rate limiting across
+ * distributed instances, consider using @convex-dev/rate-limiter package.
+ */
+export const fetchLinkMetadata = action({
+  args: { url: v.string() },
+  handler: async (ctx, args): Promise<LinkEmbed | null> => {
+    try {
+      // Basic authentication check - only authenticated users can fetch metadata
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return null;
+      }
+
+      // Validate URL
+      const urlObj = new URL(args.url);
+
+      // Only allow http/https
+      if (!["http:", "https:"].includes(urlObj.protocol)) {
+        return null;
+      }
+
+      // SSRF Protection: Block private IP addresses
+      if (isPrivateIP(urlObj.hostname)) {
+        return null;
+      }
+
+      // Fetch the page with timeout (5 seconds max to prevent slow-response DoS)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(args.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; PortalBot/1.0; +https://portal.app)",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("text/html")) {
+        // Not HTML, return basic info
+        return {
+          url: args.url,
+          title: urlObj.hostname,
+          siteName: urlObj.hostname,
+        };
+      }
+
+      const html = await response.text();
+
+      // Parse meta tags using regex (lightweight approach)
+      const getMetaContent = (property: string): string | undefined => {
+        // Try og: first
+        const ogMatch = html.match(
+          new RegExp(`<meta[^>]*property=["']og:${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:${property}["']`, "i")
+        );
+        if (ogMatch) return ogMatch[1];
+
+        // Try twitter: cards
+        const twitterMatch = html.match(
+          new RegExp(`<meta[^>]*name=["']twitter:${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:${property}["']`, "i")
+        );
+        if (twitterMatch) return twitterMatch[1];
+
+        // Try standard meta tags
+        const metaMatch = html.match(
+          new RegExp(`<meta[^>]*name=["']${property}["'][^>]*content=["']([^"']+)["']`, "i")
+        ) || html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*name=["']${property}["']`, "i")
+        );
+        return metaMatch?.[1];
+      };
+
+      // Get title
+      let title = getMetaContent("title");
+      if (!title) {
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        title = titleMatch?.[1];
+      }
+
+      // Get description
+      const description = getMetaContent("description");
+
+      // Get image
+      let image = getMetaContent("image");
+      if (image && !image.startsWith("http")) {
+        // Make relative URLs absolute
+        image = new URL(image, args.url).href;
+      }
+
+      // Get site name
+      const siteName = getMetaContent("site_name") || urlObj.hostname;
+
+      // Get favicon
+      let favicon: string | undefined;
+      const faviconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/i)
+        || html.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["'](?:shortcut )?icon["']/i);
+      if (faviconMatch) {
+        favicon = faviconMatch[1];
+        if (!favicon.startsWith("http")) {
+          favicon = new URL(favicon, args.url).href;
+        }
+      } else {
+        // Default to /favicon.ico
+        favicon = `${urlObj.origin}/favicon.ico`;
+      }
+
+      return {
+        url: args.url,
+        title: title?.trim(),
+        description: description?.trim(),
+        image,
+        siteName,
+        favicon,
+      };
+    } catch {
+      // Return null on any error
+      return null;
+    }
   },
 });
 
@@ -946,6 +1167,7 @@ export const forwardMessage = mutation({
         userId,
         content: message.content,
         attachments: message.attachments,
+        linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
       });
 
@@ -970,6 +1192,7 @@ export const forwardMessage = mutation({
         userId,
         content: message.content,
         attachments: message.attachments,
+        linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
       });
 
@@ -1252,9 +1475,9 @@ export const getPinnedMessages = query({
  * Get saved messages for the current user
  */
 export const getSavedMessages = query({
-  args: { 
+  args: {
     organizationId: v.id("organizations"),
-    limit: v.optional(v.number()) 
+    limit: v.optional(v.number())
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -1515,6 +1738,14 @@ export const sendDirectMessage = mutation({
       size: v.number(),
       type: v.string(),
     }))),
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
     parentMessageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
@@ -1561,6 +1792,7 @@ export const sendDirectMessage = mutation({
       userId,
       content: args.content.trim(),
       attachments: args.attachments,
+      linkEmbed: args.linkEmbed,
       createdAt: Date.now(),
       parentMessageId: args.parentMessageId,
       mentions: mentions.length > 0 ? mentions : undefined,
@@ -2238,17 +2470,17 @@ export const getUnreadDMsGroupedBySender = query({
           unreadCount: unreadFromOther.length,
           lastMessage: lastMessage
             ? {
-                content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
-                userId: lastMessage.userId,
-              }
+              content: lastMessage.content,
+              createdAt: lastMessage.createdAt,
+              userId: lastMessage.userId,
+            }
             : null,
         });
       }
     }
 
     // Sort by last message time descending
-    groupedDMs.sort((a, b) => 
+    groupedDMs.sort((a, b) =>
       (b.lastMessage?.createdAt ?? 0) - (a.lastMessage?.createdAt ?? 0)
     );
 

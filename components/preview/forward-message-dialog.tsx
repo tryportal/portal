@@ -195,28 +195,28 @@ export function ForwardMessageDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="default" className="max-h-[85vh] flex flex-col gap-0 p-0">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b border-[#26251E]/10">
+        <DialogHeader className="px-4 pt-4 pb-3 border-b border-border">
           <DialogTitle className="flex items-center gap-2 text-base">
             <ShareIcon className="size-5" weight="duotone" />
             Forward Message
           </DialogTitle>
-          <DialogDescription className="text-xs text-[#26251E]/60 mt-1">
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             Select a channel or person to forward this message to
           </DialogDescription>
         </DialogHeader>
 
         {/* Message Preview */}
-        <div className="px-4 py-3 bg-[#26251E]/[0.03] border-b border-[#26251E]/10">
-          <div className="text-xs text-[#26251E]/50 mb-1">Forwarding:</div>
-          <div className="text-sm text-[#26251E]/80 line-clamp-2">
+        <div className="px-4 py-3 bg-foreground/[0.03] border-b border-border">
+          <div className="text-xs text-muted-foreground mb-1">Forwarding:</div>
+          <div className="text-sm text-foreground/80 line-clamp-2">
             {truncatedContent || "(empty message)"}
           </div>
         </div>
 
         {/* Search Input */}
-        <div className="px-4 py-3 border-b border-[#26251E]/10">
+        <div className="px-4 py-3 border-b border-border">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#26251E]/40" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search channels or people..."
               value={searchQuery}
@@ -232,7 +232,7 @@ export function ForwardMessageDialog({
             {/* Channels Section */}
             {channels.length > 0 && (
               <div className="mb-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#26251E]/40 px-2 py-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5">
                   Channels
                 </div>
                 <div className="space-y-0.5">
@@ -243,20 +243,20 @@ export function ForwardMessageDialog({
                         key={channel.id}
                         onClick={() => handleForward(channel)}
                         disabled={isForwarding}
-                        className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#26251E]/[0.05] transition-colors text-left disabled:opacity-50"
+                        className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-foreground/[0.05] transition-colors text-left disabled:opacity-50"
                       >
-                        <div className="size-8 flex items-center justify-center rounded-md bg-[#26251E]/5">
+                        <div className="size-8 flex items-center justify-center rounded-md bg-muted">
                           {IconComponent ? (
-                            <IconComponent className="size-4 text-[#26251E]/60" />
+                            <IconComponent className="size-4 text-muted-foreground" />
                           ) : (
-                            <HashIcon className="size-4 text-[#26251E]/60" />
+                            <HashIcon className="size-4 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-[#26251E] truncate">
+                          <div className="text-sm font-medium text-foreground truncate">
                             {channel.name}
                           </div>
-                          <div className="text-[11px] text-[#26251E]/50 truncate">
+                          <div className="text-[11px] text-muted-foreground truncate">
                             {channel.categoryName}
                           </div>
                         </div>
@@ -270,7 +270,7 @@ export function ForwardMessageDialog({
             {/* Direct Messages Section */}
             {conversationItems.length > 0 && (
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#26251E]/40 px-2 py-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5">
                   Direct Messages
                 </div>
                 <div className="space-y-0.5">
@@ -279,7 +279,7 @@ export function ForwardMessageDialog({
                       key={conv.id}
                       onClick={() => handleForward(conv)}
                       disabled={isForwarding}
-                      className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#26251E]/[0.05] transition-colors text-left disabled:opacity-50"
+                      className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-foreground/[0.05] transition-colors text-left disabled:opacity-50"
                     >
                       <Avatar className="size-8">
                         {conv.otherParticipantAvatar ? (
@@ -288,15 +288,15 @@ export function ForwardMessageDialog({
                             alt={conv.otherParticipantName}
                           />
                         ) : null}
-                        <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-xs font-medium">
+                        <AvatarFallback className="bg-secondary text-foreground text-xs font-medium">
                           {conv.otherParticipantInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-[#26251E] truncate">
+                        <div className="text-sm font-medium text-foreground truncate">
                           {conv.otherParticipantName}
                         </div>
-                        <div className="text-[11px] text-[#26251E]/50">
+                        <div className="text-[11px] text-muted-foreground">
                           Direct message
                         </div>
                       </div>
@@ -309,8 +309,8 @@ export function ForwardMessageDialog({
             {/* Empty state */}
             {channels.length === 0 && conversationItems.length === 0 && (
               <div className="py-8 text-center">
-                <ChatCircleDotsIcon className="size-10 mx-auto text-[#26251E]/20 mb-2" />
-                <p className="text-sm text-[#26251E]/50">
+                <ChatCircleDotsIcon className="size-10 mx-auto text-foreground/20 mb-2" />
+                <p className="text-sm text-muted-foreground">
                   {searchQuery
                     ? "No matching channels or conversations"
                     : "No destinations available"}
@@ -322,8 +322,8 @@ export function ForwardMessageDialog({
 
         {/* Loading overlay */}
         {isForwarding && (
-          <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl z-10">
-            <div className="flex items-center gap-2 text-sm text-[#26251E]/70">
+          <div className="absolute inset-0 bg-card/80 flex items-center justify-center rounded-xl z-10">
+            <div className="flex items-center gap-2 text-sm text-foreground/70">
               <CircleNotchIcon className="size-4 animate-spin" />
               Forwarding...
             </div>

@@ -32,19 +32,19 @@ export function LoadingSpinner({
     >
       <CircleNotchIcon
         className={cn(
-          "animate-spin text-[#26251E]/40",
+          "animate-spin text-muted-foreground",
           sizeClasses[size]
         )}
       />
       {text && (
-        <p className="text-sm text-[#26251E]/60">{text}</p>
+        <p className="text-sm text-muted-foreground">{text}</p>
       )}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-[#F7F7F4]">
+      <div className="flex flex-1 items-center justify-center bg-background">
         {spinner}
       </div>
     );

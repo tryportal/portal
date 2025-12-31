@@ -151,39 +151,39 @@ export function ConversationsSidebar() {
 
   if (!organization?._id) {
     return (
-      <div className="hidden sm:flex h-full w-72 flex-col border-r border-[#26251E]/10 bg-[#FAFAF8]">
-        <div className="flex h-14 items-center justify-center">
-          <p className="text-sm text-[#26251E]/40">Loading...</p>
+      <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
+        <div className="flex h-12 items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="hidden sm:flex h-full w-72 flex-col border-r border-[#26251E]/10 bg-[#FAFAF8]">
+    <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-[#26251E]/10 px-4">
-        <h2 className="text-sm font-semibold text-[#26251E]">Messages</h2>
+      <div className="flex h-12 items-center justify-between border-b border-border px-4">
+        <h2 className="text-sm font-semibold text-foreground">Messages</h2>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
-          className="text-[#26251E]/60 hover:text-[#26251E]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <PlusIcon className="size-4" weight="bold" />
         </Button>
       </div>
 
       {/* Search */}
-      <div className="p-3 border-b border-[#26251E]/5">
+      <div className="p-3 border-b border-border">
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#26251E]/40" />
+          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 bg-[#26251E]/5 pl-8 text-sm placeholder:text-[#26251E]/40 border-transparent focus-visible:border-[#26251E]/20"
+            className="h-8 bg-muted pl-8 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
           />
         </div>
       </div>
@@ -192,7 +192,7 @@ export function ConversationsSidebar() {
       <ScrollArea className="flex-1">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
-            <p className="text-sm text-[#26251E]/50 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {searchQuery ? "No conversations found" : "No conversations yet"}
             </p>
             {!searchQuery && (
@@ -225,8 +225,8 @@ export function ConversationsSidebar() {
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
                     isActive
-                      ? "bg-[#26251E]/10"
-                      : "hover:bg-[#26251E]/5"
+                      ? "bg-secondary"
+                      : "hover:bg-muted"
                   )}
                 >
                   {/* Avatar with online indicator potential */}
@@ -236,13 +236,13 @@ export function ConversationsSidebar() {
                         src={participantImage || undefined}
                         alt={participantName}
                       />
-                      <AvatarFallback className="bg-[#26251E]/10 text-[#26251E] text-xs font-medium">
+                      <AvatarFallback className="bg-secondary text-foreground text-xs font-medium">
                         {participantInitials}
                       </AvatarFallback>
                     </Avatar>
                     {/* Unread indicator dot on avatar */}
                     {hasUnread && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#FAFAF8]" />
+                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-background" />
                     )}
                   </div>
 
@@ -251,13 +251,13 @@ export function ConversationsSidebar() {
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn(
                         "text-sm truncate",
-                        isActive ? "font-semibold text-[#26251E]" : hasUnread ? "font-semibold text-[#26251E]" : "font-medium text-[#26251E]"
+                        isActive ? "font-semibold text-foreground" : hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
                       )}>
                         {participantName}
                       </p>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {conversation.lastMessage && (
-                          <span className="text-[10px] text-[#26251E]/40">
+                          <span className="text-[10px] text-muted-foreground">
                             {formatTime(conversation.lastMessage.createdAt)}
                           </span>
                         )}
@@ -266,15 +266,15 @@ export function ConversationsSidebar() {
                     {conversation.lastMessage ? (
                       <p className={cn(
                         "text-xs truncate mt-0.5",
-                        hasUnread && !isActive ? "text-[#26251E]/70 font-medium" : "text-[#26251E]/50"
+                        hasUnread && !isActive ? "text-foreground/70 font-medium" : "text-muted-foreground"
                       )}>
                         {isOwnLastMessage && (
-                          <span className="text-[#26251E]/30">You: </span>
+                          <span className="text-foreground/30">You: </span>
                         )}
                         {conversation.lastMessage.content}
                       </p>
                     ) : (
-                      <p className="text-xs text-[#26251E]/30 italic mt-0.5">
+                      <p className="text-xs text-foreground/30 italic mt-0.5">
                         Start chatting
                       </p>
                     )}

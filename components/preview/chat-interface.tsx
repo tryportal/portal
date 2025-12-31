@@ -8,6 +8,7 @@ import { TypingIndicator } from "@/components/typing-indicator"
 import { PinnedMessagesDialog, type PinnedMessage } from "./pinned-messages-dialog"
 import { ForwardMessageDialog } from "./forward-message-dialog"
 import type { MentionUser } from "./mention-autocomplete"
+import type { LinkEmbedData } from "./link-preview"
 import type { Id } from "@/convex/_generated/dataModel"
 
 interface TypingUser {
@@ -27,7 +28,7 @@ interface ChatInterfaceProps {
     name: string
     size: number
     type: string
-  }>, parentMessageId?: string) => void
+  }>, parentMessageId?: string, linkEmbed?: LinkEmbedData) => void
   onDeleteMessage?: (messageId: string) => void
   onEditMessage?: (messageId: string, content: string) => void
   onReaction?: (messageId: string, emoji: string) => void
@@ -142,7 +143,7 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#F7F7F4]">
+    <div className="flex h-full flex-col bg-background">
       {/* Channel Header */}
       <ChannelHeader 
         channelName={channelName} 

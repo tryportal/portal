@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useAction } from "convex/react"
 import {
   PlusIcon,
   SmileyIcon,
@@ -11,6 +12,7 @@ import {
   SpinnerIcon,
   ArrowBendUpLeftIcon,
 } from "@phosphor-icons/react"
+import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -24,7 +26,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
+import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
 
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -52,7 +60,7 @@ interface MessageInputProps {
     name: string
     size: number
     type: string
-  }>, parentMessageId?: string) => void
+  }>, parentMessageId?: string, linkEmbed?: LinkEmbedData) => void
   channelName: string
   disabled?: boolean
   disabledReason?: string
@@ -72,6 +80,9 @@ const EMOJI_LIST = [
   "🎉", "🎊", "🎈", "🎁", "🏆", "⭐", "💡", "📌",
 ]
 
+// URL detection regex - matches http(s) URLs
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
+
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B"
   const k = 1024
@@ -80,9 +91,9 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
 }
 
-export function MessageInput({ 
-  onSendMessage, 
-  channelName, 
+export function MessageInput({
+  onSendMessage,
+  channelName,
   disabled,
   disabledReason,
   onTyping,
@@ -102,6 +113,13 @@ export function MessageInput({
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
+  // Link embed state
+  const [linkEmbed, setLinkEmbed] = React.useState<LinkEmbedData | null>(null)
+  const [linkEmbedLoading, setLinkEmbedLoading] = React.useState(false)
+  const [fetchedUrls, setFetchedUrls] = React.useState<Set<string>>(new Set())
+  const [removedUrls, setRemovedUrls] = React.useState<Set<string>>(new Set())
+  const fetchLinkMetadata = useAction(api.messages.fetchLinkMetadata)
+
   // Mention autocomplete state
   const [mentionVisible, setMentionVisible] = React.useState(false)
   const [mentionQuery, setMentionQuery] = React.useState("")
@@ -111,15 +129,15 @@ export function MessageInput({
   // Debounced typing indicator
   const handleTyping = React.useCallback(() => {
     if (!onTyping) return
-    
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
     }
-    
+
     // Trigger typing
     onTyping()
-    
+
     // Set new timeout to stop triggering after 500ms of no input
     typingTimeoutRef.current = setTimeout(() => {
       typingTimeoutRef.current = null
@@ -135,6 +153,65 @@ export function MessageInput({
     }
   }, [])
 
+  // Detect URLs and fetch metadata - only when user intent is clear
+  React.useEffect(() => {
+    const detectAndFetchUrl = async () => {
+      // Find URLs in the message
+      const urls = message.match(URL_REGEX)
+      if (!urls || urls.length === 0) {
+        // No URLs found, clear embed if it was from a URL no longer in message
+        if (linkEmbed && !message.includes(linkEmbed.url)) {
+          setLinkEmbed(null)
+        }
+        return
+      }
+
+      // Only fetch for URLs that appear "complete" - followed by whitespace or at end of message
+      const completeUrls = urls.filter((url) => {
+        const urlIndex = message.indexOf(url)
+        const charAfterUrl = message[urlIndex + url.length]
+        // URL is complete if it's followed by whitespace/newline or is at the end
+        return !charAfterUrl || /\s/.test(charAfterUrl)
+      })
+
+      if (completeUrls.length === 0) return
+
+      // Get the first complete URL that hasn't been fetched or removed
+      const urlToFetch = completeUrls.find(
+        (url) => !fetchedUrls.has(url) && !removedUrls.has(url)
+      )
+
+      if (!urlToFetch) return
+
+      // Mark as fetched to prevent duplicate requests
+      setFetchedUrls((prev) => new Set(prev).add(urlToFetch))
+      setLinkEmbedLoading(true)
+
+      try {
+        const metadata = await fetchLinkMetadata({ url: urlToFetch })
+        if (metadata) {
+          setLinkEmbed(metadata)
+        }
+      } catch {
+        // Silently fail on fetch errors
+      } finally {
+        setLinkEmbedLoading(false)
+      }
+    }
+
+    // Longer debounce to ensure user has finished typing the URL
+    const timeoutId = setTimeout(detectAndFetchUrl, 2000)
+    return () => clearTimeout(timeoutId)
+  }, [message, fetchLinkMetadata, fetchedUrls, removedUrls, linkEmbed])
+
+  // Handle removing link preview
+  const handleRemoveLinkEmbed = React.useCallback(() => {
+    if (linkEmbed) {
+      setRemovedUrls((prev) => new Set(prev).add(linkEmbed.url))
+    }
+    setLinkEmbed(null)
+  }, [linkEmbed])
+
   const handleSend = async () => {
     const uploadedAttachments = attachments
       .filter(a => a.status === "uploaded" && a.storageId)
@@ -146,16 +223,47 @@ export function MessageInput({
       }))
 
     if (message.trim() || uploadedAttachments.length > 0) {
+      let embedToSend = linkEmbed
+
+      // If no embed yet, check for complete URLs and fetch metadata before sending
+      if (!embedToSend && !linkEmbedLoading) {
+        const urls = message.match(URL_REGEX)
+        if (urls && urls.length > 0) {
+          // Find first complete URL that hasn't been removed
+          const completeUrl = urls.find((url) => {
+            if (removedUrls.has(url)) return false
+            const urlIndex = message.indexOf(url)
+            const charAfterUrl = message[urlIndex + url.length]
+            return !charAfterUrl || /\s/.test(charAfterUrl)
+          })
+
+          if (completeUrl) {
+            try {
+              const metadata = await fetchLinkMetadata({ url: completeUrl })
+              if (metadata) {
+                embedToSend = metadata
+              }
+            } catch {
+              // Silently fail on fetch errors
+            }
+          }
+        }
+      }
+
       // Send the backend message (with user IDs)
       onSendMessage(
-        message.trim(), 
+        message.trim(),
         uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-        replyingTo?.messageId
+        replyingTo?.messageId,
+        embedToSend || undefined
       )
       setMessage("")
       setDisplayMessage("")
       setMentionMap({})
       setAttachments([])
+      setLinkEmbed(null)
+      setFetchedUrls(new Set())
+      setRemovedUrls(new Set())
       onCancelReply?.()
       // Reset textarea height
       if (textareaRef.current) {
@@ -207,14 +315,14 @@ export function MessageInput({
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
-        setMentionSelectedIndex((prev) => 
+        setMentionSelectedIndex((prev) =>
           prev < filteredUsers.length - 1 ? prev + 1 : 0
         )
         return
       }
       if (e.key === "ArrowUp") {
         e.preventDefault()
-        setMentionSelectedIndex((prev) => 
+        setMentionSelectedIndex((prev) =>
           prev > 0 ? prev - 1 : filteredUsers.length - 1
         )
         return
@@ -242,7 +350,7 @@ export function MessageInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setDisplayMessage(value)
-    
+
     // Convert display message back to backend format for processing
     // Replace @userName with @userId using the mention map
     // Sort by length (longest first) to prevent partial matches
@@ -252,7 +360,7 @@ export function MessageInput({
       const userNamePattern = new RegExp(`@${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
       backendValue = backendValue.replace(userNamePattern, `@${userId}`)
     })
-    
+
     setMessage(backendValue)
     handleTyping()
 
@@ -266,24 +374,24 @@ export function MessageInput({
 
     const beforeMention = message.slice(0, mentionStartPos)
     const afterMention = message.slice(mentionStartPos + 1 + mentionQuery.length)
-    const userName = user.firstName && user.lastName 
-      ? `${user.firstName} ${user.lastName}` 
+    const userName = user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
       : user.firstName || "User"
-    
+
     // Backend message uses userId
     const backendMessage = `${beforeMention}@${user.userId} ${afterMention}`
     // Display message uses userName
     const displayMsg = `${beforeMention}@${userName} ${afterMention}`
-    
+
     // Update mention map
     setMentionMap(prev => ({ ...prev, [user.userId]: userName }))
-    
+
     setMessage(backendMessage)
     setDisplayMessage(displayMsg)
     setMentionVisible(false)
     setMentionQuery("")
     setMentionStartPos(null)
-    
+
     // Focus back on textarea
     textareaRef.current?.focus()
   }
@@ -298,9 +406,9 @@ export function MessageInput({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    
+
     await processFiles(Array.from(files))
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -314,7 +422,7 @@ export function MessageInput({
 
     for (const file of files) {
       const id = crypto.randomUUID()
-      
+
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         newAttachments.push({
@@ -347,7 +455,7 @@ export function MessageInput({
       if (attachment.status !== "pending") continue
 
       // Update status to uploading
-      setAttachments(prev => prev.map(a => 
+      setAttachments(prev => prev.map(a =>
         a.id === attachment.id ? { ...a, status: "uploading" as const } : a
       ))
 
@@ -366,16 +474,16 @@ export function MessageInput({
         const { storageId } = await response.json()
 
         // Update status to uploaded
-        setAttachments(prev => prev.map(a => 
-          a.id === attachment.id 
-            ? { ...a, status: "uploaded" as const, storageId } 
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "uploaded" as const, storageId }
             : a
         ))
-      } catch (error) {
+      } catch {
         // Update status to error
-        setAttachments(prev => prev.map(a => 
-          a.id === attachment.id 
-            ? { ...a, status: "error" as const, error: "Upload failed" } 
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "error" as const, error: "Upload failed" }
             : a
         ))
       }
@@ -391,21 +499,21 @@ export function MessageInput({
   const canSend = (message.trim() || hasUploadedAttachments) && !disabled
 
   return (
-    <div className="border-t border-[#26251E]/10 bg-[#F7F7F4] px-4 py-2 shrink-0">
+    <div className="border-t border-border bg-background px-4 py-2 shrink-0">
       {/* Reply indicator */}
       {replyingTo && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#26251E]/10 bg-white px-3 py-2">
-          <ArrowBendUpLeftIcon className="size-4 text-[#26251E]/40" />
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <ArrowBendUpLeftIcon className="size-4 text-muted-foreground" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs text-[#26251E]/50">Replying to </span>
-            <span className="text-xs font-medium text-[#26251E]">{replyingTo.userName}</span>
-            <p className="text-xs text-[#26251E]/60 truncate">{replyingTo.content}</p>
+            <span className="text-xs text-muted-foreground">Replying to </span>
+            <span className="text-xs font-medium text-foreground">{replyingTo.userName}</span>
+            <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
           </div>
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={onCancelReply}
-            className="text-[#26251E]/40 hover:text-[#26251E]"
+            className="text-muted-foreground hover:text-foreground"
           >
             <XIcon className="size-3.5" />
           </Button>
@@ -418,27 +526,26 @@ export function MessageInput({
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs ${
-                attachment.status === "error"
-                  ? "border-red-300 bg-red-50"
-                  : attachment.status === "uploading"
-                  ? "border-[#26251E]/20 bg-[#26251E]/5"
-                  : "border-[#26251E]/10 bg-white"
-              }`}
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs ${attachment.status === "error"
+                ? "border-red-300 bg-red-50"
+                : attachment.status === "uploading"
+                  ? "border-border bg-muted"
+                  : "border-border bg-card"
+                }`}
             >
               {attachment.type.startsWith("image/") ? (
-                <ImageIcon className="size-4 text-[#26251E]/50" />
+                <ImageIcon className="size-4 text-muted-foreground" />
               ) : (
-                <FileIcon className="size-4 text-[#26251E]/50" />
+                <FileIcon className="size-4 text-muted-foreground" />
               )}
-              <span className="max-w-[120px] truncate text-[#26251E]/70">
+              <span className="max-w-[120px] truncate text-foreground/70">
                 {attachment.name}
               </span>
-              <span className="text-[#26251E]/40">
+              <span className="text-muted-foreground">
                 {formatFileSize(attachment.size)}
               </span>
               {attachment.status === "uploading" && (
-                <SpinnerIcon className="size-3 animate-spin text-[#26251E]/50" />
+                <SpinnerIcon className="size-3 animate-spin text-muted-foreground" />
               )}
               {attachment.status === "error" && (
                 <span className="text-red-500">{attachment.error}</span>
@@ -446,16 +553,28 @@ export function MessageInput({
               <button
                 type="button"
                 onClick={() => removeAttachment(attachment.id)}
-                className="ml-1 rounded p-0.5 hover:bg-[#26251E]/10"
+                className="ml-1 rounded p-0.5 hover:bg-secondary"
               >
-                <XIcon className="size-3 text-[#26251E]/50" />
+                <XIcon className="size-3 text-muted-foreground" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      <div className="relative flex flex-col rounded-md border border-[#26251E]/15 bg-white shadow-sm">
+      {/* Link embed preview */}
+      {linkEmbedLoading && (
+        <div className="mb-2">
+          <LinkPreviewSkeleton onRemove={() => setLinkEmbedLoading(false)} />
+        </div>
+      )}
+      {linkEmbed && !linkEmbedLoading && (
+        <div className="mb-2">
+          <LinkPreview embed={linkEmbed} onRemove={handleRemoveLinkEmbed} />
+        </div>
+      )}
+
+      <div className="relative flex flex-col rounded-xl border border-border bg-card shadow-sm">
         {/* Mention autocomplete */}
         <MentionAutocomplete
           users={mentionUsers}
@@ -499,7 +618,7 @@ export function MessageInput({
                   : `Message #${channelName}`
             }
             disabled={disabled}
-            className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-[#26251E] placeholder:text-[#26251E]/40 focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
+            className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
             rows={1}
             style={{ height: '20px' }}
           />
@@ -511,17 +630,21 @@ export function MessageInput({
           <div className="flex items-center gap-1">
             {/* Attachment button */}
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 size-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5"
-                  disabled={disabled}
-                  title="Add attachment"
-                />}
-              >
-                <PlusIcon className="size-3.5" />
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<DropdownMenuTrigger
+                    render={<Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 size-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                      disabled={disabled}
+                    />}
+                  />}
+                >
+                  <PlusIcon className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Add attachment</TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="start" className="w-44">
                 <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                   <FileIcon className="size-4" />
@@ -536,23 +659,27 @@ export function MessageInput({
 
             {/* Emoji picker */}
             <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-              <PopoverTrigger
-                render={<Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 rounded-md border border-[#26251E]/10 text-[#26251E]/60 hover:text-[#26251E] hover:bg-[#26251E]/5 p-1"
-                  disabled={disabled}
-                  title="Add emoji"
-                />}
-              >
-                <SmileyIcon className="size-3.5" />
-              </PopoverTrigger>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<PopoverTrigger
+                    render={<Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted gap-1 px-2"
+                      disabled={disabled}
+                    />}
+                  />}
+                >
+                  <SmileyIcon className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Add emoji</TooltipContent>
+              </Tooltip>
               <PopoverContent
                 side="top"
                 align="start"
                 className="w-72 p-3"
               >
-                <div className="mb-2 text-xs font-medium text-[#26251E]/60">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
                   Quick reactions
                 </div>
                 <div className="grid grid-cols-8 gap-1">
@@ -560,7 +687,7 @@ export function MessageInput({
                     <button
                       key={emoji}
                       onClick={() => insertEmoji(emoji)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-[#26251E]/5 transition-colors"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-muted transition-colors"
                     >
                       {emoji}
                     </button>
@@ -571,15 +698,26 @@ export function MessageInput({
           </div>
 
           {/* Send button - right side */}
-          <Button
-            onClick={handleSend}
-            disabled={!canSend || isUploading}
-            size="icon"
-            className="size-7 rounded-full bg-[#26251E]/80 text-[#F7F7F4] hover:bg-[#26251E] disabled:bg-[#26251E]/30 disabled:text-[#F7F7F4]/50"
-            title="Send message (Press Enter to send, Shift+Enter for new line)"
-          >
-            <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={<Button
+                onClick={handleSend}
+                disabled={!canSend || isUploading}
+                size="icon"
+                className="size-7 rounded-full bg-foreground/80 text-background hover:bg-foreground disabled:bg-foreground/30 disabled:text-background/50"
+              />}
+            >
+              <PaperPlaneTiltIcon className="size-3.5" weight="fill" />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <div className="text-xs">
+                Send message
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  Press <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Enter</kbd> to send, <kbd className="rounded bg-secondary px-1 py-0.5 font-mono">Shift + Enter</kbd> for new line
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

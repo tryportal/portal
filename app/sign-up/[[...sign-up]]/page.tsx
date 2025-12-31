@@ -1,14 +1,18 @@
 "use client";
 
 import { SignUp } from "@clerk/nextjs";
+import { useTheme } from "@/lib/theme-provider";
 
 export default function SignUpPage() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <div className="w-full max-w-[95%] sm:max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center size-12 sm:size-16 rounded-2xl bg-primary/10 mb-4">
-            <img src="/portal.svg" alt="Portal" className="size-8" />
+            <img src={isDark ? "/portal-dark.svg" : "/portal.svg"} alt="Portal" className="size-8" />
           </div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Create your account</h1>
           <p className="text-muted-foreground mt-2">Get started with Portal</p>

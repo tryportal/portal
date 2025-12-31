@@ -105,7 +105,7 @@ function WorkspaceLayoutContent({
   const showSidebar = activeTab !== "messages";
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F7F7F4]">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
       {/* Top Navigation */}
       <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
 

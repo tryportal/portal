@@ -9,7 +9,7 @@ import { getIconComponent } from "@/components/icon-picker";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ChatInterface } from "@/components/preview/chat-interface";
 import { useUserDataCache } from "@/components/user-data-cache";
-import type { Message, Attachment, Reaction } from "@/components/preview/message-list";
+import type { Message, Attachment, Reaction, LinkEmbed } from "@/components/preview/message-list";
 import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog";
 import type { MentionUser } from "@/components/preview/mention-autocomplete";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -322,6 +322,7 @@ export default function ChannelPage({
         initials,
       },
       attachments: attachments.length > 0 ? attachments : undefined,
+      linkEmbed: msg.linkEmbed,
       editedAt: msg.editedAt,
       parentMessageId: msg.parentMessageId,
       parentMessage,
@@ -339,7 +340,8 @@ export default function ChannelPage({
       size: number;
       type: string;
     }>,
-    parentMessageId?: string
+    parentMessageId?: string,
+    linkEmbed?: LinkEmbed
   ) => {
     if (!channelId) return;
 
@@ -351,6 +353,7 @@ export default function ChannelPage({
           ...a,
           storageId: a.storageId as Id<"_storage">,
         })),
+        linkEmbed,
         parentMessageId: parentMessageId as Id<"messages"> | undefined,
       });
       analytics.messageSent({
@@ -475,7 +478,7 @@ export default function ChannelPage({
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-white">
+    <div className="flex flex-1 flex-col bg-card">
       <ChatInterface
         channelName={channel.name}
         channelDescription={channel.description}
