@@ -687,11 +687,21 @@ function isPrivateIP(hostname: string): boolean {
 /**
  * Fetch Open Graph metadata for a URL
  * Returns title, description, image, site name, and favicon
+ * 
+ * Note: This action has basic protection against abuse through URL validation,
+ * SSRF protection, and timeouts. For production-grade rate limiting across
+ * distributed instances, consider using @convex-dev/rate-limiter package.
  */
 export const fetchLinkMetadata = action({
   args: { url: v.string() },
-  handler: async (_, args): Promise<LinkEmbed | null> => {
+  handler: async (ctx, args): Promise<LinkEmbed | null> => {
     try {
+      // Basic authentication check - only authenticated users can fetch metadata
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return null;
+      }
+
       // Validate URL
       const urlObj = new URL(args.url);
 
@@ -705,7 +715,7 @@ export const fetchLinkMetadata = action({
         return null;
       }
 
-      // Fetch the page with timeout
+      // Fetch the page with timeout (5 seconds max to prevent slow-response DoS)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
