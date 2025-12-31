@@ -175,18 +175,17 @@ const MarkdownComponents = {
       {children}
     </a>
   ),
-  code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => {
-    if (inline) {
-      return (
-        <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/95">
-          {children}
-        </code>
-      )
-    }
+  pre: ({ children }: { children?: React.ReactNode }) => (
+    <pre className="p-2 bg-muted/80 rounded-md overflow-x-auto my-1.5 border border-border [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
+      {children}
+    </pre>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => {
+    // Inline code styling - code blocks inside <pre> will have these styles overridden by the pre's [&>code] selectors
     return (
-      <pre className="p-2 bg-muted/80 rounded-md overflow-x-auto my-1.5 border border-border">
-        <code className="text-[13px] font-mono text-foreground/90">{children}</code>
-      </pre>
+      <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90">
+        {children}
+      </code>
     )
   },
   ul: ({ children }: { children?: React.ReactNode }) => (
