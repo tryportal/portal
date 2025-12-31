@@ -265,7 +265,7 @@ export default function ConversationPage({
 
       // Transform attachments
       const attachments: Attachment[] =
-        msg.attachments?.map((att) => ({
+        msg.attachments?.map((att: any) => ({
           storageId: att.storageId,
           name: att.name,
           size: att.size,
@@ -273,7 +273,7 @@ export default function ConversationPage({
         })) || []
 
       // Transform reactions
-      const reactions: Reaction[] | undefined = msg.reactions?.map((r) => ({
+      const reactions: Reaction[] | undefined = msg.reactions?.map((r: any) => ({
         userId: r.userId,
         emoji: r.emoji,
       }))
