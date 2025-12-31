@@ -130,6 +130,8 @@ function PreviewSidebar({
   activeChannel: string | null
   onChannelSelect: (channelId: string | null) => void
 }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     mockCategories.map((c) => c.id)
   )
