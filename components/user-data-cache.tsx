@@ -53,10 +53,13 @@ export function UserDataCacheProvider({ children }: UserDataCacheProviderProps) 
   const pendingQueueRef = React.useRef<Set<string>>(new Set());
   const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // Use a Set for O(1) lookup of already requested IDs
+  const requestedUserIdsSet = React.useMemo(() => new Set(requestedUserIds), [requestedUserIds]);
+
   const fetchUserData = React.useCallback((userIds: string[]) => {
     // Filter out already requested user IDs
     const newUserIds = userIds.filter(
-      (id) => !requestedUserIds.includes(id) && !pendingQueueRef.current.has(id)
+      (id) => !requestedUserIdsSet.has(id) && !pendingQueueRef.current.has(id)
     );
 
     if (newUserIds.length === 0) return;
@@ -76,12 +79,13 @@ export function UserDataCacheProvider({ children }: UserDataCacheProviderProps) 
       if (idsToAdd.length === 0) return;
 
       setRequestedUserIds((prev) => {
-        const newIds = idsToAdd.filter((id) => !prev.includes(id));
+        const prevSet = new Set(prev);
+        const newIds = idsToAdd.filter((id) => !prevSet.has(id));
         if (newIds.length === 0) return prev;
         return [...prev, ...newIds];
       });
     }, 50); // 50ms debounce for batching
-  }, [requestedUserIds]);
+  }, [requestedUserIdsSet]);
 
   const getUserData = React.useCallback(
     (userId: string): UserData | undefined => {

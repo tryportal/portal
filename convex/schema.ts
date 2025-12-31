@@ -3,8 +3,9 @@ import { v } from "convex/values";
 
 export default defineSchema({
   // Users table - stores user profile data synced from Clerk for faster loading
+  // Note: clerkId should be unique per user - enforced at application level via upsert logic
   users: defineTable({
-    clerkId: v.string(), // Clerk user ID (same as identity.subject)
+    clerkId: v.string(), // Clerk user ID (same as identity.subject) - unique per user
     email: v.string(),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),

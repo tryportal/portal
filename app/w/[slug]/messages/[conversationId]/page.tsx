@@ -113,14 +113,14 @@ export default function ConversationPage({
     );
 
     // If we have client results OR search query is too short for server search, return client results
-    if (clientResults.length > 0 || searchQuery.length <= 2) {
+    if (clientResults.length > 0 || debouncedSearchQuery.length <= 2) {
       return clientResults;
     }
 
     // No client results and query is long enough - use server results
     if (serverSearchResults && serverSearchResults.length > 0) {
       // Deduplicate by message ID
-      const messageMap = new Map();
+      const messageMap = new Map<string, typeof serverSearchResults[number]>();
       serverSearchResults.forEach((msg) => {
         messageMap.set(msg._id, msg);
       });
@@ -129,7 +129,7 @@ export default function ConversationPage({
 
     // No results at all
     return [];
-  }, [rawMessages, searchQuery, serverSearchResults]);
+  }, [rawMessages, debouncedSearchQuery, serverSearchResults]);
 
   // Real-time subscription for typing users
   const typingUsersQuery = useQuery(

@@ -24,7 +24,6 @@ export function UserSync({ children }: { children: React.ReactNode }) {
     isSignedIn && user?.id ? { clerkId: user.id } : "skip"
   );
   
-  const [hasSynced, setHasSynced] = React.useState(false);
   const lastSyncedRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -72,7 +71,6 @@ export function UserSync({ children }: { children: React.ReactNode }) {
       })
         .then(() => {
           lastSyncedRef.current = currentDataHash;
-          setHasSynced(true);
         })
         .catch((error) => {
           console.error("Failed to sync user to Convex:", error);
@@ -80,7 +78,6 @@ export function UserSync({ children }: { children: React.ReactNode }) {
     } else {
       // Data is already in sync
       lastSyncedRef.current = currentDataHash;
-      setHasSynced(true);
     }
   }, [isLoaded, isSignedIn, user, existingUser, upsertUser]);
 

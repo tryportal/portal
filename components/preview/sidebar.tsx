@@ -706,11 +706,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   for (const category of categoriesData || []) {
                     const activeChannel = category.channels.find((c) => c._id === activeId)
                     if (activeChannel) {
-                      const IconComponent = activeChannel.icon === "chart" 
-                        ? ChartBarIcon 
-                        : activeChannel.icon === "users" 
-                        ? UsersIcon 
-                        : HashIcon
+                      const IconComponent = getIconComponent(activeChannel.icon)
                       
                       return (
                         <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">

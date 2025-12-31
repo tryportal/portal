@@ -297,6 +297,83 @@ export function MessageInput({
     setMentionStartPos(null)
   }
 
+  // Process files for upload (used by paste and drop handlers)
+  const processFiles = React.useCallback(async (files: File[]) => {
+    if (!generateUploadUrl) return
+
+    const newAttachments: PendingAttachment[] = []
+
+    for (const file of files) {
+      const id = crypto.randomUUID()
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        newAttachments.push({
+          id,
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          status: "error",
+          error: "File exceeds 5MB limit",
+        })
+        continue
+      }
+
+      newAttachments.push({
+        id,
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        status: "pending",
+      })
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments])
+
+    // Upload each pending file
+    setIsUploading(true)
+    for (const attachment of newAttachments) {
+      if (attachment.status !== "pending") continue
+
+      // Update status to uploading
+      setAttachments(prev => prev.map(a =>
+        a.id === attachment.id ? { ...a, status: "uploading" as const } : a
+      ))
+
+      try {
+        const uploadUrl = await generateUploadUrl()
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": attachment.file.type },
+          body: attachment.file,
+        })
+
+        if (!response.ok) {
+          throw new Error("Upload failed")
+        }
+
+        const { storageId } = await response.json()
+
+        // Update status to uploaded
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "uploaded" as const, storageId }
+            : a
+        ))
+      } catch {
+        // Update status to error
+        setAttachments(prev => prev.map(a =>
+          a.id === attachment.id
+            ? { ...a, status: "error" as const, error: "Upload failed" }
+            : a
+        ))
+      }
+    }
+    setIsUploading(false)
+  }, [generateUploadUrl])
+
   // Handle pasting images from clipboard
   const handlePaste = React.useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items
@@ -323,7 +400,7 @@ export function MessageInput({
       e.preventDefault() // Prevent the image from being pasted as text/base64
       await processFiles(imageFiles)
     }
-  }, [])
+  }, [processFiles])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle mention autocomplete navigation
@@ -436,82 +513,6 @@ export function MessageInput({
     }
   }
 
-  const processFiles = async (files: File[]) => {
-    if (!generateUploadUrl) return
-
-    const newAttachments: PendingAttachment[] = []
-
-    for (const file of files) {
-      const id = crypto.randomUUID()
-
-      // Validate file size
-      if (file.size > MAX_FILE_SIZE) {
-        newAttachments.push({
-          id,
-          file,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          status: "error",
-          error: "File exceeds 5MB limit",
-        })
-        continue
-      }
-
-      newAttachments.push({
-        id,
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        status: "pending",
-      })
-    }
-
-    setAttachments(prev => [...prev, ...newAttachments])
-
-    // Upload each pending file
-    setIsUploading(true)
-    for (const attachment of newAttachments) {
-      if (attachment.status !== "pending") continue
-
-      // Update status to uploading
-      setAttachments(prev => prev.map(a =>
-        a.id === attachment.id ? { ...a, status: "uploading" as const } : a
-      ))
-
-      try {
-        const uploadUrl = await generateUploadUrl()
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": attachment.file.type },
-          body: attachment.file,
-        })
-
-        if (!response.ok) {
-          throw new Error("Upload failed")
-        }
-
-        const { storageId } = await response.json()
-
-        // Update status to uploaded
-        setAttachments(prev => prev.map(a =>
-          a.id === attachment.id
-            ? { ...a, status: "uploaded" as const, storageId }
-            : a
-        ))
-      } catch {
-        // Update status to error
-        setAttachments(prev => prev.map(a =>
-          a.id === attachment.id
-            ? { ...a, status: "error" as const, error: "Upload failed" }
-            : a
-        ))
-      }
-    }
-    setIsUploading(false)
-  }
-
   // Drag and drop handlers
   const handleDragEnter = React.useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -547,7 +548,7 @@ export function MessageInput({
 
     // Process all file types
     await processFiles(Array.from(files))
-  }, [])
+  }, [processFiles])
 
   const removeAttachment = (id: string) => {
     setAttachments(prev => prev.filter(a => a.id !== id))
