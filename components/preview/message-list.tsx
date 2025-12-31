@@ -36,6 +36,8 @@ import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 
@@ -176,14 +178,39 @@ const MarkdownComponents = {
     </a>
   ),
   pre: ({ children }: { children?: React.ReactNode }) => (
-    <pre className="p-2 bg-muted/80 rounded-md overflow-x-auto my-1.5 border border-border [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
+    <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
       {children}
     </pre>
   ),
-  code: ({ children }: { children?: React.ReactNode }) => {
-    // Inline code styling - code blocks inside <pre> will have these styles overridden by the pre's [&>code] selectors
+  code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => {
+    // Check if this is a code block (has language-* class from markdown)
+    const match = /language-(\w+)/.exec(className || "")
+    const codeString = String(children).replace(/\n$/, "")
+
+    // If it has a language class, it's a code block - use syntax highlighting
+    if (match) {
+      return (
+        <SyntaxHighlighter
+          style={oneDark}
+          language={match[1]}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            padding: "0.5rem",
+            fontSize: "13px",
+            borderRadius: "0.375rem",
+            border: "1px solid hsl(var(--border))",
+          }}
+          {...props}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      )
+    }
+
+    // Inline code styling
     return (
-      <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90">
+      <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90" {...props}>
         {children}
       </code>
     )

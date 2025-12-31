@@ -7,3 +7,4 @@ alwaysApply: true
 3. Don't overthink solutions.
 4. Use the latest version of the tools and libraries.
 5. If you are unsure about a library/tool, use Context7 to help you.
+6. Always use Bun.
