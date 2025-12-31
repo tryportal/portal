@@ -488,7 +488,17 @@ export function MessageInput({
   const canSend = (message.trim() || hasUploadedAttachments) && !disabled
 
   return (
-    <div className="border-t border-border bg-background px-4 py-2 shrink-0">
+    <div 
+      className="border-t border-border bg-background px-4 py-2 shrink-0"
+      onClick={(e) => {
+        // Focus textarea when clicking blank areas (not interactive elements)
+        const target = e.target as HTMLElement
+        const isInteractive = target.closest('button, input, textarea, a, [role="button"]')
+        if (!isInteractive && textareaRef.current) {
+          textareaRef.current.focus()
+        }
+      }}
+    >
       {/* Reply indicator */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
