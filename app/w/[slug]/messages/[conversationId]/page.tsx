@@ -14,6 +14,7 @@ import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
 import { usePageTitle } from "@/lib/use-page-title"
+import { useNotifications } from "@/lib/use-notifications"
 import { analytics } from "@/lib/analytics"
 
 // Debounce hook for search
@@ -153,6 +154,9 @@ export default function ConversationPage({
   const toggleReaction = useMutation(api.messages.toggleDirectMessageReaction)
   const forwardMessage = useMutation(api.messages.forwardMessage)
   const markAsRead = useMutation(api.conversations.markConversationAsRead)
+  
+  // Track tab visibility for marking messages as read
+  const { isTabVisible } = useNotifications()
 
   // Fetch user data for other participant
   React.useEffect(() => {
@@ -161,12 +165,12 @@ export default function ConversationPage({
     }
   }, [conversation?.otherParticipantId, fetchUserData])
 
-  // Mark conversation as read when viewing and when new messages arrive
+  // Mark conversation as read when viewing, when new messages arrive, or when tab becomes visible
   React.useEffect(() => {
-    if (conversationId && filteredMessages && filteredMessages.length > 0) {
+    if (conversationId && filteredMessages && filteredMessages.length > 0 && isTabVisible) {
       markAsRead({ conversationId })
     }
-  }, [conversationId, filteredMessages?.length, markAsRead])
+  }, [conversationId, filteredMessages?.length, markAsRead, isTabVisible])
 
   // Fetch user data for typing users
   React.useEffect(() => {
