@@ -118,35 +118,62 @@
   --sidebar-ring: rgba(255, 255, 255, 0.15);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+/* Customization Settings */
+:root {
+  --chat-font-scaling: 16px;
+  --message-group-spacing: 16px;
+  --app-zoom: 100%;
+  --sidebar-width: 280px;
+  --sidebar-item-padding-y: 6px;
+  --sidebar-font-size: 14px;
+  --sidebar-header-height: 48px;
+  --sidebar-gap: 4px;
+  --chat-item-padding-y: 6px;
+}
 
-  body {
-    @apply bg-background text-foreground;
-  }
+.density-compact {
+  --sidebar-width: 240px;
+  --sidebar-item-padding-y: 1px;
+  --sidebar-font-size: 12px;
+  --sidebar-gap: 1px;
+  --chat-item-padding-y: 2px;
+}
 
-  /* Smooth theme transitions */
-  *,
-  *::before,
-  *::after {
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      color 0.15s ease;
-  }
+.density-default {
+  --sidebar-width: 280px;
+  --sidebar-item-padding-y: 2px;
+  --sidebar-font-size: 13px;
+  --sidebar-gap: 1px;
+  --chat-item-padding-y: 6px;
+}
 
-  /* Disable transitions on page load to prevent flash */
-  .no-transitions *,
-  .no-transitions *::before,
-  .no-transitions *::after {
-    transition: none !important;
-  }
+.density-spacious {
+  --sidebar-gap: 4px;
+}
+
+
+
+body {
+  @apply bg-background text-foreground;
+  zoom: var(--app-zoom);
+}
+
+/* Smooth theme transitions */
+/* Smooth theme transitions - SCOPED to specific properties to avoid layout thrashing */
+body {
+  transition: background-color 0.2s ease, color 0.15s ease;
+}
+
+/* Disable transitions on page load to prevent flash */
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition: none !important;
 }
 
 /* Fix Clerk UserButton circular outline issue */
 @layer utilities {
+
   /* Target Clerk UserButton elements that might receive focus */
   [class*="cl-userButton"]:focus-visible,
   [class*="cl-avatar"]:focus-visible,
