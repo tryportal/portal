@@ -16,6 +16,23 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { usePageTitle } from "@/lib/use-page-title";
 import { analytics } from "@/lib/analytics";
 
+// Debounce hook for search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function ChannelPage({
   params,
 }: {
@@ -40,6 +57,10 @@ export default function ChannelPage({
     }
   }, [params]);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   // Get channel data by route
   const channelData = useQuery(
     api.channels.getChannelByRoute,
@@ -63,6 +84,49 @@ export default function ChannelPage({
   
   // Extract messages array from paginated response
   const rawMessages = messagesData?.messages;
+
+  // Server-side search (only if search query is long enough and we have a channel)
+  const serverSearchResults = useQuery(
+    api.messages.searchMessages,
+    channelId && debouncedSearchQuery.length > 2
+      ? { channelId, query: debouncedSearchQuery, limit: 50 }
+      : "skip"
+  );
+
+  // Client-side filtering and hybrid search logic
+  const filteredMessages = React.useMemo(() => {
+    if (!rawMessages) return [];
+    
+    // No search query - return all loaded messages
+    if (!searchQuery.trim()) {
+      return rawMessages;
+    }
+
+    const searchTerm = searchQuery.toLowerCase().trim();
+
+    // First, filter loaded messages client-side
+    const clientResults = rawMessages.filter((msg) =>
+      msg.content.toLowerCase().includes(searchTerm)
+    );
+
+    // If we have client results OR search query is too short for server search, return client results
+    if (clientResults.length > 0 || debouncedSearchQuery.length <= 2) {
+      return clientResults;
+    }
+
+    // No client results and query is long enough - use server results
+    if (serverSearchResults && serverSearchResults.length > 0) {
+      // Deduplicate by message ID
+      const messageMap = new Map<string, typeof serverSearchResults[number]>();
+      serverSearchResults.forEach((msg) => {
+        messageMap.set(msg._id, msg);
+      });
+      return Array.from(messageMap.values());
+    }
+
+    // No results at all
+    return [];
+  }, [rawMessages, debouncedSearchQuery, serverSearchResults]);
 
   // Get organization ID for additional queries
   const organizationId = channelData?.channel?.organizationId;
@@ -126,11 +190,11 @@ export default function ChannelPage({
 
   // Fetch user data for all unique user IDs in messages using global cache
   React.useEffect(() => {
-    if (!rawMessages || rawMessages.length === 0) return;
+    if (!filteredMessages || filteredMessages.length === 0) return;
 
-    const uniqueUserIds = Array.from(new Set(rawMessages.map(msg => msg.userId)));
+    const uniqueUserIds = Array.from(new Set(filteredMessages.map(msg => msg.userId)));
     fetchUserData(uniqueUserIds);
-  }, [rawMessages, fetchUserData]);
+  }, [filteredMessages, fetchUserData]);
 
   // Also fetch user data for pinned messages
   React.useEffect(() => {
@@ -150,11 +214,11 @@ export default function ChannelPage({
   // Build a map of message IDs to their data for parent message lookups
   const messageMap = React.useMemo(() => {
     const map = new Map<string, { content: string; userId: string }>();
-    (rawMessages || []).forEach((msg) => {
+    (filteredMessages || []).forEach((msg) => {
       map.set(msg._id, { content: msg.content, userId: msg.userId });
     });
     return map;
-  }, [rawMessages]);
+  }, [filteredMessages]);
 
   // Build user names map for mentions and reactions
   const userNames: Record<string, string> = React.useMemo(() => {
@@ -266,7 +330,7 @@ export default function ChannelPage({
   const currentUserId = user?.id;
 
   // Transform raw messages to the format expected by ChatInterface
-  const messages: Message[] = (rawMessages || []).map((msg) => {
+  const messages: Message[] = (filteredMessages || []).map((msg) => {
     // Get user info from cache, fallback to current user's data if it's their message
     const cachedUserData = userDataCache[msg.userId];
     const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null);
@@ -282,7 +346,7 @@ export default function ChannelPage({
       : firstName?.[0] || "?";
 
     // Transform attachments
-    const attachments: Attachment[] = msg.attachments?.map(att => ({
+    const attachments: Attachment[] = msg.attachments?.map((att: any) => ({
       storageId: att.storageId,
       name: att.name,
       size: att.size,
@@ -290,7 +354,7 @@ export default function ChannelPage({
     })) || [];
 
     // Transform reactions
-    const reactions: Reaction[] | undefined = msg.reactions?.map(r => ({
+    const reactions: Reaction[] | undefined = msg.reactions?.map((r: any) => ({
       userId: r.userId,
       emoji: r.emoji,
     }));
@@ -507,6 +571,8 @@ export default function ChannelPage({
         mentionUsers={mentionUsers}
         isAdmin={isAdmin}
         organizationId={organizationId}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
     </div>
   );

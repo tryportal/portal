@@ -15,6 +15,7 @@ import type * as invitations from "../invitations.js";
 import type * as messages from "../messages.js";
 import type * as organizations from "../organizations.js";
 import type * as userSettings from "../userSettings.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   organizations: typeof organizations;
   userSettings: typeof userSettings;
+  users: typeof users;
 }>;
 
 /**

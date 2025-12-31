@@ -16,9 +16,11 @@ import {
   FileIcon,
   DownloadSimpleIcon,
   ImageIcon,
+  VideoCameraIcon,
   BookmarkSimpleIcon,
   CheckIcon,
   XIcon,
+  MagnifyingGlassIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,6 +37,8 @@ import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 import { useUserSettings } from "@/lib/user-settings-provider"
@@ -100,6 +104,7 @@ interface MessageListProps {
   channelDescription?: string
   channelIcon?: React.ElementType
   isAdmin?: boolean
+  searchQuery?: string
 }
 
 function formatFileSize(bytes: number): string {
@@ -114,8 +119,13 @@ function isImageType(type: string): boolean {
   return type.startsWith("image/")
 }
 
+function isVideoType(type: string): boolean {
+  return type.startsWith("video/")
+}
+
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
+  const isVideo = isVideoType(attachment.type)
 
   // Get URL from batch-loaded context instead of individual query
   const attachmentUrls = React.useContext(AttachmentUrlContext)
@@ -140,6 +150,34 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
           <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
+    )
+  }
+
+  if (isVideo && url) {
+    return (
+      <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
+        <video
+          src={url}
+          controls
+          preload="metadata"
+          className="max-h-80 w-auto bg-black"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <VideoCameraIcon className="size-3.5 flex-shrink-0" />
+          <span className="truncate flex-1 font-medium">{attachment.name}</span>
+          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+          <a
+            href={url}
+            download={attachment.name}
+            className="hover:text-foreground transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DownloadSimpleIcon className="size-3.5 flex-shrink-0" />
+          </a>
+        </div>
+      </div>
     )
   }
 
@@ -175,18 +213,42 @@ const MarkdownComponents = {
       {children}
     </a>
   ),
-  code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => {
-    if (inline) {
+  pre: ({ children }: { children?: React.ReactNode }) => (
+    <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
+      {children}
+    </pre>
+  ),
+  code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => {
+    // Check if this is a code block (has language-* class from markdown)
+    const match = /language-(\w+)/.exec(className || "")
+    const codeString = String(children).replace(/\n$/, "")
+
+    // If it has a language class, it's a code block - use syntax highlighting
+    if (match) {
       return (
-        <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/95">
-          {children}
-        </code>
+        <SyntaxHighlighter
+          style={oneDark}
+          language={match[1]}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            padding: "0.5rem",
+            fontSize: "13px",
+            borderRadius: "0.375rem",
+            border: "1px solid hsl(var(--border))",
+          }}
+          {...props}
+        >
+          {codeString}
+        </SyntaxHighlighter>
       )
     }
+
+    // Inline code styling
     return (
-      <pre className="p-2 bg-muted/80 rounded-md overflow-x-auto my-1.5 border border-border">
-        <code className="text-[13px] font-mono text-foreground/90">{children}</code>
-      </pre>
+      <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90" {...props}>
+        {children}
+      </code>
     )
   },
   ul: ({ children }: { children?: React.ReactNode }) => (
@@ -270,6 +332,7 @@ function MessageItem({
   userNames,
   isAdmin,
   isGrouped,
+  searchQuery,
 }: {
   message: Message
   currentUserId?: string
@@ -287,6 +350,7 @@ function MessageItem({
   userNames?: Record<string, string>
   isAdmin?: boolean
   isGrouped?: boolean
+  searchQuery?: string
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
@@ -582,12 +646,20 @@ function MessageItem({
                     marginTop: "0"
                   }}
                 >
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={MarkdownComponents}
-                  >
-                    {processedContent}
-                  </ReactMarkdown>
+                  {searchQuery && searchQuery.trim() ? (
+                    // When searching, render with highlights (no markdown)
+                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words">
+                      {renderWithHighlights(processedContent, searchQuery)}
+                    </p>
+                  ) : (
+                    // When not searching, render with full markdown support
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={MarkdownComponents}
+                    >
+                      {processedContent}
+                    </ReactMarkdown>
+                  )}
                 </div>
               )}
             </>
@@ -743,6 +815,34 @@ function shouldGroupMessages(current: Message, previous: Message | undefined): b
   return false
 }
 
+// Helper function to render text with search highlights as React nodes
+function renderWithHighlights(text: string, searchQuery: string): React.ReactNode {
+  if (!searchQuery || !searchQuery.trim()) {
+    return text;
+  }
+
+  // Escape special regex characters in the search query
+  const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // Create case-insensitive regex with global flag
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  
+  // Split text by matches
+  const parts = text.split(regex);
+  
+  return parts.map((part, index) => {
+    // Check if this part matches the search query (case-insensitive)
+    if (part.toLowerCase() === searchQuery.toLowerCase()) {
+      return (
+        <mark key={index} className="bg-yellow-200 dark:bg-yellow-800/40 text-foreground rounded px-0.5">
+          {part}
+        </mark>
+      );
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+}
+
 export function MessageList({
   messages,
   currentUserId,
@@ -762,6 +862,7 @@ export function MessageList({
   channelDescription,
   channelIcon,
   isAdmin,
+  searchQuery = "",
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const previousMessageCount = React.useRef(0)
@@ -889,6 +990,27 @@ export function MessageList({
         className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
         style={{ scrollBehavior: 'auto' }}
       >
+        {/* Search Results Indicator */}
+        {searchQuery && searchQuery.trim() && (
+          <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b border-border px-4 py-2 text-sm text-muted-foreground flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MagnifyingGlassIcon className="size-4" />
+              <span>
+                {messages.length === 0 ? (
+                  "No results found"
+                ) : messages.length === 1 ? (
+                  "1 result found"
+                ) : (
+                  `${messages.length} results found`
+                )}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground/70">
+              Searching for: <span className="font-medium">&quot;{searchQuery}&quot;</span>
+            </span>
+          </div>
+        )}
+        
         {/* Spacer pushes messages to bottom when content doesn't fill viewport */}
         <div className="flex-1" />
         <div className="py-4">
@@ -917,6 +1039,7 @@ export function MessageList({
                     userNames={userNames}
                     isAdmin={isAdmin}
                     isGrouped={isGrouped}
+                    searchQuery={searchQuery}
                   />
                 </div>
               )

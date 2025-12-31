@@ -828,11 +828,42 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               </SortableContext>
             </div>
             <DragOverlay>
-              {activeId ? (
-                <div className="rounded bg-card p-2 shadow-lg text-sm">
-                  Dragging...
-                </div>
-              ) : null}
+              {activeId ? (() => {
+                // Check if dragging a category
+                const activeCategory = categoriesData?.find((c) => c._id === activeId)
+                if (activeCategory) {
+                  return (
+                    <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FolderIcon className="size-4 text-primary" weight="fill" />
+                        <span className="truncate">{activeCategory.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {activeCategory.channels.length}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Check if dragging a channel
+                for (const category of categoriesData || []) {
+                  const activeChannel = category.channels.find((c) => c._id === activeId)
+                  if (activeChannel) {
+                    const IconComponent = getIconComponent(activeChannel.icon)
+                    
+                    return (
+                      <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
+                        <div className="flex items-center gap-2 text-sm">
+                          <IconComponent className="size-4 text-muted-foreground" weight="bold" />
+                          <span className="truncate">{activeChannel.name}</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                }
+
+                return null
+              })() : null}
             </DragOverlay>
           </DndContext>
         </div>
