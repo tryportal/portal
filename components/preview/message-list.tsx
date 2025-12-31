@@ -19,6 +19,7 @@ import {
   BookmarkSimpleIcon,
   CheckIcon,
   XIcon,
+  MagnifyingGlassIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -214,37 +215,6 @@ const MarkdownComponents = {
       {children}
     </blockquote>
   ),
-  // Custom text renderer to handle highlight markers
-  text: ({ children }: { children?: React.ReactNode }) => {
-    if (typeof children !== 'string') return <>{children}</>;
-    
-    // Check for highlight markers
-    const parts = children.split(/(==HIGHLIGHT_START==|==HIGHLIGHT_END==)/);
-    let isHighlighted = false;
-    
-    return (
-      <>
-        {parts.map((part, i) => {
-          if (part === '==HIGHLIGHT_START==') {
-            isHighlighted = true;
-            return null;
-          }
-          if (part === '==HIGHLIGHT_END==') {
-            isHighlighted = false;
-            return null;
-          }
-          if (isHighlighted) {
-            return (
-              <mark key={i} className="bg-yellow-200 dark:bg-yellow-800/40 text-foreground rounded px-0.5">
-                {part}
-              </mark>
-            );
-          }
-          return <React.Fragment key={i}>{part}</React.Fragment>;
-        })}
-      </>
-    );
-  },
 }
 
 // Replace mention user IDs with user names in content
@@ -364,13 +334,8 @@ function MessageItem({
     }
   }
 
-  // Process content to replace mention IDs with names and apply search highlighting
-  let processedContent = processMentions(message.content, message.mentions, userNames)
-  
-  // Apply search highlighting if there's a search query
-  if (searchQuery && searchQuery.trim()) {
-    processedContent = highlightSearchMatch(processedContent, searchQuery)
-  }
+  // Process content to replace mention IDs with names
+  const processedContent = processMentions(message.content, message.mentions, userNames)
 
   return (
     <div
@@ -479,12 +444,20 @@ function MessageItem({
             <>
               {message.content && (
                 <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert" style={{ marginTop: isGrouped ? "0" : "0" }}>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={MarkdownComponents}
-                  >
-                    {processedContent}
-                  </ReactMarkdown>
+                  {searchQuery && searchQuery.trim() ? (
+                    // When searching, render with highlights (no markdown)
+                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words">
+                      {renderWithHighlights(processedContent, searchQuery)}
+                    </p>
+                  ) : (
+                    // When not searching, render with full markdown support
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={MarkdownComponents}
+                    >
+                      {processedContent}
+                    </ReactMarkdown>
+                  )}
                 </div>
               )}
             </>
@@ -639,8 +612,8 @@ function shouldGroupMessages(current: Message, previous: Message | undefined): b
   return false
 }
 
-// Helper function to highlight search matches in text
-function highlightSearchMatch(text: string, searchQuery: string): string {
+// Helper function to render text with search highlights as React nodes
+function renderWithHighlights(text: string, searchQuery: string): React.ReactNode {
   if (!searchQuery || !searchQuery.trim()) {
     return text;
   }
@@ -648,13 +621,23 @@ function highlightSearchMatch(text: string, searchQuery: string): string {
   // Escape special regex characters in the search query
   const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   
-  // Create case-insensitive regex
+  // Create case-insensitive regex with global flag
   const regex = new RegExp(`(${escapedQuery})`, 'gi');
   
-  // Replace matches with highlighted version
-  // We use ==HIGHLIGHT_START== and ==HIGHLIGHT_END== markers to avoid
-  // interfering with markdown parsing, then we'll handle these in rendering
-  return text.replace(regex, '==HIGHLIGHT_START==$1==HIGHLIGHT_END==');
+  // Split text by matches
+  const parts = text.split(regex);
+  
+  return parts.map((part, index) => {
+    // Check if this part matches the search query (case-insensitive)
+    if (part.toLowerCase() === searchQuery.toLowerCase()) {
+      return (
+        <mark key={index} className="bg-yellow-200 dark:bg-yellow-800/40 text-foreground rounded px-0.5">
+          {part}
+        </mark>
+      );
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
 }
 
 export function MessageList({
@@ -804,6 +787,27 @@ export function MessageList({
         className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
         style={{ scrollBehavior: 'auto' }}
       >
+        {/* Search Results Indicator */}
+        {searchQuery && searchQuery.trim() && (
+          <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b border-border px-4 py-2 text-sm text-muted-foreground flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MagnifyingGlassIcon className="size-4" />
+              <span>
+                {messages.length === 0 ? (
+                  "No results found"
+                ) : messages.length === 1 ? (
+                  "1 result found"
+                ) : (
+                  `${messages.length} results found`
+                )}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground/70">
+              Searching for: <span className="font-medium">&quot;{searchQuery}&quot;</span>
+            </span>
+          </div>
+        )}
+        
         {/* Spacer pushes messages to bottom when content doesn't fill viewport */}
         <div className="flex-1" />
         <div className="py-4">
@@ -832,6 +836,7 @@ export function MessageList({
                     userNames={userNames}
                     isAdmin={isAdmin}
                     isGrouped={isGrouped}
+                    searchQuery={searchQuery}
                   />
                 </div>
               )
