@@ -3,19 +3,25 @@
 import type { Id } from "@/convex/_generated/dataModel"
 
 interface ForwardMessageDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  messageId?: Id<"messages">
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  messageId?: Id<"messages"> | string
   messageContent?: string
+  organizationId?: string
+  onForwardToChannel?: (messageId: string, channelId: string) => Promise<void>
+  onForwardToConversation?: (messageId: string, conversationId: string) => Promise<void>
 }
 
 export function ForwardMessageDialog({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   messageId,
   messageContent,
+  organizationId,
+  onForwardToChannel,
+  onForwardToConversation,
 }: ForwardMessageDialogProps) {
-  if (!isOpen) return null
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -25,7 +31,7 @@ export function ForwardMessageDialog({
           Forward message functionality coming soon...
         </p>
         <button
-          onClick={onClose}
+          onClick={() => onOpenChange(false)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           Close

@@ -526,7 +526,7 @@ export default function ConversationPage({
       <ForwardMessageDialog
         open={forwardDialogOpen}
         onOpenChange={setForwardDialogOpen}
-        messageId={forwardingMessage?.id ?? null}
+        messageId={forwardingMessage?.id}
         messageContent={forwardingMessage?.content ?? ""}
         organizationId={organizationId}
         onForwardToChannel={handleForwardToChannel}
