@@ -20,6 +20,8 @@ import {
   GearIcon,
   DotsSixVerticalIcon,
   WarningCircleIcon,
+  CaretLeftIcon,
+  PencilSimpleIcon,
 } from "@phosphor-icons/react"
 import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
@@ -34,7 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ import {
 import { CreateCategoryDialog } from "@/components/create-category-dialog"
 import { CreateChannelDialog } from "@/components/create-channel-dialog"
 import { EditChannelDialog } from "@/components/edit-channel-dialog"
+import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { getIconComponent } from "@/components/icon-picker"
 import {
   DndContext,
@@ -69,6 +71,10 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { useTheme } from "@/lib/theme-provider"
+import { SidebarShell } from "./sidebar-shell"
+// Import split content
+import { SidebarMessages } from "./sidebar-messages"
+import { SidebarSettingsContent } from "./sidebar-settings-content"
 
 interface SidebarProps {
   isOpen: boolean
@@ -124,11 +130,16 @@ function SortableChannel({
     >
       <Button
         variant={isActive ? "secondary" : "ghost"}
-        className={`w-full justify-start gap-2 pr-8 ${
-          isActive
-            ? "bg-secondary text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        } ${isAdmin ? "pl-1" : ""}`}
+        className={`w-full justify-start gap-2 pr-8 ${isActive
+          ? "bg-secondary text-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          } ${isAdmin ? "pl-1" : ""}`}
+        style={{
+          height: 'auto',
+          paddingTop: 'var(--sidebar-item-padding-y)',
+          paddingBottom: 'var(--sidebar-item-padding-y)',
+          fontSize: 'var(--sidebar-font-size)'
+        }}
         onClick={onSelect}
       >
         {isAdmin && (
@@ -239,7 +250,13 @@ function SortableCategory({
   return (
     <div ref={setNodeRef} style={style}>
       {/* Category Header */}
-      <div className="group flex items-center pr-2">
+      <div
+        className="group flex items-center pr-2"
+        style={{
+          paddingTop: 'calc(var(--sidebar-item-padding-y) * 0.5)',
+          paddingBottom: 'calc(var(--sidebar-item-padding-y) * 0.5)'
+        }}
+      >
         {isAdmin && (
           <span
             {...attributes}
@@ -260,7 +277,7 @@ function SortableCategory({
           )}
           <span className="uppercase tracking-wider">{category.name}</span>
         </button>
-        
+
         {isAdmin && (
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -271,7 +288,7 @@ function SortableCategory({
               <DotsThreeIcon className="size-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={() => onDeleteCategory(category._id)}
               >
@@ -319,6 +336,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   // Use shared workspace data from context
   const { organization: currentOrg, membership } = useWorkspaceData()
+  const isAdmin = membership?.role === "admin"
 
   // Dialog states
   const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false)
@@ -329,6 +347,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   // Drag and drop state
   const [activeId, setActiveId] = React.useState<string | null>(null)
+
+  // Messages state
+  const [newDmDialogOpen, setNewDmDialogOpen] = React.useState(false)
 
   // Get categories and channels from Convex (this is still needed per-sidebar)
   const categoriesData = useQuery(
@@ -351,9 +372,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }, [categoriesData, expandedCategories.length])
 
-  // Check current route for active state
-  const isSettingsPage =
-    pathname?.endsWith("/settings") || pathname?.endsWith("/settings/")
+  // DETERMINE SIDEBAR MODE
+  const isMessagesMode = pathname?.includes("/messages")
+  const isSettingsMode = pathname?.includes("/settings")
+
+  // Check current route for active state (channel view)
   const isPeoplePage = pathname?.includes("/people")
 
   // Parse active channel from URL
@@ -378,7 +401,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     return null
   }, [pathname, currentSlug, categoriesData])
 
-  const isOverviewActive = !activeChannelFromUrl && !isSettingsPage && !isPeoplePage
+  const isOverviewActive = !activeChannelFromUrl && !isSettingsMode && !isPeoplePage && !isMessagesMode
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -387,8 +410,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         : [...prev, categoryId]
     )
   }
-
-  const isAdmin = membership?.role === "admin"
 
   // DnD sensors
   const sensors = useSensors(
@@ -524,9 +545,85 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }
 
-  if (!isOpen) {
+  // Navigation handlers for settings/back
+  const handleBack = () => {
+    if (currentSlug) {
+      router.push(`/w/${currentSlug}`)
+    }
+  }
+
+  const handleNavigateSettings = (section: "workspace" | "customization") => {
+    if (currentSlug) {
+      router.push(`/w/${currentSlug}/settings/${section}`)
+    }
+  }
+
+  const handlePrefetchSettings = (section: "workspace" | "customization") => {
+    if (currentSlug) {
+      router.prefetch(`/w/${currentSlug}/settings/${section}`)
+    }
+  }
+
+  // --- Dynamic Header Logic ---
+  const renderHeader = () => {
+    if (isSettingsMode) {
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="size-8 text-muted-foreground hover:text-foreground"
+          >
+            <CaretLeftIcon className="size-4" weight="bold" />
+          </Button>
+          <h2 className="text-sm font-semibold text-foreground">Settings</h2>
+        </div>
+      )
+    }
+
+    if (isMessagesMode) {
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="size-8 text-muted-foreground hover:text-foreground"
+          >
+            <CaretLeftIcon className="size-4" weight="bold" />
+          </Button>
+          <h2 className="text-sm font-semibold text-foreground">Messages</h2>
+        </div>
+      )
+    }
+
+    // Default Channel/Org Header
     return (
-      <div className="hidden sm:flex h-full w-12 flex-col items-center border-r border-border bg-background py-3">
+      <>
+        <div className="flex items-center gap-2">
+          {currentOrg?.logoUrl ? (
+            <Image
+              src={currentOrg.logoUrl}
+              alt={currentOrg.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded"
+            />
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
+              <Image
+                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                alt="Workspace"
+                width={12}
+                height={12}
+              />
+            </div>
+          )}
+          <span className="text-sm font-medium text-foreground">
+            {currentOrg?.name || "Organization"}
+          </span>
+        </div>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -535,201 +632,213 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         >
           <SidebarIcon className="size-4" />
         </Button>
-      </div>
+      </>
     )
   }
 
-  return (
-    <>
-      {/* Mobile Overlay */}
-      <div 
-        className="sm:hidden fixed inset-0 bg-black/50 z-40"
-        onClick={onToggle}
-      />
-      
-      {/* Sidebar - slides in on mobile */}
-      <div className="fixed sm:relative z-50 sm:z-auto h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full sm:animate-none duration-200">
-        {/* Header with toggle */}
-        <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            {currentOrg?.logoUrl ? (
-              <Image
-                src={currentOrg.logoUrl}
-                alt={currentOrg.name || "Organization"}
-                width={20}
-                height={20}
-                className="rounded"
-              />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
-                <Image
-                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                  alt="Workspace"
-                  width={12}
-                  height={12}
-                />
-              </div>
-            )}
-            <span className="text-sm font-medium text-foreground">
-              {currentOrg?.name || "Organization"}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onToggle}
-            className="text-muted-foreground hover:text-foreground"
+  // --- Dynamic Footer Logic ---
+  const renderFooter = () => {
+    if (isSettingsMode) {
+      return null // No footer in settings mode
+    }
+
+    if (isMessagesMode) {
+      return (
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => setNewDmDialogOpen(true)}
+        >
+          <PencilSimpleIcon className="size-4" />
+          New Message
+        </Button>
+      )
+    }
+
+    // Default Channel/Org Footer
+    return isAdmin ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+            />
+          }
+        >
+          <PlusIcon className="size-4" />
+          Create new
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-44">
+          <DropdownMenuItem
+            onClick={() => setCreateChannelOpen(true)}
+            disabled={!categoriesData || categoriesData.length === 0}
+            className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
           >
-            <SidebarIcon className="size-4" />
-          </Button>
-        </div>
+            <HashIcon className="size-4" />
+            New channel
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setCreateCategoryOpen(true)}>
+            <FolderIcon className="size-4" />
+            New category
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null
+  }
 
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {/* Sidebar Tabs */}
-            <div className="mb-4 space-y-0.5">
-              {/* Overview button */}
-              <Link
-                href={currentSlug ? `/w/${currentSlug}` : "#"}
-                className="block"
-                onMouseEnter={handleOverviewPrefetch}
-              >
-                <Button
-                  variant={isOverviewActive ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-2 ${
-                    isOverviewActive
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <ChartBarIcon
-                    className="size-4"
-                    weight={isOverviewActive ? "fill" : "regular"}
-                  />
-                  Overview
-                </Button>
-              </Link>
-              {/* People button */}
-              <Link
-                href={currentSlug ? `/w/${currentSlug}/people` : "#"}
-                className="block"
-                onMouseEnter={handlePeoplePrefetch}
-              >
-                <Button
-                  variant={isPeoplePage ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-2 ${
-                    isPeoplePage
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <UsersIcon
-                    className="size-4"
-                    weight={isPeoplePage ? "fill" : "regular"}
-                  />
-                  People
-                </Button>
-              </Link>
-              {/* Settings button for admins */}
-              {isAdmin && (
-                <Link
-                  href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
-                  className="block"
-                  onMouseEnter={handleSettingsPrefetch}
-                >
-                  <Button
-                    variant={isSettingsPage ? "secondary" : "ghost"}
-                    className={`w-full justify-start gap-2 ${
-                      isSettingsPage
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <GearIcon
-                      className="size-4"
-                      weight={isSettingsPage ? "fill" : "regular"}
-                    />
-                    Settings
-                  </Button>
-                </Link>
-              )}
-            </div>
 
-            {/* Categories and Channels with DnD */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
+  return (
+    <SidebarShell
+      isOpen={isOpen}
+      onToggle={onToggle}
+      header={renderHeader()}
+      footer={renderFooter()}
+    >
+      {/* Messages Mode */}
+      {isMessagesMode && (
+        <SidebarMessages />
+      )}
+
+      {/* Settings Mode */}
+      {isSettingsMode && (
+        <SidebarSettingsContent
+          isAdmin={isAdmin}
+          isWorkspaceActive={pathname?.includes("/settings/workspace") || false}
+          isCustomizationActive={pathname?.includes("/settings/customization") || false}
+          handleNavigate={handleNavigateSettings}
+          handlePrefetch={handlePrefetchSettings}
+        />
+      )}
+
+      {/* Channels/Default Mode */}
+      {!isMessagesMode && !isSettingsMode && (
+        <div className="space-y-4">
+          {/* Sidebar Tabs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sidebar-gap)' }}>
+            {/* Overview button */}
+            <Link
+              href={currentSlug ? `/w/${currentSlug}` : "#"}
+              className="block"
+              onMouseEnter={handleOverviewPrefetch}
             >
-              <div className="space-y-2">
-                <SortableContext
-                  items={categoriesData?.map((c) => c._id) || []}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {categoriesData?.map((category) => (
-                    <SortableCategory
-                      key={category._id}
-                      category={category}
-                      isExpanded={expandedCategories.includes(category._id)}
-                      onToggle={() => toggleCategory(category._id)}
-                      activeChannelId={activeChannelFromUrl}
-                      onChannelSelect={handleChannelSelect}
-                      onChannelPrefetch={handleChannelPrefetch}
-                      isAdmin={isAdmin}
-                      onEditChannel={handleEditChannel}
-                      onDeleteChannel={handleDeleteChannel}
-                      onDeleteCategory={handleDeleteCategory}
-                    />
-                  ))}
-                </SortableContext>
-              </div>
-              <DragOverlay>
-                {activeId ? (
-                  <div className="rounded bg-card p-2 shadow-lg text-sm">
-                    Dragging...
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          </div>
-        </ScrollArea>
-
-        {/* Bottom: Create button */}
-        {isAdmin && (
-          <div className="border-t border-border p-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-                  />
-                }
+              <Button
+                variant={isOverviewActive ? "secondary" : "ghost"}
+                className={`w-full justify-start gap-2 ${isOverviewActive
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                style={{
+                  height: 'auto',
+                  paddingTop: 'var(--sidebar-item-padding-y)',
+                  paddingBottom: 'var(--sidebar-item-padding-y)',
+                  fontSize: 'var(--sidebar-font-size)'
+                }}
               >
-                <PlusIcon className="size-4" />
-                Create new
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem 
-                  onClick={() => setCreateChannelOpen(true)}
-                  disabled={!categoriesData || categoriesData.length === 0}
-                  className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
+                <ChartBarIcon
+                  className="size-4"
+                  weight={isOverviewActive ? "fill" : "regular"}
+                />
+                Overview
+              </Button>
+            </Link>
+            {/* People button */}
+            <Link
+              href={currentSlug ? `/w/${currentSlug}/people` : "#"}
+              className="block"
+              onMouseEnter={handlePeoplePrefetch}
+            >
+              <Button
+                variant={isPeoplePage ? "secondary" : "ghost"}
+                className={`w-full justify-start gap-2 ${isPeoplePage
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                style={{
+                  height: 'auto',
+                  paddingTop: 'var(--sidebar-item-padding-y)',
+                  paddingBottom: 'var(--sidebar-item-padding-y)',
+                  fontSize: 'var(--sidebar-font-size)'
+                }}
+              >
+                <UsersIcon
+                  className="size-4"
+                  weight={isPeoplePage ? "fill" : "regular"}
+                />
+                People
+              </Button>
+            </Link>
+            {/* Settings button for admins */}
+            {isAdmin && (
+              <Link
+                href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
+                className="block"
+                onMouseEnter={handleSettingsPrefetch}
+              >
+                <Button
+                  variant={isSettingsMode ? "secondary" : "ghost"}
+                  className={`w-full justify-start gap-2 ${isSettingsMode
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  style={{
+                    height: 'auto',
+                    paddingTop: 'var(--sidebar-item-padding-y)',
+                    paddingBottom: 'var(--sidebar-item-padding-y)',
+                    fontSize: 'var(--sidebar-font-size)'
+                  }}
                 >
-                  <HashIcon className="size-4" />
-                  New channel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCreateCategoryOpen(true)}>
-                  <FolderIcon className="size-4" />
-                  New category
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <GearIcon
+                    className="size-4"
+                    weight={isSettingsMode ? "fill" : "regular"}
+                  />
+                  Settings
+                </Button>
+              </Link>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Dialogs */}
+          {/* Categories and Channels with DnD */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="space-y-2">
+              <SortableContext
+                items={categoriesData?.map((c) => c._id) || []}
+                strategy={verticalListSortingStrategy}
+              >
+                {categoriesData?.map((category) => (
+                  <SortableCategory
+                    key={category._id}
+                    category={category}
+                    isExpanded={expandedCategories.includes(category._id)}
+                    onToggle={() => toggleCategory(category._id)}
+                    activeChannelId={activeChannelFromUrl}
+                    onChannelSelect={handleChannelSelect}
+                    onChannelPrefetch={handleChannelPrefetch}
+                    isAdmin={isAdmin}
+                    onEditChannel={handleEditChannel}
+                    onDeleteChannel={handleDeleteChannel}
+                    onDeleteCategory={handleDeleteCategory}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+            <DragOverlay>
+              {activeId ? (
+                <div className="rounded bg-card p-2 shadow-lg text-sm">
+                  Dragging...
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      )}
+
+      {/* Dialogs outside of SidebarShell to avoid scroll interference */}
       {currentOrg?._id && (
         <>
           <CreateCategoryDialog
@@ -742,6 +851,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             onOpenChange={setCreateChannelOpen}
             organizationId={currentOrg._id}
           />
+          <NewDmDialog
+            open={newDmDialogOpen}
+            onOpenChange={setNewDmDialogOpen}
+            organizationId={currentOrg._id}
+          />
           <EditChannelDialog
             open={editChannelId !== null}
             onOpenChange={(open) => {
@@ -750,8 +864,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             channelId={editChannelId}
             organizationId={currentOrg._id}
           />
-          <AlertDialog 
-            open={deleteCategoryDialogOpen} 
+          <AlertDialog
+            open={deleteCategoryDialogOpen}
             onOpenChange={(open) => {
               setDeleteCategoryDialogOpen(open)
               if (!open) {
@@ -784,6 +898,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </AlertDialog>
         </>
       )}
-    </>
+    </SidebarShell>
   )
 }
