@@ -94,33 +94,25 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
     return (
         <UserSettingsContext.Provider value={value}>
-            <style dangerouslySetInnerHTML={{
-                __html: `
-          :root {
-            --chat-font-scaling: ${settings.fontScaling}px;
-            --message-group-spacing: ${settings.groupSpacing}px;
-            --app-zoom: ${settings.zoomLevel}%;
-          }
-          
-          /* Apply Zoom */
-          body {
-            zoom: var(--app-zoom);
-            -moz-transform: scale(calc(var(--app-zoom) / 100));
-            -moz-transform-origin: 0 0;
-          }
+            <style jsx global>{`
+                /* Density specific adjustments */
+                .density-compact {
+                    --sidebar-width: 240px;
+                }
+                .density-default {
+                    --sidebar-width: 280px;
+                }
+                .density-spacious {
+                    --sidebar-width: 320px;
+                }
 
-          /* Density specific adjustments could be added here or via tailwind classes on root */
-          .density-compact {
-            --sidebar-width: 240px;
-          }
-          .density-default {
-            --sidebar-width: 280px;
-          }
-          .density-spacious {
-            --sidebar-width: 320px;
-          }
-        `
-            }} />
+                /* Apply Zoom - using CSS variables set via JS */
+                body {
+                    zoom: var(--app-zoom, 100%);
+                    -moz-transform: scale(calc(var(--app-zoom, 100%) / 100));
+                    -moz-transform-origin: 0 0;
+                }
+            `}</style>
             {children}
         </UserSettingsContext.Provider>
     );
