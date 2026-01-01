@@ -268,7 +268,22 @@
 }
 
 /* Catch-all for any Clerk text elements in dark mode */
-:root.dark [class^="cl-"] {
+:root.dark [class*="cl-userButton"],
+:root.dark [class*="cl-popover"],
+:root.dark [class*="cl-modal"],
+:root.dark [class*="cl-card"],
+:root.dark [class*="cl-avatar"],
+:root.dark [class*="cl-organizationSwitcher"],
+:root.dark [class*="cl-signIn"],
+:root.dark [class*="cl-signUp"],
+.dark [class*="cl-userButton"],
+.dark [class*="cl-popover"],
+.dark [class*="cl-modal"],
+.dark [class*="cl-card"],
+.dark [class*="cl-avatar"],
+.dark [class*="cl-organizationSwitcher"],
+.dark [class*="cl-signIn"],
+.dark [class*="cl-signUp"] {
   --cl-color-text-primary: #fafafa;
   --cl-color-text-secondary: #888888;
   --cl-color-background: #141414;

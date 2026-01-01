@@ -29,18 +29,20 @@ export function ResizableSidebar({
 
   // Load saved width from localStorage on mount
   React.useEffect(() => {
-    const savedWidth = localStorage.getItem(storageKey)
-    if (savedWidth) {
-      const parsed = parseInt(savedWidth, 10)
-      if (!isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
-        setWidth(parsed)
+    if (typeof window !== 'undefined') {
+      const savedWidth = localStorage.getItem(storageKey)
+      if (savedWidth) {
+        const parsed = parseInt(savedWidth, 10)
+        if (!isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
+          setWidth(parsed)
+        }
       }
     }
   }, [storageKey, minWidth, maxWidth])
 
   // Save width to localStorage when it changes
   React.useEffect(() => {
-    if (!isResizing) {
+    if (!isResizing && typeof window !== 'undefined') {
       localStorage.setItem(storageKey, width.toString())
     }
   }, [width, storageKey, isResizing])
