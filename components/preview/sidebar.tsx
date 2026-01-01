@@ -759,17 +759,20 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile Overlay */}
-      <div 
-        className="sm:hidden fixed inset-0 bg-black/50 z-40"
-        onClick={onToggle}
-      />
-      
-      {/* Mobile Sidebar - fixed width, slides in */}
-      <div className="sm:hidden fixed z-50 h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full duration-200">
-        {sidebarContent}
-      </div>
+      {isOpen && (
+        <>
+          {/* Mobile Overlay */}
+          <div
+            className="sm:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={onToggle}
+          />
 
+          {/* Mobile Sidebar - fixed width, slides in */}
+          <div className="sm:hidden fixed z-50 h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full duration-200">
+            {sidebarContent}
+          </div>
+        </>
+      )}
       {/* Desktop Sidebar - resizable */}
       <ResizableSidebar
         storageKey={SIDEBAR_STORAGE_KEY}
