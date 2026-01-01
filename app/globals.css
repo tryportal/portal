@@ -245,12 +245,12 @@
 :root.dark .cl-userButtonPopoverFooter span,
 :root.dark [class*="cl-userButtonPopoverFooter"] a,
 :root.dark [class*="cl-userButtonPopoverFooter"] span,
-:root.dark .cl-internal-wf8x4b,
+:root.dark .cl-userButtonPopoverFooter *,
 .dark .cl-userButtonPopoverFooter a,
 .dark .cl-userButtonPopoverFooter span,
 .dark [class*="cl-userButtonPopoverFooter"] a,
 .dark [class*="cl-userButtonPopoverFooter"] span,
-.dark .cl-internal-wf8x4b {
+.dark .cl-userButtonPopoverFooter * {
   color: #888888 !important;
 }
 
