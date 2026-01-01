@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { PushPinIcon, XIcon } from "@phosphor-icons/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -11,11 +12,26 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
 export interface PinnedMessage {
   id: string
   content: string
   timestamp: string
+  createdAt?: number
   user: {
     id: string
     name: string
@@ -89,9 +105,18 @@ export function PinnedMessagesDialog({
                         <span className="text-sm font-medium text-foreground">
                           {message.user.name}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {message.timestamp}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <span className="text-xs text-muted-foreground cursor-default">
+                              {message.timestamp}
+                            </span>
+                          </TooltipTrigger>
+                          {message.createdAt && (
+                            <TooltipContent>
+                              {formatFullDateTime(message.createdAt)}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
                       </div>
                       <p className="text-sm text-foreground/70 line-clamp-3">
                         {message.content}

@@ -11,6 +11,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { parseMentions } from "./mention"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
 interface SavedMessagesPageProps {
   organizationId: Id<"organizations">
@@ -145,6 +159,7 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
         hour: "numeric",
         minute: "2-digit",
       }),
+      createdAt: msg.createdAt,
       user: {
         id: msg.userId,
         name,
@@ -215,9 +230,18 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                               {channelInfo.name}
                             </span>
                           )}
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {message.timestamp}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className="text-xs text-muted-foreground ml-auto cursor-default">
+                                {message.timestamp}
+                              </span>
+                            </TooltipTrigger>
+                            {message.createdAt && (
+                              <TooltipContent>
+                                {formatFullDateTime(message.createdAt)}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
                         </div>
                         <p className="text-sm text-foreground/70 line-clamp-3">
                           {parseMentions(message.content, message.mentionUserNames)}
