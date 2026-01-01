@@ -181,21 +181,21 @@ export function ChatInterface({
         searchQuery={searchQuery}
       />
 
-      {/* Typing Indicator */}
-      <TypingIndicator typingUsers={typingUsers} />
-
-      {/* Message Input */}
-      <MessageInput 
-        onSendMessage={onSendMessage} 
-        channelName={channelName}
-        disabled={disabled}
-        disabledReason={disabledReason}
-        onTyping={onTyping}
-        generateUploadUrl={generateUploadUrl}
-        replyingTo={replyingTo}
-        onCancelReply={handleCancelReply}
-        mentionUsers={mentionUsers}
-      />
+      {/* Message Input with Typing Indicator overlay */}
+      <div className="relative">
+        <TypingIndicator typingUsers={typingUsers} />
+        <MessageInput 
+          onSendMessage={onSendMessage} 
+          channelName={channelName}
+          disabled={disabled}
+          disabledReason={disabledReason}
+          onTyping={onTyping}
+          generateUploadUrl={generateUploadUrl}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
+          mentionUsers={mentionUsers}
+        />
+      </div>
 
       {/* Pinned Messages Dialog */}
       <PinnedMessagesDialog

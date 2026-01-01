@@ -14,6 +14,7 @@ import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
 import { usePageTitle } from "@/lib/use-page-title"
+import { useNotifications } from "@/lib/use-notifications"
 import { analytics } from "@/lib/analytics"
 
 // Debounce hook for search
@@ -153,6 +154,9 @@ export default function ConversationPage({
   const toggleReaction = useMutation(api.messages.toggleDirectMessageReaction)
   const forwardMessage = useMutation(api.messages.forwardMessage)
   const markAsRead = useMutation(api.conversations.markConversationAsRead)
+  
+  // Track tab visibility for marking messages as read
+  const { isTabVisible } = useNotifications()
 
   // Fetch user data for other participant
   React.useEffect(() => {
@@ -161,12 +165,12 @@ export default function ConversationPage({
     }
   }, [conversation?.otherParticipantId, fetchUserData])
 
-  // Mark conversation as read when viewing and when new messages arrive
+  // Mark conversation as read when viewing, when new messages arrive, or when tab becomes visible
   React.useEffect(() => {
-    if (conversationId && filteredMessages && filteredMessages.length > 0) {
+    if (conversationId && filteredMessages && filteredMessages.length > 0 && isTabVisible) {
       markAsRead({ conversationId })
     }
-  }, [conversationId, filteredMessages?.length, markAsRead])
+  }, [conversationId, filteredMessages?.length, markAsRead, isTabVisible])
 
   // Fetch user data for typing users
   React.useEffect(() => {
@@ -487,40 +491,38 @@ export default function ConversationPage({
       />
 
       {/* Message List - takes up available space */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageList
-          messages={messages}
-          currentUserId={currentUserId}
-          onDeleteMessage={handleDeleteMessage}
-          onEditMessage={handleEditMessage}
-          onReply={handleReply}
-          onForward={handleForward}
-          onReaction={handleReaction}
-          onAvatarClick={handleAvatarClick}
-          onNameClick={handleNameClick}
-          savedMessageIds={new Set()}
-          userNames={userNames}
+      <MessageList
+        messages={messages}
+        currentUserId={currentUserId}
+        onDeleteMessage={handleDeleteMessage}
+        onEditMessage={handleEditMessage}
+        onReply={handleReply}
+        onForward={handleForward}
+        onReaction={handleReaction}
+        onAvatarClick={handleAvatarClick}
+        onNameClick={handleNameClick}
+        savedMessageIds={new Set()}
+        userNames={userNames}
+        channelName={participantName}
+        channelDescription="Direct message"
+        isAdmin={false}
+        searchQuery={searchQuery}
+      />
+
+      {/* Message Input with Typing Indicator overlay */}
+      <div className="relative">
+        <TypingIndicator typingUsers={typingUsers} />
+        <MessageInput
+          onSendMessage={handleSendMessage}
           channelName={participantName}
-          channelDescription="Direct message"
-          isAdmin={false}
-          searchQuery={searchQuery}
+          onTyping={handleTyping}
+          generateUploadUrl={handleGenerateUploadUrl}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
+          mentionUsers={[]}
+          isDirectMessage
         />
       </div>
-
-      {/* Typing Indicator */}
-      <TypingIndicator typingUsers={typingUsers} />
-
-      {/* Message Input - stays at bottom */}
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        channelName={participantName}
-        onTyping={handleTyping}
-        generateUploadUrl={handleGenerateUploadUrl}
-        replyingTo={replyingTo}
-        onCancelReply={handleCancelReply}
-        mentionUsers={[]}
-        isDirectMessage
-      />
 
       {/* Forward Message Dialog */}
       <ForwardMessageDialog

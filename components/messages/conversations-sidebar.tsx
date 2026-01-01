@@ -16,7 +16,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
+import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
+
+const CONVERSATIONS_SIDEBAR_STORAGE_KEY = "portal-conversations-sidebar-width"
 
 interface ConversationWithDetails {
   _id: string
@@ -200,24 +203,36 @@ export function ConversationsSidebar() {
 
   if (!organization?._id) {
     return (
-      <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
+      <ResizableSidebar
+        storageKey={CONVERSATIONS_SIDEBAR_STORAGE_KEY}
+        defaultWidth={240}
+        minWidth={180}
+        maxWidth={400}
+        className="h-full border-r border-border bg-background"
+      >
         <div className="flex h-14 items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
-      </div>
+      </ResizableSidebar>
     )
   }
 
   return (
-    <div className="hidden sm:flex h-full w-60 flex-col border-r border-border bg-background">
+    <ResizableSidebar
+      storageKey={CONVERSATIONS_SIDEBAR_STORAGE_KEY}
+      defaultWidth={240}
+      minWidth={180}
+      maxWidth={400}
+      className="h-full border-r border-border bg-background"
+    >
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-border px-4">
-        <h2 className="text-sm font-semibold text-foreground">Messages</h2>
+      <div className="flex h-14 items-center justify-between border-b border-border px-4 shrink-0">
+        <h2 className="text-sm font-semibold text-foreground truncate">Messages</h2>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
-          className="bg-foreground text-background hover:bg-foreground/90"
+          className="bg-foreground text-background hover:bg-foreground/90 shrink-0"
         >
           <PlusIcon className="size-4" weight="bold" />
         </Button>
@@ -225,14 +240,14 @@ export function ConversationsSidebar() {
 
       {/* Search */}
       <div className="p-3 border-b border-border">
-        <div className="relative">
+        <div className="relative w-full">
           <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 bg-muted pl-8 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
+            className="h-8 w-full bg-muted pl-8 text-sm placeholder:text-muted-foreground border-transparent focus-visible:border-border"
           />
         </div>
       </div>
@@ -348,7 +363,7 @@ export function ConversationsSidebar() {
         onOpenChange={setNewDmDialogOpen}
         organizationId={organization._id}
       />
-    </div>
+    </ResizableSidebar>
   )
 }
 

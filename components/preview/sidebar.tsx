@@ -69,6 +69,9 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { useTheme } from "@/lib/theme-provider"
+import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
+
+const SIDEBAR_STORAGE_KEY = "portal-sidebar-width"
 
 interface SidebarProps {
   isOpen: boolean
@@ -539,226 +542,247 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     )
   }
 
-  return (
+  // Shared sidebar content for both mobile and desktop
+  const sidebarContent = (
     <>
-      {/* Mobile Overlay */}
-      <div 
-        className="sm:hidden fixed inset-0 bg-black/50 z-40"
-        onClick={onToggle}
-      />
-      
-      {/* Sidebar - slides in on mobile */}
-      <div className="fixed sm:relative z-50 sm:z-auto h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full sm:animate-none duration-200">
-        {/* Header with toggle */}
-        <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            {currentOrg?.logoUrl ? (
+      {/* Header with toggle */}
+      <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {currentOrg?.logoUrl ? (
+            <Image
+              src={currentOrg.logoUrl}
+              alt={currentOrg.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded shrink-0"
+            />
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground shrink-0">
               <Image
-                src={currentOrg.logoUrl}
-                alt={currentOrg.name || "Organization"}
-                width={20}
-                height={20}
-                className="rounded"
+                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                alt="Workspace"
+                width={12}
+                height={12}
               />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
-                <Image
-                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                  alt="Workspace"
-                  width={12}
-                  height={12}
-                />
-              </div>
-            )}
-            <span className="text-sm font-medium text-foreground">
-              {currentOrg?.name || "Organization"}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onToggle}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <SidebarIcon className="size-4" />
-          </Button>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {/* Sidebar Tabs */}
-            <div className="mb-4 space-y-0.5">
-              {/* Overview button */}
-              <Link
-                href={currentSlug ? `/w/${currentSlug}` : "#"}
-                className="block"
-                onMouseEnter={handleOverviewPrefetch}
-              >
-                <Button
-                  variant={isOverviewActive ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-2 ${
-                    isOverviewActive
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <ChartBarIcon
-                    className="size-4"
-                    weight={isOverviewActive ? "fill" : "regular"}
-                  />
-                  Overview
-                </Button>
-              </Link>
-              {/* People button */}
-              <Link
-                href={currentSlug ? `/w/${currentSlug}/people` : "#"}
-                className="block"
-                onMouseEnter={handlePeoplePrefetch}
-              >
-                <Button
-                  variant={isPeoplePage ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-2 ${
-                    isPeoplePage
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <UsersIcon
-                    className="size-4"
-                    weight={isPeoplePage ? "fill" : "regular"}
-                  />
-                  People
-                </Button>
-              </Link>
-              {/* Settings button for admins */}
-              {isAdmin && (
-                <Link
-                  href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
-                  className="block"
-                  onMouseEnter={handleSettingsPrefetch}
-                >
-                  <Button
-                    variant={isSettingsPage ? "secondary" : "ghost"}
-                    className={`w-full justify-start gap-2 ${
-                      isSettingsPage
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <GearIcon
-                      className="size-4"
-                      weight={isSettingsPage ? "fill" : "regular"}
-                    />
-                    Settings
-                  </Button>
-                </Link>
-              )}
             </div>
+          )}
+          <span className="text-sm font-medium text-foreground truncate">
+            {currentOrg?.name || "Organization"}
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onToggle}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+        >
+          <SidebarIcon className="size-4" />
+        </Button>
+      </div>
 
-            {/* Categories and Channels with DnD */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {/* Sidebar Tabs */}
+          <div className="mb-4 space-y-0.5">
+            {/* Overview button */}
+            <Link
+              href={currentSlug ? `/w/${currentSlug}` : "#"}
+              className="block"
+              onMouseEnter={handleOverviewPrefetch}
             >
-              <div className="space-y-2">
-                <SortableContext
-                  items={categoriesData?.map((c) => c._id) || []}
-                  strategy={verticalListSortingStrategy}
+              <Button
+                variant={isOverviewActive ? "secondary" : "ghost"}
+                className={`w-full justify-start gap-2 ${
+                  isOverviewActive
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <ChartBarIcon
+                  className="size-4"
+                  weight={isOverviewActive ? "fill" : "regular"}
+                />
+                Overview
+              </Button>
+            </Link>
+            {/* People button */}
+            <Link
+              href={currentSlug ? `/w/${currentSlug}/people` : "#"}
+              className="block"
+              onMouseEnter={handlePeoplePrefetch}
+            >
+              <Button
+                variant={isPeoplePage ? "secondary" : "ghost"}
+                className={`w-full justify-start gap-2 ${
+                  isPeoplePage
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <UsersIcon
+                  className="size-4"
+                  weight={isPeoplePage ? "fill" : "regular"}
+                />
+                People
+              </Button>
+            </Link>
+            {/* Settings button for admins */}
+            {isAdmin && (
+              <Link
+                href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
+                className="block"
+                onMouseEnter={handleSettingsPrefetch}
+              >
+                <Button
+                  variant={isSettingsPage ? "secondary" : "ghost"}
+                  className={`w-full justify-start gap-2 ${
+                    isSettingsPage
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
                 >
-                  {categoriesData?.map((category) => (
-                    <SortableCategory
-                      key={category._id}
-                      category={category}
-                      isExpanded={expandedCategories.includes(category._id)}
-                      onToggle={() => toggleCategory(category._id)}
-                      activeChannelId={activeChannelFromUrl}
-                      onChannelSelect={handleChannelSelect}
-                      onChannelPrefetch={handleChannelPrefetch}
-                      isAdmin={isAdmin}
-                      onEditChannel={handleEditChannel}
-                      onDeleteChannel={handleDeleteChannel}
-                      onDeleteCategory={handleDeleteCategory}
-                    />
-                  ))}
-                </SortableContext>
-              </div>
-              <DragOverlay>
-                {activeId ? (() => {
-                  // Check if dragging a category
-                  const activeCategory = categoriesData?.find((c) => c._id === activeId)
-                  if (activeCategory) {
+                  <GearIcon
+                    className="size-4"
+                    weight={isSettingsPage ? "fill" : "regular"}
+                  />
+                  Settings
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          {/* Categories and Channels with DnD */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="space-y-2">
+              <SortableContext
+                items={categoriesData?.map((c) => c._id) || []}
+                strategy={verticalListSortingStrategy}
+              >
+                {categoriesData?.map((category) => (
+                  <SortableCategory
+                    key={category._id}
+                    category={category}
+                    isExpanded={expandedCategories.includes(category._id)}
+                    onToggle={() => toggleCategory(category._id)}
+                    activeChannelId={activeChannelFromUrl}
+                    onChannelSelect={handleChannelSelect}
+                    onChannelPrefetch={handleChannelPrefetch}
+                    isAdmin={isAdmin}
+                    onEditChannel={handleEditChannel}
+                    onDeleteChannel={handleDeleteChannel}
+                    onDeleteCategory={handleDeleteCategory}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+            <DragOverlay>
+              {activeId ? (() => {
+                // Check if dragging a category
+                const activeCategory = categoriesData?.find((c) => c._id === activeId)
+                if (activeCategory) {
+                  return (
+                    <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FolderIcon className="size-4 text-primary" weight="fill" />
+                        <span className="truncate">{activeCategory.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {activeCategory.channels.length}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Check if dragging a channel
+                for (const category of categoriesData || []) {
+                  const activeChannel = category.channels.find((c) => c._id === activeId)
+                  if (activeChannel) {
+                    const IconComponent = getIconComponent(activeChannel.icon)
+                    
                     return (
-                      <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <FolderIcon className="size-4 text-primary" weight="fill" />
-                          <span className="truncate">{activeCategory.name}</span>
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {activeCategory.channels.length}
-                          </span>
+                      <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
+                        <div className="flex items-center gap-2 text-sm">
+                          <IconComponent className="size-4 text-muted-foreground" weight="bold" />
+                          <span className="truncate">{activeChannel.name}</span>
                         </div>
                       </div>
                     )
                   }
-
-                  // Check if dragging a channel
-                  for (const category of categoriesData || []) {
-                    const activeChannel = category.channels.find((c) => c._id === activeId)
-                    if (activeChannel) {
-                      const IconComponent = getIconComponent(activeChannel.icon)
-                      
-                      return (
-                        <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
-                          <div className="flex items-center gap-2 text-sm">
-                            <IconComponent className="size-4 text-muted-foreground" weight="bold" />
-                            <span className="truncate">{activeChannel.name}</span>
-                          </div>
-                        </div>
-                      )
-                    }
-                  }
-
-                  return null
-                })() : null}
-              </DragOverlay>
-            </DndContext>
-          </div>
-        </ScrollArea>
-
-        {/* Bottom: Create button */}
-        {isAdmin && (
-          <div className="border-t border-border p-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-                  />
                 }
+
+                return null
+              })() : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      </ScrollArea>
+
+      {/* Bottom: Create button */}
+      {isAdmin && (
+        <div className="border-t border-border p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+                />
+              }
+            >
+              <PlusIcon className="size-4" />
+              Create new
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem 
+                onClick={() => setCreateChannelOpen(true)}
+                disabled={!categoriesData || categoriesData.length === 0}
+                className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
               >
-                <PlusIcon className="size-4" />
-                Create new
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem 
-                  onClick={() => setCreateChannelOpen(true)}
-                  disabled={!categoriesData || categoriesData.length === 0}
-                  className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
-                >
-                  <HashIcon className="size-4" />
-                  New channel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCreateCategoryOpen(true)}>
-                  <FolderIcon className="size-4" />
-                  New category
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <HashIcon className="size-4" />
+                New channel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCreateCategoryOpen(true)}>
+                <FolderIcon className="size-4" />
+                New category
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+    </>
+  )
+
+  return (
+    <>
+      {isOpen && (
+        <>
+          {/* Mobile Overlay */}
+          <div
+            className="sm:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={onToggle}
+          />
+
+          {/* Mobile Sidebar - fixed width, slides in */}
+          <div className="sm:hidden fixed z-50 h-full w-60 flex-col border-r border-border bg-background flex animate-in slide-in-from-left-full duration-200">
+            {sidebarContent}
           </div>
-        )}
-      </div>
+        </>
+      )}
+      {/* Desktop Sidebar - resizable */}
+      <ResizableSidebar
+        storageKey={SIDEBAR_STORAGE_KEY}
+        defaultWidth={240}
+        minWidth={180}
+        maxWidth={400}
+        className="h-full border-r border-border bg-background"
+      >
+        {sidebarContent}
+      </ResizableSidebar>
 
       {/* Dialogs */}
       {currentOrg?._id && (

@@ -269,7 +269,8 @@ export const updateLastMessageAt = mutation({
 
 /**
  * Mark a conversation as read by the current user
- * This updates the lastReadAt timestamp to now
+ * This updates the lastReadAt timestamp to the latest message's createdAt
+ * to avoid race conditions where new messages arrive during the mutation
  */
 export const markConversationAsRead = mutation({
   args: { conversationId: v.id("conversations") },
@@ -291,7 +292,18 @@ export const markConversationAsRead = mutation({
       throw new Error("Not a participant in this conversation");
     }
 
-    const now = Date.now();
+    // Get the latest message in the conversation to use its timestamp
+    // This ensures we mark all current messages as read, avoiding race conditions
+    const latestMessage = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_and_created", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("desc")
+      .first();
+
+    // Use the latest message's createdAt or current time if no messages exist
+    const readTimestamp = latestMessage ? latestMessage.createdAt : Date.now();
 
     // Check if read status exists
     const existingStatus = await ctx.db
@@ -302,14 +314,16 @@ export const markConversationAsRead = mutation({
       .first();
 
     if (existingStatus) {
-      // Update existing status
-      await ctx.db.patch(existingStatus._id, { lastReadAt: now });
+      // Only update if the new timestamp is greater (to avoid going backwards)
+      if (readTimestamp > existingStatus.lastReadAt) {
+        await ctx.db.patch(existingStatus._id, { lastReadAt: readTimestamp });
+      }
     } else {
       // Create new read status
       await ctx.db.insert("conversationReadStatus", {
         conversationId: args.conversationId,
         userId,
-        lastReadAt: now,
+        lastReadAt: readTimestamp,
       });
     }
   },

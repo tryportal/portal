@@ -168,3 +168,124 @@
     z-index: 1;
   }
 }
+
+/* Clerk dark mode overrides - use :root.dark to catch portaled elements */
+:root.dark .cl-userButtonPopoverCard,
+:root.dark .cl-popoverBox,
+:root.dark [class*="cl-userButton-popover"],
+.dark .cl-userButtonPopoverCard,
+.dark .cl-popoverBox,
+.dark [class*="cl-userButton-popover"] {
+  background-color: #141414 !important;
+  color: #fafafa !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.dark .cl-userButtonPopoverActionButton,
+:root.dark .cl-userButtonPopoverFooter,
+:root.dark [class*="cl-userButtonPopoverActionButton"],
+.dark .cl-userButtonPopoverActionButton,
+.dark .cl-userButtonPopoverFooter,
+.dark [class*="cl-userButtonPopoverActionButton"] {
+  color: #fafafa !important;
+}
+
+:root.dark .cl-userButtonPopoverActionButton:hover,
+:root.dark [class*="cl-userButtonPopoverActionButton"]:hover,
+.dark .cl-userButtonPopoverActionButton:hover,
+.dark [class*="cl-userButtonPopoverActionButton"]:hover {
+  background-color: #1f1f1f !important;
+}
+
+:root.dark .cl-userButtonPopoverActionButtonText,
+:root.dark [class*="cl-userButtonPopoverActionButtonText"],
+.dark .cl-userButtonPopoverActionButtonText,
+.dark [class*="cl-userButtonPopoverActionButtonText"] {
+  color: #fafafa !important;
+}
+
+:root.dark .cl-userButtonPopoverActionButtonIcon,
+:root.dark [class*="cl-userButtonPopoverActionButtonIcon"],
+:root.dark .cl-buttonArrowIcon,
+.dark .cl-userButtonPopoverActionButtonIcon,
+.dark [class*="cl-userButtonPopoverActionButtonIcon"],
+.dark .cl-buttonArrowIcon {
+  color: #888888 !important;
+}
+
+:root.dark .cl-userPreview,
+:root.dark [class*="cl-userPreview"],
+.dark .cl-userPreview,
+.dark [class*="cl-userPreview"] {
+  color: #fafafa !important;
+}
+
+:root.dark .cl-userPreviewMainIdentifier,
+:root.dark [class*="cl-userPreviewMainIdentifier"],
+.dark .cl-userPreviewMainIdentifier,
+.dark [class*="cl-userPreviewMainIdentifier"] {
+  color: #fafafa !important;
+}
+
+:root.dark .cl-userPreviewSecondaryIdentifier,
+:root.dark [class*="cl-userPreviewSecondaryIdentifier"],
+.dark .cl-userPreviewSecondaryIdentifier,
+.dark [class*="cl-userPreviewSecondaryIdentifier"] {
+  color: #888888 !important;
+}
+
+:root.dark .cl-userButtonPopoverFooter,
+:root.dark [class*="cl-userButtonPopoverFooter"],
+.dark .cl-userButtonPopoverFooter,
+.dark [class*="cl-userButtonPopoverFooter"] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.dark .cl-userButtonPopoverFooter a,
+:root.dark .cl-userButtonPopoverFooter span,
+:root.dark [class*="cl-userButtonPopoverFooter"] a,
+:root.dark [class*="cl-userButtonPopoverFooter"] span,
+:root.dark .cl-userButtonPopoverFooter *,
+.dark .cl-userButtonPopoverFooter a,
+.dark .cl-userButtonPopoverFooter span,
+.dark [class*="cl-userButtonPopoverFooter"] a,
+.dark [class*="cl-userButtonPopoverFooter"] span,
+.dark .cl-userButtonPopoverFooter * {
+  color: #888888 !important;
+}
+
+/* Clerk modal/dialog dark mode */
+:root.dark .cl-modalContent,
+:root.dark .cl-card,
+:root.dark [class*="cl-modalContent"],
+:root.dark [class*="cl-card"],
+.dark .cl-modalContent,
+.dark .cl-card,
+.dark [class*="cl-modalContent"],
+.dark [class*="cl-card"] {
+  background-color: #141414 !important;
+  color: #fafafa !important;
+}
+
+/* Catch-all for any Clerk text elements in dark mode */
+:root.dark [class*="cl-userButton"],
+:root.dark [class*="cl-popover"],
+:root.dark [class*="cl-modal"],
+:root.dark [class*="cl-card"],
+:root.dark [class*="cl-avatar"],
+:root.dark [class*="cl-organizationSwitcher"],
+:root.dark [class*="cl-signIn"],
+:root.dark [class*="cl-signUp"],
+.dark [class*="cl-userButton"],
+.dark [class*="cl-popover"],
+.dark [class*="cl-modal"],
+.dark [class*="cl-card"],
+.dark [class*="cl-avatar"],
+.dark [class*="cl-organizationSwitcher"],
+.dark [class*="cl-signIn"],
+.dark [class*="cl-signUp"] {
+  --cl-color-text-primary: #fafafa;
+  --cl-color-text-secondary: #888888;
+  --cl-color-background: #141414;
+  --cl-color-background-secondary: #1f1f1f;
+}

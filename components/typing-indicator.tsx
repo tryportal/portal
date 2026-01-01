@@ -46,30 +46,32 @@ export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
-      {/* Avatars */}
-      <div className="flex -space-x-1.5">
-        {typingUsers.slice(0, 3).map((user) => (
-          <Avatar key={user.userId} className="size-5 border-2 border-background">
-            {user.imageUrl ? (
-              <AvatarImage src={user.imageUrl} alt={getDisplayName(user)} />
-            ) : null}
-            <AvatarFallback className="bg-secondary text-foreground text-[8px]">
-              {getInitials(user.firstName, user.lastName)}
-            </AvatarFallback>
-          </Avatar>
-        ))}
-      </div>
-      
-      {/* Typing text with animated dots */}
-      <span className="flex items-center gap-0.5">
-        <span>{getTypingText().replace("...", "")}</span>
-        <span className="flex gap-0.5">
-          <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
-          <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
-          <span className="animate-bounce" style={{ animationDelay: "300ms" }}>.</span>
+    <div className="absolute -top-6 left-0 z-10 pointer-events-none">
+      <div className="flex items-center gap-1.5 px-4 py-0.5 text-[11px] text-muted-foreground">
+        {/* Avatars */}
+        <div className="flex -space-x-1">
+          {typingUsers.slice(0, 3).map((user) => (
+            <Avatar key={user.userId} className="size-4 border border-background">
+              {user.imageUrl ? (
+                <AvatarImage src={user.imageUrl} alt={getDisplayName(user)} />
+              ) : null}
+              <AvatarFallback className="bg-secondary text-foreground text-[6px]">
+                {getInitials(user.firstName, user.lastName)}
+              </AvatarFallback>
+            </Avatar>
+          ))}
+        </div>
+        
+        {/* Typing text with animated dots */}
+        <span className="flex items-center">
+          <span>{getTypingText().replace("...", "")}</span>
+          <span className="flex">
+            <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
+            <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
+            <span className="animate-bounce" style={{ animationDelay: "300ms" }}>.</span>
+          </span>
         </span>
-      </span>
+      </div>
     </div>
   )
 }

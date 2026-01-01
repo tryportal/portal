@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import {
   ArrowBendUpLeftIcon,
+  ArrowDownIcon,
   ShareIcon,
   DotsThreeIcon,
   CopyIcon,
@@ -722,12 +723,15 @@ export function MessageList({
   searchQuery = "",
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
   const previousMessageCount = React.useRef(0)
   const hasInitialScrolled = React.useRef(false)
   // Track if user is near the bottom - only auto-scroll if they are
   const isUserNearBottom = React.useRef(true)
   // Track if this is the initial load
   const isInitialLoad = React.useRef(true)
+  // State for showing the scroll-to-bottom button
+  const [showScrollButton, setShowScrollButton] = React.useState(false)
 
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
@@ -752,14 +756,24 @@ export function MessageList({
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
       // Consider "near bottom" if within 150px of the bottom
       const threshold = 150
-      isUserNearBottom.current = scrollHeight - scrollTop - clientHeight < threshold
+      const nearBottom = scrollHeight - scrollTop - clientHeight < threshold
+      isUserNearBottom.current = nearBottom
+      // Show scroll button when user is NOT near bottom (and not during initial load)
+      if (!isInitialLoad.current) {
+        setShowScrollButton(!nearBottom)
+      }
     }
   }, [])
 
   // Callback to scroll to bottom
-  const scrollToBottom = React.useCallback(() => {
+  const scrollToBottom = React.useCallback((smooth = false) => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      })
+      isUserNearBottom.current = true
+      setShowScrollButton(false)
     }
   }, [])
 
@@ -776,6 +790,29 @@ export function MessageList({
     return () => container.removeEventListener('scroll', handleScroll)
   }, [checkIfNearBottom])
 
+  // ResizeObserver to detect content height changes (e.g., when images/videos load)
+  // and auto-scroll if user is near bottom
+  React.useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    let lastHeight = content.scrollHeight
+
+    const resizeObserver = new ResizeObserver(() => {
+      const newHeight = content.scrollHeight
+      // Only scroll if height increased (content loaded) and user is near bottom
+      // During initial load, always scroll to handle async image/video loading
+      if (newHeight > lastHeight && (isInitialLoad.current || isUserNearBottom.current)) {
+        scrollToBottom()
+      }
+      lastHeight = newHeight
+    })
+
+    resizeObserver.observe(content)
+
+    return () => resizeObserver.disconnect()
+  }, [scrollToBottom])
+
   // Scroll to bottom on initial load and when new messages arrive (if user is near bottom)
   React.useLayoutEffect(() => {
     if (messages.length > 0) {
@@ -783,7 +820,10 @@ export function MessageList({
 
       // Always scroll on initial load, or when new messages arrive and user is near bottom
       if (isInitialLoad.current || (isNewMessage && isUserNearBottom.current)) {
-        scrollToBottom()
+        // Use requestAnimationFrame to ensure DOM has updated before scrolling
+        requestAnimationFrame(() => {
+          scrollToBottom()
+        })
 
         // Multiple scroll attempts to handle async content on initial load
         if (isInitialLoad.current) {
@@ -800,10 +840,11 @@ export function MessageList({
 
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
-        // Mark initial load as complete after a short delay
+        // Mark initial load as complete after a delay to allow images/videos to load
+        // The ResizeObserver will handle scrolling during this period
         setTimeout(() => {
           isInitialLoad.current = false
-        }, 1000)
+        }, 3000)
       }
     }
   }, [messages.length, scrollToBottom])
@@ -842,67 +883,82 @@ export function MessageList({
 
   return (
     <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div
-        ref={scrollRef}
-        className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
-        style={{ scrollBehavior: 'auto' }}
-      >
-        {/* Search Results Indicator */}
-        {searchQuery && searchQuery.trim() && (
-          <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b border-border px-4 py-2 text-sm text-muted-foreground flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MagnifyingGlassIcon className="size-4" />
-              <span>
-                {messages.length === 0 ? (
-                  "No results found"
-                ) : messages.length === 1 ? (
-                  "1 result found"
-                ) : (
-                  `${messages.length} results found`
-                )}
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
+          style={{ scrollBehavior: 'auto' }}
+        >
+          {/* Search Results Indicator */}
+          {searchQuery && searchQuery.trim() && (
+            <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b border-border px-4 py-2 text-sm text-muted-foreground flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MagnifyingGlassIcon className="size-4" />
+                <span>
+                  {messages.length === 0 ? (
+                    "No results found"
+                  ) : messages.length === 1 ? (
+                    "1 result found"
+                  ) : (
+                    `${messages.length} results found`
+                  )}
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground/70">
+                Searching for: <span className="font-medium">&quot;{searchQuery}&quot;</span>
               </span>
             </div>
-            <span className="text-xs text-muted-foreground/70">
-              Searching for: <span className="font-medium">&quot;{searchQuery}&quot;</span>
-            </span>
-          </div>
-        )}
-        
-        {/* Spacer pushes messages to bottom when content doesn't fill viewport */}
-        <div className="flex-1" />
-        <div className="py-4">
-          <div className="space-y-0">
-            {messages.map((message, index) => {
-              const previousMessage = index > 0 ? messages[index - 1] : undefined
-              const isGrouped = shouldGroupMessages(message, previousMessage)
-              const isLastMessage = index === messages.length - 1
+          )}
+          
+          {/* Spacer pushes messages to bottom when content doesn't fill viewport */}
+          <div className="flex-1" />
+          <div ref={contentRef} className="py-4">
+            <div className="space-y-0">
+              {messages.map((message, index) => {
+                const previousMessage = index > 0 ? messages[index - 1] : undefined
+                const isGrouped = shouldGroupMessages(message, previousMessage)
+                const isLastMessage = index === messages.length - 1
 
-              return (
-                <div key={message.id} ref={isLastMessage ? lastMessageRef : undefined}>
-                  <MessageItem
-                    message={message}
-                    currentUserId={currentUserId}
-                    onDeleteMessage={onDeleteMessage}
-                    onEditMessage={onEditMessage}
-                    onReply={onReply}
-                    onForward={onForward}
-                    onReaction={onReaction}
-                    onPin={onPin}
-                    onSave={onSave}
-                    onUnsave={onUnsave}
-                    onAvatarClick={onAvatarClick}
-                    onNameClick={onNameClick}
-                    isSaved={savedMessageIds.has(message.id)}
-                    userNames={userNames}
-                    isAdmin={isAdmin}
-                    isGrouped={isGrouped}
-                    searchQuery={searchQuery}
-                  />
-                </div>
-              )
-            })}
+                return (
+                  <div key={message.id} ref={isLastMessage ? lastMessageRef : undefined}>
+                    <MessageItem
+                      message={message}
+                      currentUserId={currentUserId}
+                      onDeleteMessage={onDeleteMessage}
+                      onEditMessage={onEditMessage}
+                      onReply={onReply}
+                      onForward={onForward}
+                      onReaction={onReaction}
+                      onPin={onPin}
+                      onSave={onSave}
+                      onUnsave={onUnsave}
+                      onAvatarClick={onAvatarClick}
+                      onNameClick={onNameClick}
+                      isSaved={savedMessageIds.has(message.id)}
+                      userNames={userNames}
+                      isAdmin={isAdmin}
+                      isGrouped={isGrouped}
+                      searchQuery={searchQuery}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <Button
+            onClick={() => scrollToBottom(true)}
+            size="icon"
+            variant="secondary"
+            className="absolute bottom-4 right-4 z-20 rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+            aria-label="Scroll to bottom"
+          >
+            <ArrowDownIcon className="size-4" />
+          </Button>
+        )}
       </div>
     </AttachmentUrlContext.Provider>
   )
