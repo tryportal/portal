@@ -17,6 +17,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { parseMentions } from "./mention"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
 interface InboxPageProps {
   organizationId: Id<"organizations">
@@ -292,9 +306,16 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                                 in #{mention.channelName}
                               </span>
                             )}
-                            <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0">
-                              {formatTime(mention.createdAt)}
-                            </span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0 cursor-default">
+                                  {formatTime(mention.createdAt)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {formatFullDateTime(mention.createdAt)}
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <p className="text-xs sm:text-sm text-foreground/70 line-clamp-2">
                             {parseMentions(mention.content, mentionUserNames)}
@@ -363,9 +384,16 @@ export function InboxPage({ organizationId }: InboxPageProps) {
                               {dm.unreadCount} unread {dm.unreadCount === 1 ? "message" : "messages"}
                             </span>
                             {dm.lastMessage && (
-                              <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0">
-                                {formatTime(dm.lastMessage.createdAt)}
-                              </span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0 cursor-default">
+                                    {formatTime(dm.lastMessage.createdAt)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {formatFullDateTime(dm.lastMessage.createdAt)}
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                           {dm.lastMessage && (

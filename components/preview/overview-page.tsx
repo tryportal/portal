@@ -20,6 +20,20 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { getIconComponent } from "@/components/icon-picker"
 import type { Message } from "@/components/preview/message-list"
 import { parseMentions } from "./mention"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
 interface OverviewPageProps {
   organizationId: Id<"organizations">
@@ -125,10 +139,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     return {
       id: msg._id,
       content: msg.content,
-      timestamp: new Date(msg.createdAt).toLocaleTimeString([], { 
-        hour: "numeric", 
-        minute: "2-digit" 
+      timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit"
       }),
+      createdAt: msg.createdAt,
       user: {
         id: msg.userId,
         name,
@@ -241,10 +256,19 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             {channelInfo && (
                               <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <p className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default">{message.timestamp}</p>
+                              </TooltipTrigger>
+                              {message.createdAt && (
+                                <TooltipContent>
+                                  {formatFullDateTime(message.createdAt)}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames 
+                            {msgWithMentions.mentionUserNames
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
                             }
@@ -309,10 +333,19 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             {channelInfo && (
                               <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <p className="text-sm text-foreground/50 ml-auto flex-shrink-0">{message.timestamp}</p>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <p className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default">{message.timestamp}</p>
+                              </TooltipTrigger>
+                              {message.createdAt && (
+                                <TooltipContent>
+                                  {formatFullDateTime(message.createdAt)}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames 
+                            {msgWithMentions.mentionUserNames
                               ? parseMentions(message.content, msgWithMentions.mentionUserNames)
                               : message.content
                             }

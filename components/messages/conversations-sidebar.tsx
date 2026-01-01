@@ -18,6 +18,20 @@ import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
 const CONVERSATIONS_SIDEBAR_STORAGE_KEY = "portal-conversations-sidebar-width"
 
@@ -328,9 +342,16 @@ export function ConversationsSidebar() {
                       </p>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {conversation.lastMessage && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatTime(conversation.lastMessage.createdAt)}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className="text-[10px] text-muted-foreground cursor-default">
+                                {formatTime(conversation.lastMessage.createdAt)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {formatFullDateTime(conversation.lastMessage.createdAt)}
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </div>

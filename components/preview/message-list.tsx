@@ -36,6 +36,7 @@ import {
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -120,6 +121,68 @@ function isImageType(type: string): boolean {
 
 function isVideoType(type: string): boolean {
   return type.startsWith("video/")
+}
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+
+function formatDateForSeparator(timestamp: number): string {
+  const date = new Date(timestamp)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  // Reset hours to compare dates only
+  today.setHours(0, 0, 0, 0)
+  yesterday.setHours(0, 0, 0, 0)
+  const messageDate = new Date(date)
+  messageDate.setHours(0, 0, 0, 0)
+
+  if (messageDate.getTime() === today.getTime()) {
+    return "Today"
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return "Yesterday"
+  } else {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+}
+
+function isDifferentDay(timestamp1: number, timestamp2: number): boolean {
+  const date1 = new Date(timestamp1)
+  const date2 = new Date(timestamp2)
+  return (
+    date1.getFullYear() !== date2.getFullYear() ||
+    date1.getMonth() !== date2.getMonth() ||
+    date1.getDate() !== date2.getDate()
+  )
+}
+
+function DateSeparator({ date }: { date: string }) {
+  return (
+    <div className="flex items-center justify-center my-4 px-4">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-border/60 min-w-[60px]" />
+        <span className="text-xs text-muted-foreground font-medium whitespace-nowrap px-1">
+          {date}
+        </span>
+        <div className="flex-1 h-px bg-border/60 min-w-[60px]" />
+      </div>
+    </div>
+  )
 }
 
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
@@ -439,9 +502,18 @@ function MessageItem({
           </Avatar>
         ) : (
           <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
-            <span className="text-[8px] text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums">
-              {message.timestamp}
-            </span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="text-[8px] text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default">
+                  {message.timestamp}
+                </span>
+              </TooltipTrigger>
+              {message.createdAt && (
+                <TooltipContent>
+                  {formatFullDateTime(message.createdAt)}
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         )}
 
@@ -455,9 +527,18 @@ function MessageItem({
               >
                 {message.user.name}
               </button>
-              <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
-                {message.timestamp}
-              </span>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-[11px] text-muted-foreground font-medium tabular-nums cursor-default">
+                    {message.timestamp}
+                  </span>
+                </TooltipTrigger>
+                {message.createdAt && (
+                  <TooltipContent>
+                    {formatFullDateTime(message.createdAt)}
+                  </TooltipContent>
+                )}
+              </Tooltip>
               {message.editedAt && (
                 <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
               )}
@@ -919,28 +1000,39 @@ export function MessageList({
                 const isGrouped = shouldGroupMessages(message, previousMessage)
                 const isLastMessage = index === messages.length - 1
 
+                // Check if we need a date separator
+                const showDateSeparator =
+                  message.createdAt &&
+                  previousMessage?.createdAt &&
+                  isDifferentDay(message.createdAt, previousMessage.createdAt)
+
                 return (
-                  <div key={message.id} ref={isLastMessage ? lastMessageRef : undefined}>
-                    <MessageItem
-                      message={message}
-                      currentUserId={currentUserId}
-                      onDeleteMessage={onDeleteMessage}
-                      onEditMessage={onEditMessage}
-                      onReply={onReply}
-                      onForward={onForward}
-                      onReaction={onReaction}
-                      onPin={onPin}
-                      onSave={onSave}
-                      onUnsave={onUnsave}
-                      onAvatarClick={onAvatarClick}
-                      onNameClick={onNameClick}
-                      isSaved={savedMessageIds.has(message.id)}
-                      userNames={userNames}
-                      isAdmin={isAdmin}
-                      isGrouped={isGrouped}
-                      searchQuery={searchQuery}
-                    />
-                  </div>
+                  <React.Fragment key={message.id}>
+                    {showDateSeparator && message.createdAt && (
+                      <DateSeparator date={formatDateForSeparator(message.createdAt)} />
+                    )}
+                    <div ref={isLastMessage ? lastMessageRef : undefined}>
+                      <MessageItem
+                        message={message}
+                        currentUserId={currentUserId}
+                        onDeleteMessage={onDeleteMessage}
+                        onEditMessage={onEditMessage}
+                        onReply={onReply}
+                        onForward={onForward}
+                        onReaction={onReaction}
+                        onPin={onPin}
+                        onSave={onSave}
+                        onUnsave={onUnsave}
+                        onAvatarClick={onAvatarClick}
+                        onNameClick={onNameClick}
+                        isSaved={savedMessageIds.has(message.id)}
+                        userNames={userNames}
+                        isAdmin={isAdmin}
+                        isGrouped={isGrouped}
+                        searchQuery={searchQuery}
+                      />
+                    </div>
+                  </React.Fragment>
                 )
               })}
             </div>
