@@ -504,7 +504,7 @@ function MessageItem({
           <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
             <Tooltip>
               <TooltipTrigger>
-                <span className="text-[8px] text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default">
+                <span className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default">
                   {message.timestamp}
                 </span>
               </TooltipTrigger>
@@ -529,7 +529,7 @@ function MessageItem({
               </button>
               <Tooltip>
                 <TooltipTrigger>
-                  <span className="text-[11px] text-muted-foreground font-medium tabular-nums cursor-default">
+                  <span className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default">
                     {message.timestamp}
                   </span>
                 </TooltipTrigger>
