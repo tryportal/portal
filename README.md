@@ -36,9 +36,9 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
    cp .env.example .env.local
    ```
    
-   Required environment variables:
-   - `NEXT_PUBLIC_DATABUDDY_CLIENT_ID` - Your Databuddy client ID (optional, for analytics)
-   - `NEXT_PUBLIC_POSTHOG_KEY` - Your PostHog key (optional, for event tracking)
+   Optional environment variables:
+   - `NEXT_PUBLIC_DATABUDDY_CLIENT_ID` - Your Databuddy client ID (for analytics)
+   - `NEXT_PUBLIC_POSTHOG_KEY` - Your PostHog key (for event tracking)
 
 4. Start Convex (in a separate terminal):
    ```bash
