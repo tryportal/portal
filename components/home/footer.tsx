@@ -11,20 +11,23 @@ export function Footer() {
   const isDark = resolvedTheme === "dark"
   
   return (
-    <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-border">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-2">
+    <footer className="py-6 px-4 border-t border-border">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <Image
               src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
               alt="Portal"
-              width={100}
-              height={32}
-              className="h-5 sm:h-6 w-auto"
+              width={72}
+              height={20}
+              className="h-4 w-auto"
             />
+            <span className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()}
+            </span>
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <Link
               href="https://autochangelog.com/changelog/portal/alpha"
               target="_blank"
@@ -39,33 +42,27 @@ export function Footer() {
             >
               Privacy
             </Link>
+            <div className="flex items-center gap-3 ml-2">
+              <Link
+                href="https://github.com/tryportal/portal"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <GitHubLogo size={14} />
+              </Link>
+              <Link
+                href="https://x.com/portalmessage"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <TwitterLogo size={14} weight="fill" />
+              </Link>
+            </div>
           </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="https://github.com/tryportal/portal"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <GitHubLogo size={20} />
-            </Link>
-            <Link
-              href="https://x.com/portalmessage"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <TwitterLogo size={20} weight="fill" />
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-border text-center text-xs sm:text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Portal. Open source under MIT License.</p>
         </div>
       </div>
     </footer>
   )
 }
-
