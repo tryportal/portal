@@ -257,7 +257,7 @@ export function MobileConversationsList() {
                       </p>
                       {conversation.lastMessage && (
                         <Tooltip>
-                          <TooltipTrigger>
+                          <TooltipTrigger asChild>
                             <span className="text-xs text-muted-foreground flex-shrink-0 cursor-default">
                               {formatTime(conversation.lastMessage.createdAt)}
                             </span>
