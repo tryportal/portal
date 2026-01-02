@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Spinner, X } from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,6 +13,7 @@ import { SetupWizard } from "@/components/setup/setup-wizard";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/theme-provider";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SetupContent() {
   const router = useRouter();
@@ -92,7 +93,7 @@ function SetupContent() {
   if (!authLoaded || !isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="size-5 animate-spin text-muted-foreground" />
+        <LoadingSpinner size="sm" />
       </div>
     );
   }
@@ -108,7 +109,7 @@ function SetupContent() {
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="size-5 animate-spin text-muted-foreground" />
+        <LoadingSpinner size="sm" />
       </div>
     );
   }
@@ -117,7 +118,7 @@ function SetupContent() {
   if (hasSetupOrganizations && !isInSetupFlow) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="size-5 animate-spin text-muted-foreground" />
+        <LoadingSpinner size="sm" />
       </div>
     );
   }
@@ -173,7 +174,7 @@ export default function SetupPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-background">
-          <Spinner className="size-5 animate-spin text-muted-foreground" />
+          <LoadingSpinner size="sm" />
         </div>
       }
     >

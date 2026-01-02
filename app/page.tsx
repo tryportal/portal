@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import { useTheme } from "@/lib/theme-provider";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function Page() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function Page() {
           className="h-8 w-auto"
           priority
         />
-        <div className="size-5 animate-spin rounded-full border-2 border-border border-t-foreground/40" />
+        <LoadingSpinner size="sm" />
       </div>
     </div>
   );

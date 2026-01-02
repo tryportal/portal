@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 // Base skeleton component with shimmer animation
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -366,13 +367,11 @@ export function WorkspaceLayoutSkeleton({ children }: { children?: React.ReactNo
   );
 }
 
-// Generic page loading spinner
+// Generic page loading spinner - uses the unified LoadingSpinner component
 export function PageLoadingSpinner() {
   return (
     <div className="flex flex-1 items-center justify-center bg-card">
-      <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
-        <div className="size-6 animate-spin rounded-full border-2 border-border border-t-foreground/40" />
-      </div>
+      <LoadingSpinner size="md" />
     </div>
   );
 }
