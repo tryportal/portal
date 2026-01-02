@@ -4,11 +4,12 @@ import { useAuth, SignIn } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Spinner, CheckCircle, XCircle, EnvelopeSimple } from "@phosphor-icons/react";
+import { CheckCircle, XCircle, EnvelopeSimple } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { analytics } from "@/lib/analytics";
 import { useTheme } from "@/lib/theme-provider";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import * as React from "react";
 
 export default function InvitePage({
@@ -94,10 +95,7 @@ export default function InvitePage({
           <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
             <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <Spinner className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm font-medium text-muted-foreground">Loading invitation...</p>
-          </div>
+          <LoadingSpinner size="sm" text="Loading invitation..." />
         </div>
       </div>
     );
@@ -197,7 +195,7 @@ export default function InvitePage({
             <p className="text-sm sm:text-base text-muted-foreground">
               You&apos;ve successfully joined the team. Redirecting you to the workspace...
             </p>
-            <Spinner className="size-5 animate-spin text-muted-foreground mt-4" />
+            <LoadingSpinner size="sm" className="mt-4" />
           </div>
         </div>
       </div>
@@ -240,10 +238,7 @@ export default function InvitePage({
           <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
             <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <Spinner className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm font-medium text-muted-foreground">Joining {organization.name}...</p>
-          </div>
+          <LoadingSpinner size="sm" text={`Joining ${organization.name}...`} />
         </div>
       </div>
     );
@@ -288,7 +283,7 @@ export default function InvitePage({
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-        <Spinner className="size-6 animate-spin text-foreground/20" />
+        <LoadingSpinner size="md" />
       </div>
     </div>
   );

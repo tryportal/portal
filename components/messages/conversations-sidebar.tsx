@@ -19,6 +19,7 @@ import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
 function formatFullDateTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -270,10 +271,7 @@ export function ConversationsSidebar() {
       <ScrollArea className="flex-1">
         {!conversations || isLoadingUserData || !allUserDataLoaded ? (
           <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-6 w-6 border-2 border-muted-foreground/20 border-t-foreground rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Loading conversations...</p>
-            </div>
+            <LoadingSpinner size="sm" text="Loading conversations..." />
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">

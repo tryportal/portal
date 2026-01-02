@@ -70,6 +70,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { useTheme } from "@/lib/theme-provider"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
 const SIDEBAR_STORAGE_KEY = "portal-sidebar-width"
 
@@ -652,6 +653,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
 
           {/* Categories and Channels with DnD */}
+          {categoriesData === undefined ? (
+            <div className="flex items-center justify-center py-8">
+              <LoadingSpinner size="sm" />
+            </div>
+          ) : (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -719,6 +725,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               })() : null}
             </DragOverlay>
           </DndContext>
+          )}
         </div>
       </ScrollArea>
 
