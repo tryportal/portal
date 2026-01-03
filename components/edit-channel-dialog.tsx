@@ -98,16 +98,16 @@ export function EditChannelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="default">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      <DialogContent size="default" className="max-h-[90vh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Edit Channel</DialogTitle>
             <DialogDescription>
               Update the channel settings.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 overflow-y-auto flex-1 min-h-0">
             {/* Channel Name */}
             <div className="space-y-2">
               <Label htmlFor="edit-channel-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
@@ -208,7 +208,7 @@ export function EditChannelDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               type="button"
               variant="outline"
