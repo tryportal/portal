@@ -16,15 +16,11 @@ import { SmileyIcon } from "@phosphor-icons/react"
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "@/lib/theme-provider"
 
-// Quick reactions for the reaction bar
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "😢"]
-
 interface ReactionPickerProps {
   onSelectReaction: (emoji: string) => void
-  existingReactions?: Array<{ emoji: string; count: number; hasReacted: boolean }>
 }
 
-export function ReactionPicker({ onSelectReaction, existingReactions = [] }: ReactionPickerProps) {
+export function ReactionPicker({ onSelectReaction }: ReactionPickerProps) {
   const [open, setOpen] = React.useState(false)
   const { resolvedTheme } = useTheme()
 
@@ -50,26 +46,6 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
         <TooltipContent>Add reaction</TooltipContent>
       </Tooltip>
       <PopoverContent side="top" align="start" className="w-auto p-0 border-0 bg-transparent shadow-none">
-        {/* Quick reactions bar */}
-        <div className="flex items-center gap-1 border-b border-border p-2 bg-popover rounded-t-lg">
-          {QUICK_REACTIONS.map((emoji) => {
-            const existing = existingReactions.find((r) => r.emoji === emoji)
-            return (
-              <button
-                key={emoji}
-                onClick={() => handleSelect(emoji)}
-                className={`flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors ${existing?.hasReacted
-                  ? "bg-secondary"
-                  : "hover:bg-muted"
-                  }`}
-              >
-                {emoji}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Full emoji picker */}
         <EmojiPicker
           onEmojiClick={(emojiData: EmojiClickData) => handleSelect(emojiData.emoji)}
           theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
