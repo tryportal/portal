@@ -571,6 +571,7 @@ export default function ChannelPage({
         mentionUsers={mentionUsers}
         isAdmin={isAdmin}
         organizationId={organizationId}
+        channelId={channelId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
