@@ -7,7 +7,6 @@ import {
   DotsThreeIcon,
   BellIcon,
   PushPinIcon,
-  UserPlusIcon,
   GearIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { EditChannelDialog } from "@/components/edit-channel-dialog"
+import type { Id } from "@/convex/_generated/dataModel"
 
 interface ChannelHeaderProps {
   channelName: string
@@ -27,6 +28,9 @@ interface ChannelHeaderProps {
   onViewPinnedMessages?: () => void
   searchQuery?: string
   onSearchChange?: (query: string) => void
+  channelId?: Id<"channels">
+  organizationId?: Id<"organizations">
+  isAdmin?: boolean
 }
 
 export function ChannelHeader({
@@ -36,7 +40,11 @@ export function ChannelHeader({
   onViewPinnedMessages,
   searchQuery = "",
   onSearchChange,
+  channelId,
+  organizationId,
+  isAdmin = false,
 }: ChannelHeaderProps) {
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false)
 
   return (
     <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
@@ -89,18 +97,26 @@ export function ChannelHeader({
               <PushPinIcon className="size-4" />
               View pinned messages
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <UserPlusIcon className="size-4" />
-              Add members
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <GearIcon className="size-4" />
-              Channel settings
-            </DropdownMenuItem>
+            {isAdmin && channelId && organizationId && (
+              <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                <GearIcon className="size-4" />
+                Channel settings
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Edit Channel Dialog */}
+      {channelId && organizationId && (
+        <EditChannelDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          channelId={channelId}
+          organizationId={organizationId}
+        />
+      )}
     </header>
   )
 }

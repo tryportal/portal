@@ -51,6 +51,7 @@ interface ChatInterfaceProps {
   mentionUsers?: MentionUser[]
   isAdmin?: boolean
   organizationId?: Id<"organizations">
+  channelId?: Id<"channels">
   searchQuery?: string
   onSearchChange?: (query: string) => void
 }
@@ -83,6 +84,7 @@ export function ChatInterface({
   mentionUsers = [],
   isAdmin = false,
   organizationId,
+  channelId,
   searchQuery = "",
   onSearchChange,
 }: ChatInterfaceProps) {
@@ -156,6 +158,9 @@ export function ChatInterface({
         onViewPinnedMessages={() => setPinnedDialogOpen(true)}
         searchQuery={searchQuery}
         onSearchChange={onSearchChange}
+        channelId={channelId}
+        organizationId={organizationId}
+        isAdmin={isAdmin}
       />
 
       {/* Message List */}

@@ -658,18 +658,6 @@ function MessageItem({
 
           <ReactionPicker
             onSelectReaction={(emoji) => onReaction?.(message.id, emoji)}
-            existingReactions={
-              message.reactions
-                ? Object.entries(
-                  message.reactions.reduce((acc, r) => {
-                    acc[r.emoji] = acc[r.emoji] || { count: 0, hasReacted: false }
-                    acc[r.emoji].count++
-                    if (r.userId === currentUserId) acc[r.emoji].hasReacted = true
-                    return acc
-                  }, {} as Record<string, { count: number; hasReacted: boolean }>)
-                ).map(([emoji, data]) => ({ emoji, ...data }))
-                : []
-            }
           />
 
           <DropdownMenu>
