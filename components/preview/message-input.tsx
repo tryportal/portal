@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/popover"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
+import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
+import { useTheme } from "@/lib/theme-provider"
 
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -61,14 +63,6 @@ interface MessageInputProps {
   isDirectMessage?: boolean
 }
 
-const EMOJI_LIST = [
-  "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊",
-  "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘",
-  "👍", "👎", "👏", "🙌", "🤝", "💪", "✨", "🔥",
-  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
-  "🎉", "🎊", "🎈", "🎁", "🏆", "⭐", "💡", "📌",
-]
-
 // URL detection regex - matches http(s) URLs
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
 
@@ -92,6 +86,7 @@ export function MessageInput({
   mentionUsers = [],
   isDirectMessage = false,
 }: MessageInputProps) {
+  const { resolvedTheme } = useTheme()
   const [message, setMessage] = React.useState("")
   const [displayMessage, setDisplayMessage] = React.useState("") // Display value with names
   const [mentionMap, setMentionMap] = React.useState<Record<string, string>>({}) // Map userId -> userName
@@ -749,22 +744,16 @@ export function MessageInput({
               <PopoverContent
                 side="top"
                 align="start"
-                className="w-72 p-3"
+                className="w-auto p-0 border-0 bg-transparent shadow-none"
               >
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  Quick reactions
-                </div>
-                <div className="grid grid-cols-8 gap-1">
-                  {EMOJI_LIST.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => insertEmoji(emoji)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg hover:bg-muted transition-colors"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+                <EmojiPicker
+                  onEmojiClick={(emojiData: EmojiClickData) => insertEmoji(emojiData.emoji)}
+                  theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
+                  width={350}
+                  height={400}
+                  searchPlaceHolder="Search emoji..."
+                  previewConfig={{ showPreview: false }}
+                />
               </PopoverContent>
             </Popover>
           </div>

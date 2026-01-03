@@ -13,29 +13,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { SmileyIcon } from "@phosphor-icons/react"
+import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
+import { useTheme } from "@/lib/theme-provider"
 
 // Quick reactions for the reaction bar
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "😢"]
-
-// Full emoji list for the picker
-const EMOJI_CATEGORIES = [
-  {
-    name: "Smileys",
-    emojis: ["😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘"],
-  },
-  {
-    name: "Gestures",
-    emojis: ["👍", "👎", "👏", "🙌", "🤝", "💪", "🙏", "✌️", "🤞", "🤙", "👋", "🖐️", "✋", "👌", "🤌", "👆"],
-  },
-  {
-    name: "Hearts",
-    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❤️‍🔥", "💕", "💞", "💓", "💗", "💖", "💘"],
-  },
-  {
-    name: "Celebration",
-    emojis: ["🎉", "🎊", "🎈", "🎁", "🏆", "⭐", "✨", "🔥", "💡", "📌", "🚀", "💯", "🎯", "🌟", "👑", "💎"],
-  },
-]
 
 interface ReactionPickerProps {
   onSelectReaction: (emoji: string) => void
@@ -44,6 +26,7 @@ interface ReactionPickerProps {
 
 export function ReactionPicker({ onSelectReaction, existingReactions = [] }: ReactionPickerProps) {
   const [open, setOpen] = React.useState(false)
+  const { resolvedTheme } = useTheme()
 
   const handleSelect = (emoji: string) => {
     onSelectReaction(emoji)
@@ -66,9 +49,9 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
         </TooltipTrigger>
         <TooltipContent>Add reaction</TooltipContent>
       </Tooltip>
-      <PopoverContent side="top" align="start" className="w-72 p-0">
+      <PopoverContent side="top" align="start" className="w-auto p-0 border-0 bg-transparent shadow-none">
         {/* Quick reactions bar */}
-        <div className="flex items-center gap-1 border-b border-border p-2">
+        <div className="flex items-center gap-1 border-b border-border p-2 bg-popover rounded-t-lg">
           {QUICK_REACTIONS.map((emoji) => {
             const existing = existingReactions.find((r) => r.emoji === emoji)
             return (
@@ -86,27 +69,15 @@ export function ReactionPicker({ onSelectReaction, existingReactions = [] }: Rea
           })}
         </div>
 
-        {/* Full emoji grid */}
-        <div className="max-h-48 overflow-y-auto p-2">
-          {EMOJI_CATEGORIES.map((category) => (
-            <div key={category.name} className="mb-3 last:mb-0">
-              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                {category.name}
-              </div>
-              <div className="grid grid-cols-8 gap-0.5">
-                {category.emojis.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleSelect(emoji)}
-                    className="flex h-7 w-7 items-center justify-center rounded text-base hover:bg-muted transition-colors"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Full emoji picker */}
+        <EmojiPicker
+          onEmojiClick={(emojiData: EmojiClickData) => handleSelect(emojiData.emoji)}
+          theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
+          width={350}
+          height={350}
+          searchPlaceHolder="Search emoji..."
+          previewConfig={{ showPreview: false }}
+        />
       </PopoverContent>
     </Popover>
   )
