@@ -60,6 +60,7 @@ export default defineSchema({
     imageUrl: v.optional(v.string()), // Deprecated: kept for backwards compatibility
     createdBy: v.string(), // Clerk user ID
     createdAt: v.number(),
+    isPublic: v.optional(v.boolean()), // If true, anyone can join this workspace without an invite
   })
     .index("by_slug", ["slug"])
     .index("by_created_by", ["createdBy"]),

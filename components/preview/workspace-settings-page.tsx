@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { LogoUpload } from "@/components/setup/logo-upload"
-import { CheckIcon, GearIcon, WarningCircleIcon, TrashIcon } from "@phosphor-icons/react"
+import { CheckIcon, GearIcon, WarningCircleIcon, TrashIcon, GlobeIcon, LockIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
@@ -46,6 +46,7 @@ export function WorkspaceSettingsPage({
   const [name, setName] = React.useState("")
   const [slug, setSlug] = React.useState("")
   const [description, setDescription] = React.useState("")
+  const [isPublic, setIsPublic] = React.useState(false)
   const [pendingLogoId, setPendingLogoId] = React.useState<Id<"_storage"> | null>(null)
   const [removeLogo, setRemoveLogo] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -60,6 +61,7 @@ export function WorkspaceSettingsPage({
       setName(organization.name)
       setSlug(organization.slug)
       setDescription(organization.description || "")
+      setIsPublic(organization.isPublic || false)
       setPendingLogoId(null)
       setRemoveLogo(false)
     }
@@ -72,6 +74,7 @@ export function WorkspaceSettingsPage({
     name !== organization?.name ||
     slug !== organization?.slug ||
     description !== (organization?.description || "") ||
+    isPublic !== (organization?.isPublic || false) ||
     pendingLogoId !== null ||
     removeLogo
 
@@ -97,6 +100,7 @@ export function WorkspaceSettingsPage({
         description: description.trim() || undefined,
         logoId: pendingLogoId ?? undefined,
         removeLogo: removeLogo || undefined,
+        isPublic: isPublic,
       })
 
       // If slug changed, redirect to new URL
@@ -261,7 +265,7 @@ export function WorkspaceSettingsPage({
                   </Label>
                   <div className="flex items-center rounded-md border border-border bg-background px-3 focus-within:border-border focus-within:bg-card focus-within:ring-1 focus-within:ring-ring transition-all">
                     <span className="text-sm text-muted-foreground select-none">
-                      {typeof window !== "undefined" ? window.location.host : "portal.app"}/
+                      {typeof window !== "undefined" ? window.location.host : "portal.app"}/w/
                     </span>
                     <input
                       id="slug"
@@ -278,6 +282,59 @@ export function WorkspaceSettingsPage({
               </div>
             </section>
 
+            {/* Access Section */}
+            <section className="space-y-6">
+              <div>
+                <h2 className="text-base sm:text-lg font-medium text-foreground">Access Settings</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">Control who can join your workspace.</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
+                      isPublic ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"
+                    )}>
+                      {isPublic ? (
+                        <GlobeIcon className="size-5" weight="fill" />
+                      ) : (
+                        <LockIcon className="size-5" weight="fill" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-foreground">
+                        {isPublic ? "Public Workspace" : "Private Workspace"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {isPublic
+                          ? "Anyone with the workspace URL can join without an invitation."
+                          : "Only invited members can join this workspace."
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isPublic}
+                    onClick={() => setIsPublic(!isPublic)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      isPublic ? "bg-green-600" : "bg-muted"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                        isPublic ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            </section>
+
             {/* Save Actions */}
             <div className="flex items-center justify-between pt-4">
               <div className="text-sm text-muted-foreground">
@@ -290,6 +347,7 @@ export function WorkspaceSettingsPage({
                     setName(organization.name)
                     setSlug(organization.slug)
                     setDescription(organization.description || "")
+                    setIsPublic(organization.isPublic || false)
                     setPendingLogoId(null)
                     setRemoveLogo(false)
                   }} 

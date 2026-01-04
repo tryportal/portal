@@ -54,12 +54,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   // Fetch saved messages instead of recent messages
   const savedMessagesRaw = useQuery(
     api.messages.getSavedMessages,
-    organizationId ? { organizationId, limit: 5 } : "skip"
+    organizationId ? { organizationId, limit: 3 } : "skip"
   )
 
   const mentionsRaw = useQuery(
     api.messages.getMentions,
-    organizationId ? { organizationId, limit: 5 } : "skip"
+    organizationId ? { organizationId, limit: 3 } : "skip"
   )
 
   // Fetch user data
@@ -162,8 +162,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     } as Message & { mentionUserNames: Record<string, string> }
   }
 
-  const savedMessages = (savedMessagesRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null)
-  const mentions = (mentionsRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null)
+  const savedMessages = (savedMessagesRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null).slice(0, 3)
+  const mentions = (mentionsRaw || []).filter(m => m.channelId).map(formatMessage).filter((m): m is Message => m !== null).slice(0, 3)
 
   // Create a map of channelId to channel info for quick lookup
   const channelMap = React.useMemo(() => {
@@ -217,13 +217,17 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
         {/* Cards Grid */}
         <div className="mb-6 sm:mb-8 grid gap-4 md:grid-cols-2">
           {/* Saved Messages Card */}
-          <Card>
-            <CardHeader>
+          <Card 
+            className="cursor-pointer hover:ring-foreground/20 transition-all"
+            onClick={handleViewAllSaved}
+          >
+            <CardHeader className="relative">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <BookmarkIcon className="size-4" weight="fill" />
                 Saved Messages
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">Messages you've saved for later</CardDescription>
+              <ArrowRightIcon className="absolute top-4 right-4 size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               {savedMessages.length === 0 ? (
@@ -240,7 +244,8 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       <div
                         key={message.id}
                         className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           if (channel?.channelId && channelInfo) {
                             handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
                           }
@@ -277,17 +282,6 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       </div>
                     )
                   })}
-                  {savedMessages.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-sm text-muted-foreground hover:text-foreground"
-                      onClick={handleViewAllSaved}
-                    >
-                      View all saved messages
-                      <ArrowRightIcon className="size-4 ml-1" />
-                    </Button>
-                  )}
                 </div>
               )}
             </CardContent>
