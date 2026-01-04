@@ -284,6 +284,7 @@ export const updateOrganization = mutation({
     description: v.optional(v.string()),
     logoId: v.optional(v.id("_storage")),
     removeLogo: v.optional(v.boolean()),
+    isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -351,6 +352,11 @@ export const updateOrganization = mutation({
       }
       updates.logoId = args.logoId;
       updates.imageUrl = undefined; // Clear legacy field when using new storage
+    }
+
+    // Handle isPublic update
+    if (args.isPublic !== undefined) {
+      updates.isPublic = args.isPublic;
     }
 
     await ctx.db.patch(args.id, updates);
@@ -1223,6 +1229,89 @@ export const revokeInviteLink = mutation({
     }
 
     return { revokedCount: activeLinks.length };
+  },
+});
+
+/**
+ * Toggle whether a workspace is public
+ */
+export const setOrganizationPublic = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    isPublic: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if user is an admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only organization admins can change public access settings");
+    }
+
+    await ctx.db.patch(args.organizationId, { isPublic: args.isPublic });
+    return { success: true };
+  },
+});
+
+/**
+ * Join a public workspace (no invitation required)
+ */
+export const joinPublicOrganization = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Get the organization
+    const org = await ctx.db.get(args.organizationId);
+    if (!org) {
+      throw new Error("Organization not found");
+    }
+
+    // Check if it's public
+    if (!org.isPublic) {
+      throw new Error("This workspace is not public. You need an invitation to join.");
+    }
+
+    // Check if already a member
+    const existingMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (existingMembership) {
+      throw new Error("You are already a member of this workspace");
+    }
+
+    // Add as member
+    await ctx.db.insert("organizationMembers", {
+      organizationId: args.organizationId,
+      userId,
+      role: "member",
+      joinedAt: Date.now(),
+    });
+
+    return { organizationId: args.organizationId, slug: org.slug };
   },
 });
 

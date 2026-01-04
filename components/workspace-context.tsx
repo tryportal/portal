@@ -10,7 +10,9 @@ interface Organization {
   _id: Id<"organizations">;
   name: string;
   slug: string;
+  description?: string;
   logoUrl?: string;
+  isPublic?: boolean;
 }
 
 interface Membership {

@@ -91,7 +91,7 @@ function WorkspaceLayoutContent({
 
   // User doesn't have access to this workspace
   if (!membership) {
-    return <NoAccess slug={slug} organizationExists={true} />;
+    return <NoAccess slug={slug} organizationExists={true} organization={organization} />;
   }
 
   const handleTabChange = (tab: string) => {
