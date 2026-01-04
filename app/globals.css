@@ -128,10 +128,7 @@
   }
 
   /* Global text wrapping utilities for preventing UI breaks */
-  .break-anywhere {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
+  /* Removed unused .break-anywhere utility */
 
   /* Smooth theme transitions */
   *,
