@@ -49,13 +49,13 @@ export function ChannelHeader({
   return (
     <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
       {/* Left: Channel info */}
-      <div className="flex items-center gap-2">
-        <Icon className="size-5 text-foreground" weight="fill" />
-        <h1 className="text-base font-semibold text-foreground">{channelName}</h1>
+      <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+        <Icon className="size-5 text-foreground flex-shrink-0" weight="fill" />
+        <h1 className="text-base font-semibold text-foreground truncate">{channelName}</h1>
         {pinnedCount > 0 && (
           <button
             onClick={onViewPinnedMessages}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
           >
             <PushPinIcon className="size-3.5" />
             <span>{pinnedCount}</span>
@@ -64,7 +64,7 @@ export function ChannelHeader({
       </div>
 
       {/* Right: Search + Options */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {/* Search bar */}
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -148,7 +148,7 @@ function SortableChannel({
           className: "size-4",
           weight: isActive ? "fill" : "regular",
         })}
-        <span className="truncate">{channel.name}</span>
+        <span className="truncate min-w-0">{channel.name}</span>
       </Button>
 
       {/* More button on hover */}
@@ -262,7 +262,7 @@ function SortableCategory({
           ) : (
             <CaretRightIcon className="size-3" />
           )}
-          <span className="uppercase tracking-wider">{category.name}</span>
+          <span className="uppercase tracking-wider truncate">{category.name}</span>
         </button>
         
         {isAdmin && (
@@ -567,7 +567,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               />
             </div>
           )}
-          <span className="text-sm font-medium text-foreground truncate">
+          <span className="text-sm font-medium text-foreground truncate min-w-0">
             {currentOrg?.name || "Organization"}
           </span>
         </div>
@@ -695,7 +695,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <FolderIcon className="size-4 text-primary" weight="fill" />
-                        <span className="truncate">{activeCategory.name}</span>
+                        <span className="truncate min-w-0">{activeCategory.name}</span>
                         <span className="text-xs text-muted-foreground ml-auto">
                           {activeCategory.channels.length}
                         </span>
@@ -714,7 +714,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
                         <div className="flex items-center gap-2 text-sm">
                           <IconComponent className="size-4 text-muted-foreground" weight="bold" />
-                          <span className="truncate">{activeChannel.name}</span>
+                          <span className="truncate min-w-0">{activeChannel.name}</span>
                         </div>
                       </div>
                     )

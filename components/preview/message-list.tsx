@@ -208,7 +208,7 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         />
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <ImageIcon className="size-3.5 flex-shrink-0" />
-          <span className="truncate flex-1 font-medium">{attachment.name}</span>
+          <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
           <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
@@ -228,7 +228,7 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         </video>
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <VideoCameraIcon className="size-3.5 flex-shrink-0" />
-          <span className="truncate flex-1 font-medium">{attachment.name}</span>
+          <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
           <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
           <a
             href={url}
@@ -252,7 +252,7 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
     >
       <FileIcon className="size-8 text-muted-foreground flex-shrink-0" weight="duotone" />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-foreground truncate">{attachment.name}</div>
+        <div className="text-sm font-medium text-foreground truncate min-w-0">{attachment.name}</div>
         <div className="text-xs text-muted-foreground font-medium">{formatFileSize(attachment.size)}</div>
       </div>
       <DownloadSimpleIcon className="size-4 text-muted-foreground flex-shrink-0" />
@@ -263,14 +263,14 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
 // Markdown renderer components
 const MarkdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="mb-1 last:mb-0">{children}</p>
+    <p className="mb-1 last:mb-0 [overflow-wrap:anywhere]">{children}</p>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium"
+      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium break-words"
     >
       {children}
     </a>
@@ -474,7 +474,7 @@ function MessageItem({
           <ArrowBendUpLeftIcon className="size-3" />
           <span>Replying to</span>
           <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
-          <span className="truncate max-w-[200px]">{message.parentMessage.content}</span>
+          <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
         </div>
       )}
 
@@ -585,10 +585,10 @@ function MessageItem({
           ) : (
             <>
               {message.content && (
-                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden [overflow-wrap:anywhere]" style={{ marginTop: isGrouped ? "0" : "0" }}>
                   {searchQuery && searchQuery.trim() ? (
                     // When searching, render with highlights (no markdown)
-                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words">
+                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {renderWithHighlights(processedContent, searchQuery)}
                     </p>
                   ) : (
