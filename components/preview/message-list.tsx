@@ -263,7 +263,7 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
 // Markdown renderer components
 const MarkdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="mb-1 last:mb-0">{children}</p>
+    <p className="mb-1 last:mb-0 [overflow-wrap:anywhere]">{children}</p>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
@@ -585,10 +585,10 @@ function MessageItem({
           ) : (
             <>
               {message.content && (
-                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden [overflow-wrap:anywhere]" style={{ marginTop: isGrouped ? "0" : "0" }}>
                   {searchQuery && searchQuery.trim() ? (
                     // When searching, render with highlights (no markdown)
-                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words">
+                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {renderWithHighlights(processedContent, searchQuery)}
                     </p>
                   ) : (
