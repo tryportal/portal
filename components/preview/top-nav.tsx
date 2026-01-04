@@ -153,7 +153,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                 />
               </div>
             )}
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium truncate max-w-[150px]">
               {currentOrg?.name || "Organization"}
             </span>
             <CaretDownIcon className="ml-1 size-3 text-muted-foreground" />
@@ -186,7 +186,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                         />
                       </div>
                     )}
-                    <span className="text-sm flex-1">
+                    <span className="text-sm flex-1 truncate min-w-0">
                       {org.name || "Organization"}
                     </span>
                     {isActive && (

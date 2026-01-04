@@ -77,10 +77,10 @@ export function NoAccess({ slug, organizationExists, organization }: NoAccessPro
               )}
               
               <div className="space-y-2">
-                <h1 className="text-2xl font-semibold text-foreground">
+                <h1 className="text-2xl font-semibold text-foreground break-words">
                   Join {organization?.name}
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground break-words">
                   {organization?.description || `This is a public workspace. Click below to join and start collaborating.`}
                 </p>
               </div>
@@ -96,8 +96,8 @@ export function NoAccess({ slug, organizationExists, organization }: NoAccessPro
                 <h1 className="text-2xl font-semibold text-foreground">
                   {organizationExists ? "No Access" : "Workspace Not Found"}
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  {organizationExists 
+                <p className="text-sm text-muted-foreground break-words">
+                  {organizationExists
                     ? `You don't have access to the workspace "${slug}". Please contact an admin to get an invitation.`
                     : `The workspace "${slug}" doesn't exist or has been removed.`
                   }
@@ -135,30 +135,30 @@ export function NoAccess({ slug, organizationExists, organization }: NoAccessPro
                         onClick={() => handleGoToOrganization(org.slug)}
                         className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left group"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           {org.logoUrl ? (
                             <img
                               src={org.logoUrl}
                               alt={org.name}
-                              className="w-8 h-8 rounded object-cover"
+                              className="w-8 h-8 rounded object-cover flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center">
+                            <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center flex-shrink-0">
                               <span className="text-sm font-medium text-foreground">
                                 {org.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
                           )}
-                          <div>
-                            <div className="text-sm font-medium text-foreground">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-foreground truncate">
                               {org.name}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground truncate">
                               /{org.slug}
                             </div>
                           </div>
                         </div>
-                        <ArrowRight className="w-5 h-5 text-foreground/30 group-hover:text-muted-foreground transition-colors" />
+                        <ArrowRight className="w-5 h-5 text-foreground/30 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
                       </button>
                     ))}
                   </div>
@@ -177,30 +177,30 @@ export function NoAccess({ slug, organizationExists, organization }: NoAccessPro
                     onClick={() => handleGoToOrganization(org.slug)}
                     className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left group"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {org.logoUrl ? (
                         <img
                           src={org.logoUrl}
                           alt={org.name}
-                          className="w-8 h-8 rounded object-cover"
+                          className="w-8 h-8 rounded object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center">
+                        <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center flex-shrink-0">
                           <span className="text-sm font-medium text-foreground">
                             {org.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
-                      <div>
-                        <div className="text-sm font-medium text-foreground">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-foreground truncate">
                           {org.name}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate">
                           /{org.slug}
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-foreground/30 group-hover:text-muted-foreground transition-colors" />
+                    <ArrowRight className="w-5 h-5 text-foreground/30 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
                   </button>
                 ))}
               </div>

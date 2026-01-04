@@ -127,6 +127,12 @@
     @apply bg-background text-foreground;
   }
 
+  /* Global text wrapping utilities for preventing UI breaks */
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   /* Smooth theme transitions */
   *,
   *::before,

@@ -333,7 +333,7 @@ export function ConversationsSidebar() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn(
-                        "text-sm truncate",
+                        "text-sm truncate min-w-0",
                         isActive ? "font-semibold text-foreground" : hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
                       )}>
                         {participantName}
@@ -355,7 +355,7 @@ export function ConversationsSidebar() {
                     </div>
                     {conversation.lastMessage ? (
                       <p className={cn(
-                        "text-xs truncate mt-0.5",
+                        "text-xs truncate mt-0.5 min-w-0",
                         hasUnread && !isActive ? "text-foreground/70 font-medium" : "text-muted-foreground"
                       )}>
                         {isOwnLastMessage && (
