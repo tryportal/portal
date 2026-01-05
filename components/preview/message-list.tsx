@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import {
   ArrowBendUpLeftIcon,
+  ArrowBendDoubleUpRightIcon,
   ArrowDownIcon,
   ShareIcon,
   DotsThreeIcon,
@@ -36,7 +37,7 @@ import {
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -83,6 +84,10 @@ export interface Message {
   reactions?: Reaction[]
   pinned?: boolean
   mentions?: string[]
+  forwardedFrom?: {
+    channelName?: string
+    userName?: string
+  }
 }
 
 interface MessageListProps {
@@ -478,6 +483,21 @@ function MessageItem({
         </div>
       )}
 
+      {/* Forwarded indicator */}
+      {message.forwardedFrom && (
+        <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-muted-foreground">
+          <ArrowBendDoubleUpRightIcon className="size-3" />
+          <span>Forwarded from</span>
+          <span className="font-medium text-foreground/70">
+            {message.forwardedFrom.channelName 
+              ? `#${message.forwardedFrom.channelName}` 
+              : message.forwardedFrom.userName 
+                ? `@${message.forwardedFrom.userName}` 
+                : "unknown"}
+          </span>
+        </div>
+      )}
+
       {/* Pin indicator */}
       {message.pinned && (
         <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-amber-600 font-medium">
@@ -502,18 +522,12 @@ function MessageItem({
           </Avatar>
         ) : (
           <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default">
-                  {message.timestamp}
-                </span>
-              </TooltipTrigger>
-              {message.createdAt && (
-                <TooltipContent>
-                  {formatFullDateTime(message.createdAt)}
-                </TooltipContent>
-              )}
-            </Tooltip>
+            <span 
+              className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default"
+              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+            >
+              {message.timestamp}
+            </span>
           </div>
         )}
 
@@ -527,18 +541,12 @@ function MessageItem({
               >
                 {message.user.name}
               </button>
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default">
-                    {message.timestamp}
-                  </span>
-                </TooltipTrigger>
-                {message.createdAt && (
-                  <TooltipContent>
-                    {formatFullDateTime(message.createdAt)}
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <span 
+                className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default"
+                title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+              >
+                {message.timestamp}
+              </span>
               {message.editedAt && (
                 <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
               )}

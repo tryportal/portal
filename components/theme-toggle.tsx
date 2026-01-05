@@ -10,11 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 
 interface ThemeToggleProps {
   variant?: "icon" | "dropdown";
@@ -27,25 +23,17 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
   // Simple icon toggle between light/dark
   if (variant === "icon") {
     return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
-              className={`text-muted-foreground hover:text-foreground ${className}`}
-            />
-          }
-        >
-          <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
-          <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </TooltipTrigger>
-        <TooltipContent>
-          {resolvedTheme === "light" ? "Dark mode" : "Light mode"}
-        </TooltipContent>
-      </Tooltip>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+        className={`text-muted-foreground hover:text-foreground ${className}`}
+        title={resolvedTheme === "light" ? "Dark mode" : "Light mode"}
+      >
+        <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+        <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
     );
   }
 

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 import { LoadingSpinner } from "@/components/loading-spinner"
 
 function formatFullDateTime(timestamp: number): string {
@@ -340,16 +340,12 @@ export function ConversationsSidebar() {
                       </p>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {conversation.lastMessage && (
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span className="text-[10px] text-muted-foreground cursor-default">
-                                {formatTime(conversation.lastMessage.createdAt)}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {formatFullDateTime(conversation.lastMessage.createdAt)}
-                            </TooltipContent>
-                          </Tooltip>
+                          <span 
+                            className="text-[10px] text-muted-foreground cursor-default"
+                            title={formatFullDateTime(conversation.lastMessage.createdAt)}
+                          >
+                            {formatTime(conversation.lastMessage.createdAt)}
+                          </span>
                         )}
                       </div>
                     </div>

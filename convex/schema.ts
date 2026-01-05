@@ -128,6 +128,14 @@ export default defineSchema({
     }))), // User reactions
     pinned: v.optional(v.boolean()), // Pin status
     mentions: v.optional(v.array(v.string())), // Array of mentioned user IDs
+    // Forwarding metadata
+    forwardedFrom: v.optional(v.object({
+      messageId: v.id("messages"), // Original message ID
+      channelId: v.optional(v.id("channels")), // If forwarded from a channel
+      conversationId: v.optional(v.id("conversations")), // If forwarded from a DM
+      channelName: v.optional(v.string()), // Channel name for display
+      userName: v.optional(v.string()), // User name for DM display
+    })),
   })
     .index("by_channel", ["channelId"])
     .index("by_channel_and_created", ["channelId", "createdAt"])

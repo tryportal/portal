@@ -584,7 +584,7 @@ export function MessageInput({
           <div className="flex-1 min-w-0">
             <span className="text-xs text-muted-foreground">Replying to </span>
             <span className="text-xs font-medium text-foreground">{replyingTo.userName}</span>
-            <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
+            <p className="text-xs text-muted-foreground break-all">{replyingTo.content}</p>
           </div>
           <Button
             variant="ghost"
@@ -652,7 +652,7 @@ export function MessageInput({
       )}
 
       <div 
-        className="relative flex flex-col rounded-lg border border-border bg-card shadow-sm"
+        className="relative flex flex-col"
         onClick={(e) => {
           // Focus textarea when clicking blank areas (not interactive elements)
           const target = e.target as HTMLElement

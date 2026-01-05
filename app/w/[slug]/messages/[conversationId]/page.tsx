@@ -4,6 +4,7 @@ import * as React from "react"
 import { useQuery, useMutation, useAction } from "convex/react"
 import { useRouter, useParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
+import { toast } from "sonner"
 import { api } from "@/convex/_generated/api"
 import { useUserDataCache } from "@/components/user-data-cache"
 import { LoadingSpinner } from "@/components/loading-spinner"
@@ -143,6 +144,8 @@ export default function ConversationPage({
   const [forwardingMessage, setForwardingMessage] = React.useState<{
     id: string
     content: string
+    attachments?: Array<{ name: string }>
+    linkEmbed?: { url: string }
   } | null>(null)
 
   // Mutations
@@ -315,6 +318,10 @@ export default function ConversationPage({
         parentMessage,
         reactions: reactions && reactions.length > 0 ? reactions : undefined,
         mentions: msg.mentions,
+        forwardedFrom: msg.forwardedFrom ? {
+          channelName: msg.forwardedFrom.channelName,
+          userName: msg.forwardedFrom.userName,
+        } : undefined,
       }
     })
   }, [filteredMessages, userDataCache, user, messageMap, userNames])
@@ -452,6 +459,8 @@ export default function ConversationPage({
       setForwardingMessage({
         id: message.id,
         content: message.content,
+        attachments: message.attachments?.map(a => ({ name: a.name })),
+        linkEmbed: message.linkEmbed ? { url: message.linkEmbed.url } : undefined,
       })
       setForwardDialogOpen(true)
     }
@@ -459,23 +468,41 @@ export default function ConversationPage({
 
   const handleForwardToChannel = async (messageId: string, targetChannelId: string) => {
     try {
-      await forwardMessage({
+      const result = await forwardMessage({
         messageId: messageId as Id<"messages">,
         targetChannelId: targetChannelId as Id<"channels">,
       })
+      
+      if (result && routeParams) {
+        toast.success(`Message forwarded to #${result.targetName}`)
+        // Navigate to the target channel
+        if (result.targetType === "channel" && result.categoryName) {
+          router.push(`/w/${routeParams.slug}/${encodeURIComponent(result.categoryName)}/${encodeURIComponent(result.targetName)}`)
+        }
+      }
     } catch (error) {
       console.error("Failed to forward message:", error)
+      toast.error("Failed to forward message")
     }
   }
 
   const handleForwardToConversation = async (messageId: string, targetConversationId: string) => {
     try {
-      await forwardMessage({
+      const result = await forwardMessage({
         messageId: messageId as Id<"messages">,
         targetConversationId: targetConversationId as Id<"conversations">,
       })
+      
+      if (result && routeParams) {
+        toast.success(`Message forwarded to @${result.targetName}`)
+        // Navigate to the target conversation
+        if (result.targetType === "conversation" && result.conversationId) {
+          router.push(`/w/${routeParams.slug}/messages/${result.conversationId}`)
+        }
+      }
     } catch (error) {
       console.error("Failed to forward message:", error)
+      toast.error("Failed to forward message")
     }
   }
 
@@ -530,7 +557,10 @@ export default function ConversationPage({
         onOpenChange={setForwardDialogOpen}
         messageId={forwardingMessage?.id}
         messageContent={forwardingMessage?.content ?? ""}
+        messageAttachments={forwardingMessage?.attachments}
+        messageLinkEmbed={forwardingMessage?.linkEmbed}
         organizationId={organizationId}
+        currentConversationId={conversationId}
         onForwardToChannel={handleForwardToChannel}
         onForwardToConversation={handleForwardToConversation}
       />

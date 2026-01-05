@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { cn } from "@/lib/utils"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 function formatFullDateTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -256,16 +256,12 @@ export function MobileConversationsList() {
                         {participantName}
                       </p>
                       {conversation.lastMessage && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-xs text-muted-foreground flex-shrink-0 cursor-default">
-                              {formatTime(conversation.lastMessage.createdAt)}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {formatFullDateTime(conversation.lastMessage.createdAt)}
-                          </TooltipContent>
-                        </Tooltip>
+                        <span 
+                          className="text-xs text-muted-foreground flex-shrink-0 cursor-default"
+                          title={formatFullDateTime(conversation.lastMessage.createdAt)}
+                        >
+                          {formatTime(conversation.lastMessage.createdAt)}
+                        </span>
                       )}
                     </div>
                     {conversation.lastMessage ? (
