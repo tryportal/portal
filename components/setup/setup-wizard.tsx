@@ -243,10 +243,12 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     if (!currentOrgId) {
       throw new Error("Please complete the first step first");
     }
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
     await sendInvitation({
       organizationId: currentOrgId,
       email,
       role: role === "org:admin" ? "admin" : "member",
+      baseUrl,
     });
   };
 

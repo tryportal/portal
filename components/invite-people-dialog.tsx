@@ -90,6 +90,7 @@ export function InvitePeopleDialog({
         organizationId,
         email: email.trim(),
         role,
+        baseUrl,
       });
       analytics.invitationSent({ method: "email", role });
       setSuccess(true);
