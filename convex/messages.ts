@@ -54,7 +54,23 @@ async function checkChannelAccess(
     throw new Error("Not a member of this organization");
   }
 
-  return { userId, channel, membership, isAdmin: membership.role === "admin" };
+  const isAdmin = membership.role === "admin";
+
+  // Check private channel access
+  if (channel.isPrivate && !isAdmin) {
+    const channelMember = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel_and_user", (q: { eq: Function }) =>
+        q.eq("channelId", channelId).eq("userId", userId)
+      )
+      .first();
+
+    if (!channelMember) {
+      throw new Error("You don't have access to this private channel");
+    }
+  }
+
+  return { userId, channel, membership, isAdmin };
 }
 
 // ============================================================================

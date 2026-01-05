@@ -9,8 +9,10 @@ import {
   CheckIcon,
   PlusIcon,
   ListIcon,
+  GearIcon,
+  SignOutIcon,
 } from "@phosphor-icons/react";
-import { UserButton } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -24,6 +26,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/lib/theme-provider";
 
@@ -44,11 +47,26 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const currentSlug = params?.slug as string | undefined;
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } =
     useWorkspaceData();
   const { sidebarOpen, setSidebarOpen } = useWorkspace();
+
+  const handleSettings = () => {
+    router.push("/settings");
+  };
+
+  const handleSignOut = () => {
+    signOut({ redirectUrl: "/" });
+  };
+
+  // Get user initials for avatar fallback
+  const userInitials = user?.firstName
+    ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) || ""}`.toUpperCase()
+    : user?.primaryEmailAddress?.emailAddress?.charAt(0).toUpperCase() || "U";
 
   // Get total unread message count for DMs
   const totalUnreadCount = useQuery(api.conversations.getTotalUnreadCount) ?? 0;
@@ -259,18 +277,40 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       {/* Right: Theme Toggle + User Account */}
       <div className="flex justify-end items-center gap-2">
         <ThemeToggle variant="icon" className="hidden sm:flex" />
-        <UserButton
-          appearance={{
-            elements: {
-              rootBox: "h-8",
-              avatarBox: "h-7 w-7 sm:h-8 sm:w-8",
-              userButtonPopoverCard: "shadow-lg",
-              userButtonPopoverActions: "p-2",
-              userButtonPopoverActionButton: "text-foreground hover:bg-muted",
-              userButtonPopoverFooter: "hidden",
-            },
-          }}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
+            <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
+              {user?.imageUrl && <AvatarImage src={user.imageUrl} alt={user.fullName || "User"} />}
+              <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[180px]">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium text-foreground truncate">
+                {user?.fullName || user?.firstName || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.primaryEmailAddress?.emailAddress}
+              </p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleSettings}
+              className="gap-2 cursor-pointer"
+            >
+              <GearIcon className="size-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50"
+            >
+              <SignOutIcon className="size-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Mobile Bottom Tab Navigation */}

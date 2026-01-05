@@ -321,8 +321,8 @@ const MarkdownComponents = {
   ul: ({ children }: { children?: React.ReactNode }) => (
     <ul className="list-disc list-inside my-1 space-y-0.5">{children}</ul>
   ),
-  ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
+  ol: ({ children, start }: { children?: React.ReactNode; start?: number }) => (
+    <ol start={start} className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
   ),
   strong: ({ children }: { children?: React.ReactNode }) => {
     // Check if this is a mention (starts with @)

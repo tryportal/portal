@@ -270,6 +270,28 @@
   color: #fafafa !important;
 }
 
+/* Clerk accounts menu dark mode */
+:root.dark [class*="cl-userButtonPopoverActions"],
+:root.dark [class*="cl-menuList"],
+:root.dark [class*="cl-menuItem"],
+:root.dark [class*="cl-menuButton"],
+:root.dark [class*="cl-accountSwitcher"],
+.dark [class*="cl-userButtonPopoverActions"],
+.dark [class*="cl-menuList"],
+.dark [class*="cl-menuItem"],
+.dark [class*="cl-menuButton"],
+.dark [class*="cl-accountSwitcher"] {
+  background-color: #141414 !important;
+  color: #fafafa !important;
+}
+
+:root.dark [class*="cl-menuItem"]:hover,
+:root.dark [class*="cl-menuButton"]:hover,
+.dark [class*="cl-menuItem"]:hover,
+.dark [class*="cl-menuButton"]:hover {
+  background-color: #1f1f1f !important;
+}
+
 /* Catch-all for any Clerk text elements in dark mode */
 :root.dark [class*="cl-userButton"],
 :root.dark [class*="cl-popover"],
@@ -279,6 +301,8 @@
 :root.dark [class*="cl-organizationSwitcher"],
 :root.dark [class*="cl-signIn"],
 :root.dark [class*="cl-signUp"],
+:root.dark [class*="cl-menu"],
+:root.dark [class*="cl-account"],
 .dark [class*="cl-userButton"],
 .dark [class*="cl-popover"],
 .dark [class*="cl-modal"],
@@ -286,9 +310,21 @@
 .dark [class*="cl-avatar"],
 .dark [class*="cl-organizationSwitcher"],
 .dark [class*="cl-signIn"],
-.dark [class*="cl-signUp"] {
+.dark [class*="cl-signUp"],
+.dark [class*="cl-menu"],
+.dark [class*="cl-account"] {
   --cl-color-text-primary: #fafafa;
   --cl-color-text-secondary: #888888;
   --cl-color-background: #141414;
   --cl-color-background-secondary: #1f1f1f;
+}
+
+/* Force all Clerk text to be light in dark mode */
+:root.dark [class*="cl-"] span,
+:root.dark [class*="cl-"] p,
+:root.dark [class*="cl-"] div,
+.dark [class*="cl-"] span,
+.dark [class*="cl-"] p,
+.dark [class*="cl-"] div {
+  color: inherit;
 }

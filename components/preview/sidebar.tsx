@@ -20,6 +20,7 @@ import {
   GearIcon,
   DotsSixVerticalIcon,
   WarningCircleIcon,
+  LockIcon,
 } from "@phosphor-icons/react"
 import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
@@ -84,6 +85,7 @@ interface SortableChannelProps {
     _id: Id<"channels">
     name: string
     icon: string
+    isPrivate?: boolean
   }
   isActive: boolean
   onSelect: () => void
@@ -149,6 +151,9 @@ function SortableChannel({
           weight: isActive ? "fill" : "regular",
         })}
         <span className="truncate min-w-0">{channel.name}</span>
+        {channel.isPrivate && (
+          <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
       </Button>
 
       {/* More button on hover */}
@@ -200,6 +205,7 @@ interface SortableCategoryProps {
       _id: Id<"channels">
       name: string
       icon: string
+      isPrivate?: boolean
     }>
   }
   isExpanded: boolean

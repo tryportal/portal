@@ -10,7 +10,6 @@ import { useUserDataCache } from "@/components/user-data-cache"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { MessageList, type Message, type Attachment, type Reaction, type LinkEmbed } from "@/components/preview/message-list"
 import { MessageInput } from "@/components/preview/message-input"
-import { TypingIndicator } from "@/components/typing-indicator"
 import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
 import type { Id } from "@/convex/_generated/dataModel"
@@ -536,20 +535,18 @@ export default function ConversationPage({
         searchQuery={searchQuery}
       />
 
-      {/* Message Input with Typing Indicator overlay */}
-      <div className="relative">
-        <TypingIndicator typingUsers={typingUsers} />
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          channelName={participantName}
-          onTyping={handleTyping}
-          generateUploadUrl={handleGenerateUploadUrl}
-          replyingTo={replyingTo}
-          onCancelReply={handleCancelReply}
-          mentionUsers={[]}
-          isDirectMessage
-        />
-      </div>
+      {/* Message Input with Typing Indicator */}
+      <MessageInput
+        onSendMessage={handleSendMessage}
+        channelName={participantName}
+        onTyping={handleTyping}
+        generateUploadUrl={handleGenerateUploadUrl}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
+        mentionUsers={[]}
+        isDirectMessage
+        typingUsers={typingUsers}
+      />
 
       {/* Forward Message Dialog */}
       <ForwardMessageDialog
