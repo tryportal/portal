@@ -195,7 +195,7 @@ export default function UserSettingsPage() {
                     onClick={() => openUserProfile()}
                     className="shrink-0"
                   >
-                    View Account
+                    Manage Account
                   </Button>
                 </div>
               </div>
