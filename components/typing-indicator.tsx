@@ -46,7 +46,7 @@ export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   }
 
   return (
-    <div className="absolute -top-6 left-0 z-10 pointer-events-none">
+    <div className="absolute -top-8 left-0 z-10 pointer-events-none">
       <div className="flex items-center gap-1.5 px-4 py-0.5 text-[11px] text-muted-foreground">
         {/* Avatars */}
         <div className="flex -space-x-1">
