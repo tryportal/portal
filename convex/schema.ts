@@ -43,6 +43,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     icon: v.string(), // Phosphor icon name, e.g., "Hash", "ChatCircle"
     permissions: v.union(v.literal("open"), v.literal("readOnly")), // "open" = everyone can send, "readOnly" = only admins can send
+    isPrivate: v.optional(v.boolean()), // If true, only selected members can access this channel
     order: v.number(),
     createdAt: v.number(),
     createdBy: v.string(), // Clerk user ID
@@ -50,6 +51,17 @@ export default defineSchema({
     .index("by_organization", ["organizationId"])
     .index("by_category", ["categoryId"])
     .index("by_category_and_order", ["categoryId", "order"]),
+
+  // Members of private channels - only users in this table can access a private channel
+  channelMembers: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID
+    addedAt: v.number(),
+    addedBy: v.string(), // Clerk user ID of who added this member
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_user", ["userId"])
+    .index("by_channel_and_user", ["channelId", "userId"]),
 
   organizations: defineTable({
     name: v.string(),

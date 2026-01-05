@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { IconPicker, getIconComponent } from "@/components/icon-picker"
+import { MemberSelector } from "@/components/member-selector"
+import { LockIcon } from "@phosphor-icons/react"
 
 interface EditChannelDialogProps {
   open: boolean
@@ -35,12 +37,18 @@ export function EditChannelDialog({
   const [description, setDescription] = React.useState("")
   const [icon, setIcon] = React.useState("Hash")
   const [permissions, setPermissions] = React.useState<"open" | "readOnly">("open")
+  const [isPrivate, setIsPrivate] = React.useState(false)
+  const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   const updateChannel = useMutation(api.channels.updateChannel)
   const channel = useQuery(
     api.channels.getChannel,
+    channelId ? { channelId } : "skip"
+  )
+  const channelMembers = useQuery(
+    api.channels.getChannelMembers,
     channelId ? { channelId } : "skip"
   )
 
@@ -51,9 +59,17 @@ export function EditChannelDialog({
       setDescription(channel.description || "")
       setIcon(channel.icon)
       setPermissions(channel.permissions)
+      setIsPrivate(channel.isPrivate || false)
       setError(null)
     }
   }, [channel])
+
+  // Populate member selection when channel members load
+  React.useEffect(() => {
+    if (channelMembers) {
+      setSelectedMemberIds(channelMembers)
+    }
+  }, [channelMembers])
 
   // Reset form when dialog closes
   React.useEffect(() => {
@@ -82,6 +98,8 @@ export function EditChannelDialog({
         description: description.trim() || undefined,
         icon,
         permissions,
+        isPrivate,
+        memberIds: isPrivate ? selectedMemberIds : undefined,
       })
       onOpenChange(false)
     } catch (err) {
@@ -200,6 +218,43 @@ export function EditChannelDialog({
                 </label>
               </div>
             </div>
+
+            {/* Private Channel Toggle */}
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Access</Label>
+              <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${isPrivate ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={isPrivate}
+                    onChange={(e) => setIsPrivate(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`flex size-5 items-center justify-center rounded border transition-colors ${isPrivate ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                    {isPrivate && <LockIcon className="size-3 text-background" weight="bold" />}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-foreground flex items-center gap-2">
+                    <LockIcon className="size-4" weight="bold" />
+                    Private Channel
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    Only selected members can see and access this channel.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Member Selection (only visible when private) */}
+            {isPrivate && (
+              <MemberSelector
+                organizationId={organizationId}
+                selectedMemberIds={selectedMemberIds}
+                onSelectionChange={setSelectedMemberIds}
+                label="Channel Members"
+              />
+            )}
 
             {error && (
               <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">

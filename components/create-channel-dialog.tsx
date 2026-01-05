@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { IconPicker, getIconComponent } from "@/components/icon-picker"
-import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react"
+import { MemberSelector } from "@/components/member-selector"
+import { ArrowLeftIcon, ArrowRightIcon, LockIcon } from "@phosphor-icons/react"
 import { analytics } from "@/lib/analytics"
 
 interface CreateChannelDialogProps {
@@ -27,7 +28,7 @@ interface CreateChannelDialogProps {
   defaultCategoryId?: Id<"channelCategories">
 }
 
-type Step = "details" | "permissions"
+type Step = "details" | "permissions" | "members"
 
 export function CreateChannelDialog({
   open,
@@ -40,6 +41,8 @@ export function CreateChannelDialog({
   const [description, setDescription] = React.useState("")
   const [icon, setIcon] = React.useState("Hash")
   const [permissions, setPermissions] = React.useState<"open" | "readOnly">("open")
+  const [isPrivate, setIsPrivate] = React.useState(false)
+  const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([])
   const [categoryId, setCategoryId] = React.useState<Id<"channelCategories"> | null>(
     defaultCategoryId ?? null
   )
@@ -67,28 +70,42 @@ export function CreateChannelDialog({
       setDescription("")
       setIcon("Hash")
       setPermissions("open")
+      setIsPrivate(false)
+      setSelectedMemberIds([])
       setCategoryId(defaultCategoryId ?? null)
       setError(null)
     }
   }, [open, defaultCategoryId])
 
   const handleNext = () => {
-    if (!name.trim()) {
-      setError("Channel name is required")
-      return
+    if (step === "details") {
+      if (!name.trim()) {
+        setError("Channel name is required")
+        return
+      }
+      setError(null)
+      setStep("permissions")
+    } else if (step === "permissions") {
+      setError(null)
+      if (isPrivate) {
+        setStep("members")
+      } else {
+        // Skip members step for non-private channels, submit directly
+        handleFinalSubmit()
+      }
     }
-    setError(null)
-    setStep("permissions")
   }
 
   const handleBack = () => {
     setError(null)
-    setStep("details")
+    if (step === "permissions") {
+      setStep("details")
+    } else if (step === "members") {
+      setStep("permissions")
+    }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const handleFinalSubmit = async () => {
     if (!categoryId) {
       setError("Please select a category")
       return
@@ -105,6 +122,8 @@ export function CreateChannelDialog({
         description: description.trim() || undefined,
         icon,
         permissions,
+        isPrivate,
+        memberIds: isPrivate ? selectedMemberIds : undefined,
       })
       analytics.channelCreated({
         channelId,
@@ -119,6 +138,16 @@ export function CreateChannelDialog({
     }
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (step === "members") {
+      await handleFinalSubmit()
+    } else {
+      handleNext()
+    }
+  }
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setStep("details")
@@ -126,6 +155,8 @@ export function CreateChannelDialog({
       setDescription("")
       setIcon("Hash")
       setPermissions("open")
+      setIsPrivate(false)
+      setSelectedMemberIds([])
       setError(null)
     }
     onOpenChange(newOpen)
@@ -136,19 +167,21 @@ export function CreateChannelDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="default">
-        <form onSubmit={step === "permissions" ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }}>
+        <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {step === "details" ? "Create Channel" : "Channel Settings"}
+              {step === "details" && "Create Channel"}
+              {step === "permissions" && "Channel Settings"}
+              {step === "members" && "Select Members"}
             </DialogTitle>
             <DialogDescription>
-              {step === "details"
-                ? "Channels are where your team communicates."
-                : "Configure permissions and select a category."}
+              {step === "details" && "Channels are where your team communicates."}
+              {step === "permissions" && "Configure permissions and select a category."}
+              {step === "members" && "Choose who can access this private channel."}
             </DialogDescription>
           </DialogHeader>
 
-          {step === "details" ? (
+          {step === "details" && (
             <div className="space-y-6 py-4">
               {hasNoCategories ? (
                 <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 border border-yellow-200">
@@ -211,7 +244,9 @@ export function CreateChannelDialog({
               </>
               )}
             </div>
-          ) : (
+          )}
+
+          {step === "permissions" && (
             <div className="space-y-6 py-4">
               {/* Permissions */}
               <div className="space-y-3">
@@ -262,6 +297,33 @@ export function CreateChannelDialog({
                 </div>
               </div>
 
+              {/* Private Channel Toggle */}
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Access</Label>
+                <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${isPrivate ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                  <div className="mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={isPrivate}
+                      onChange={(e) => setIsPrivate(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`flex size-5 items-center justify-center rounded border transition-colors ${isPrivate ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                      {isPrivate && <LockIcon className="size-3 text-background" weight="bold" />}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-foreground flex items-center gap-2">
+                      <LockIcon className="size-4" weight="bold" />
+                      Private Channel
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Only selected members can see and access this channel.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
               {/* Category Selection */}
               <div className="space-y-3">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</Label>
@@ -305,8 +367,29 @@ export function CreateChannelDialog({
             </div>
           )}
 
+          {step === "members" && (
+            <div className="space-y-6 py-4">
+              <MemberSelector
+                organizationId={organizationId}
+                selectedMemberIds={selectedMemberIds}
+                onSelectionChange={setSelectedMemberIds}
+                label="Channel Members"
+              />
+
+              <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                <p>You will be automatically added as a member of this channel.</p>
+              </div>
+
+              {error && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 border border-red-100">
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
-            {step === "details" ? (
+            {step === "details" && (
               <>
                 <Button
                   type="button"
@@ -320,7 +403,24 @@ export function CreateChannelDialog({
                   <ArrowRightIcon className="size-4 ml-1" />
                 </Button>
               </>
-            ) : (
+            )}
+            {step === "permissions" && (
+              <>
+                <Button type="button" variant="outline" onClick={handleBack}>
+                  <ArrowLeftIcon className="size-4 mr-1" />
+                  Back
+                </Button>
+                <Button type="submit" disabled={isSubmitting || !categoryId || hasNoCategories}>
+                  {isSubmitting ? "Creating..." : isPrivate ? (
+                    <>
+                      Next
+                      <ArrowRightIcon className="size-4 ml-1" />
+                    </>
+                  ) : "Create Channel"}
+                </Button>
+              </>
+            )}
+            {step === "members" && (
               <>
                 <Button type="button" variant="outline" onClick={handleBack}>
                   <ArrowLeftIcon className="size-4 mr-1" />
