@@ -12,6 +12,7 @@ import { Sidebar } from "@/components/preview/sidebar";
 import { NoAccess } from "@/components/no-access";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { analytics } from "@/lib/analytics";
+import { useSidebarHotkey } from "@/lib/use-sidebar-hotkey";
 
 // Helper to get the current tab from a pathname
 function getTabFromPathname(pathname: string | null, slug: string): "home" | "messages" | "inbox" {
@@ -34,14 +35,24 @@ function WorkspaceLayoutContent({
   const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   
-  const { 
-    sidebarOpen, 
-    setSidebarOpen, 
+  const {
+    sidebarOpen,
+    setSidebarOpen,
     activeTab,
     setActiveTab
   } = useWorkspace();
 
   const { membership, isLoading, isError, slug, organization } = useWorkspaceData();
+
+  // Sidebar toggle hotkey
+  const handleSidebarToggle = React.useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, [setSidebarOpen]);
+
+  useSidebarHotkey({
+    onToggle: handleSidebarToggle,
+    enabled: activeTab !== "messages", // Only enable when sidebar is visible
+  });
 
   // Track the tab derived from the actual current pathname
   const currentPathTab = getTabFromPathname(pathname, slug);

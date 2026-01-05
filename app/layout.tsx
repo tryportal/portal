@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/lib/convex-provider";
 import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { UserSettingsProvider } from "@/lib/user-settings";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -75,16 +76,18 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-            <PostHogProvider>
-              <DatabuddyProvider>
-                <ConvexClientProvider>
-                  <RootNotificationProvider>
-                    {children}
-                    <Toaster position="bottom-right" richColors />
-                  </RootNotificationProvider>
-                </ConvexClientProvider>
-              </DatabuddyProvider>
-            </PostHogProvider>
+            <UserSettingsProvider>
+              <PostHogProvider>
+                <DatabuddyProvider>
+                  <ConvexClientProvider>
+                    <RootNotificationProvider>
+                      {children}
+                      <Toaster position="bottom-right" richColors />
+                    </RootNotificationProvider>
+                  </ConvexClientProvider>
+                </DatabuddyProvider>
+              </PostHogProvider>
+            </UserSettingsProvider>
           </ThemeProvider>
         </body>
       </html>
