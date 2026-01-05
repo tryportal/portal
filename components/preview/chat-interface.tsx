@@ -4,7 +4,6 @@ import * as React from "react"
 import { ChannelHeader } from "./channel-header"
 import { MessageList, type Message } from "./message-list"
 import { MessageInput, type ReplyingTo } from "./message-input"
-import { TypingIndicator } from "@/components/typing-indicator"
 import { PinnedMessagesDialog, type PinnedMessage } from "./pinned-messages-dialog"
 import { ForwardMessageDialog } from "./forward-message-dialog"
 import type { MentionUser } from "./mention-autocomplete"
@@ -190,21 +189,19 @@ export function ChatInterface({
         searchQuery={searchQuery}
       />
 
-      {/* Message Input with Typing Indicator overlay */}
-      <div className="relative">
-        <TypingIndicator typingUsers={typingUsers} />
-        <MessageInput 
-          onSendMessage={onSendMessage} 
-          channelName={channelName}
-          disabled={disabled}
-          disabledReason={disabledReason}
-          onTyping={onTyping}
-          generateUploadUrl={generateUploadUrl}
-          replyingTo={replyingTo}
-          onCancelReply={handleCancelReply}
-          mentionUsers={mentionUsers}
-        />
-      </div>
+      {/* Message Input with Typing Indicator */}
+      <MessageInput
+        onSendMessage={onSendMessage}
+        channelName={channelName}
+        disabled={disabled}
+        disabledReason={disabledReason}
+        onTyping={onTyping}
+        generateUploadUrl={generateUploadUrl}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
+        mentionUsers={mentionUsers}
+        typingUsers={typingUsers}
+      />
 
       {/* Pinned Messages Dialog */}
       <PinnedMessagesDialog

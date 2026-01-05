@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/popover"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
+import { TypingIndicator, type TypingUser } from "@/components/typing-indicator"
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "@/lib/theme-provider"
 
@@ -61,6 +62,7 @@ interface MessageInputProps {
   onCancelReply?: () => void
   mentionUsers?: MentionUser[]
   isDirectMessage?: boolean
+  typingUsers?: TypingUser[]
 }
 
 // URL detection regex - matches http(s) URLs
@@ -85,6 +87,7 @@ export function MessageInput({
   onCancelReply,
   mentionUsers = [],
   isDirectMessage = false,
+  typingUsers = [],
 }: MessageInputProps) {
   const { resolvedTheme } = useTheme()
   const [message, setMessage] = React.useState("")
@@ -577,6 +580,8 @@ export function MessageInput({
           </div>
         </div>
       )}
+      {/* Typing indicator */}
+      <TypingIndicator typingUsers={typingUsers} />
       {/* Reply indicator */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
