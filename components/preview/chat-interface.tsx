@@ -94,6 +94,8 @@ export function ChatInterface({
   const [forwardingMessage, setForwardingMessage] = React.useState<{
     id: string
     content: string
+    attachments?: Array<{ name: string }>
+    linkEmbed?: { url: string }
   } | null>(null)
 
   // Handle reply button click
@@ -120,6 +122,8 @@ export function ChatInterface({
       setForwardingMessage({
         id: message.id,
         content: message.content,
+        attachments: message.attachments?.map(a => ({ name: a.name })),
+        linkEmbed: message.linkEmbed ? { url: message.linkEmbed.url } : undefined,
       })
       setForwardDialogOpen(true)
     }
@@ -218,7 +222,10 @@ export function ChatInterface({
         onOpenChange={setForwardDialogOpen}
         messageId={forwardingMessage?.id}
         messageContent={forwardingMessage?.content ?? ""}
+        messageAttachments={forwardingMessage?.attachments}
+        messageLinkEmbed={forwardingMessage?.linkEmbed}
         organizationId={organizationId}
+        currentChannelId={channelId}
         onForwardToChannel={handleForwardToChannel}
         onForwardToConversation={handleForwardToConversation}
       />

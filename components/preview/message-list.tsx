@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import {
   ArrowBendUpLeftIcon,
+  ArrowBendDoubleUpRightIcon,
   ArrowDownIcon,
   ShareIcon,
   DotsThreeIcon,
@@ -83,6 +84,10 @@ export interface Message {
   reactions?: Reaction[]
   pinned?: boolean
   mentions?: string[]
+  forwardedFrom?: {
+    channelName?: string
+    userName?: string
+  }
 }
 
 interface MessageListProps {
@@ -475,6 +480,21 @@ function MessageItem({
           <span>Replying to</span>
           <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
           <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
+        </div>
+      )}
+
+      {/* Forwarded indicator */}
+      {message.forwardedFrom && (
+        <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-muted-foreground">
+          <ArrowBendDoubleUpRightIcon className="size-3" />
+          <span>Forwarded from</span>
+          <span className="font-medium text-foreground/70">
+            {message.forwardedFrom.channelName 
+              ? `#${message.forwardedFrom.channelName}` 
+              : message.forwardedFrom.userName 
+                ? `@${message.forwardedFrom.userName}` 
+                : "unknown"}
+          </span>
         </div>
       )}
 

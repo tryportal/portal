@@ -6,6 +6,7 @@ import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -79,6 +80,7 @@ export default function RootLayout({
                 <ConvexClientProvider>
                   <RootNotificationProvider>
                     {children}
+                    <Toaster position="bottom-right" richColors />
                   </RootNotificationProvider>
                 </ConvexClientProvider>
               </DatabuddyProvider>

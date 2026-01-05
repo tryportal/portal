@@ -1007,6 +1007,7 @@ export const getUserData = action({
 /**
  * Forward a message to another channel or conversation (DM)
  * Either targetChannelId or targetConversationId must be provided (not both)
+ * Returns forwarding info including target details for navigation
  */
 export const forwardMessage = mutation({
   args: {
@@ -1034,7 +1035,26 @@ export const forwardMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify user has access to the source message
+    // Check for same-location forwarding
+    if (message.channelId && args.targetChannelId && message.channelId === args.targetChannelId) {
+      throw new Error("Cannot forward a message to the same channel");
+    }
+    if (message.conversationId && args.targetConversationId && message.conversationId === args.targetConversationId) {
+      throw new Error("Cannot forward a message to the same conversation");
+    }
+
+    // Build forwardedFrom metadata
+    let forwardedFrom: {
+      messageId: typeof args.messageId;
+      channelId?: typeof message.channelId;
+      conversationId?: typeof message.conversationId;
+      channelName?: string;
+      userName?: string;
+    } = {
+      messageId: args.messageId,
+    };
+
+    // Verify user has access to the source message and gather source info
     if (message.channelId) {
       const channel = await ctx.db.get(message.channelId);
       if (!channel) {
@@ -1049,6 +1069,10 @@ export const forwardMessage = mutation({
       if (!membership) {
         throw new Error("Not a member of the source organization");
       }
+      
+      // Store channel info for forwarding indicator
+      forwardedFrom.channelId = message.channelId;
+      forwardedFrom.channelName = channel.name;
     } else if (message.conversationId) {
       const conversation = await ctx.db.get(message.conversationId);
       if (!conversation) {
@@ -1057,6 +1081,23 @@ export const forwardMessage = mutation({
       if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
         throw new Error("Not a participant in the source conversation");
       }
+      
+      // Get the other participant's name for the forwarding indicator
+      const otherParticipantId = conversation.participant1Id === userId
+        ? conversation.participant2Id
+        : conversation.participant1Id;
+      
+      const otherUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", otherParticipantId))
+        .first();
+      
+      const userName = otherUser?.firstName && otherUser?.lastName
+        ? `${otherUser.firstName} ${otherUser.lastName}`
+        : otherUser?.firstName || "Unknown User";
+      
+      forwardedFrom.conversationId = message.conversationId;
+      forwardedFrom.userName = userName;
     } else {
       throw new Error("Invalid source message");
     }
@@ -1070,6 +1111,12 @@ export const forwardMessage = mutation({
         throw new Error("Only admins can post in this read-only channel");
       }
 
+      // Get category info for navigation
+      const category = await ctx.db.get(targetChannel.categoryId);
+      
+      // Get organization for slug
+      const organization = await ctx.db.get(targetChannel.organizationId);
+
       // Create new forwarded message in channel
       const forwardedMessageId = await ctx.db.insert("messages", {
         channelId: args.targetChannelId,
@@ -1078,9 +1125,16 @@ export const forwardMessage = mutation({
         attachments: message.attachments,
         linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
+        forwardedFrom,
       });
 
-      return forwardedMessageId;
+      return {
+        messageId: forwardedMessageId,
+        targetType: "channel" as const,
+        targetName: targetChannel.name,
+        categoryName: category?.name || "general",
+        organizationSlug: organization?.slug || "",
+      };
     }
 
     // Forward to conversation (DM)
@@ -1095,6 +1149,20 @@ export const forwardMessage = mutation({
         throw new Error("Not a participant in the target conversation");
       }
 
+      // Get the other participant's name for the toast
+      const otherParticipantId = conversation.participant1Id === userId
+        ? conversation.participant2Id
+        : conversation.participant1Id;
+      
+      const otherUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", otherParticipantId))
+        .first();
+      
+      const targetUserName = otherUser?.firstName && otherUser?.lastName
+        ? `${otherUser.firstName} ${otherUser.lastName}`
+        : otherUser?.firstName || "Unknown User";
+
       // Create new forwarded message in conversation
       const forwardedMessageId = await ctx.db.insert("messages", {
         conversationId: args.targetConversationId,
@@ -1103,6 +1171,7 @@ export const forwardMessage = mutation({
         attachments: message.attachments,
         linkEmbed: message.linkEmbed,
         createdAt: Date.now(),
+        forwardedFrom,
       });
 
       // Update conversation's lastMessageAt
@@ -1110,7 +1179,12 @@ export const forwardMessage = mutation({
         lastMessageAt: Date.now(),
       });
 
-      return forwardedMessageId;
+      return {
+        messageId: forwardedMessageId,
+        targetType: "conversation" as const,
+        targetName: targetUserName,
+        conversationId: args.targetConversationId,
+      };
     }
 
     throw new Error("No target provided");

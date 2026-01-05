@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { getIconComponent } from "@/components/icon-picker";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -393,6 +394,10 @@ export default function ChannelPage({
       reactions: reactions && reactions.length > 0 ? reactions : undefined,
       pinned: msg.pinned,
       mentions: msg.mentions,
+      forwardedFrom: msg.forwardedFrom ? {
+        channelName: msg.forwardedFrom.channelName,
+        userName: msg.forwardedFrom.userName,
+      } : undefined,
     };
   });
 
@@ -505,25 +510,43 @@ export default function ChannelPage({
 
   const handleForwardToChannel = async (messageId: string, targetChannelId: string) => {
     try {
-      await forwardMessage({ 
+      const result = await forwardMessage({ 
         messageId: messageId as Id<"messages">,
         targetChannelId: targetChannelId as Id<"channels">,
       });
       analytics.messageForwarded();
+      
+      if (result && routeParams) {
+        toast.success(`Message forwarded to #${result.targetName}`);
+        // Navigate to the target channel
+        if (result.categoryName && result.organizationSlug) {
+          router.push(`/w/${result.organizationSlug}/${encodeURIComponent(result.categoryName)}/${encodeURIComponent(result.targetName)}`);
+        }
+      }
     } catch (error) {
       console.error("Failed to forward message:", error);
+      toast.error("Failed to forward message");
     }
   };
 
   const handleForwardToConversation = async (messageId: string, targetConversationId: string) => {
     try {
-      await forwardMessage({ 
+      const result = await forwardMessage({ 
         messageId: messageId as Id<"messages">,
         targetConversationId: targetConversationId as Id<"conversations">,
       });
       analytics.messageForwarded();
+      
+      if (result && routeParams) {
+        toast.success(`Message forwarded to @${result.targetName}`);
+        // Navigate to the target conversation
+        if (result.targetType === "conversation" && result.conversationId) {
+          router.push(`/w/${routeParams.slug}/messages/${result.conversationId}`);
+        }
+      }
     } catch (error) {
       console.error("Failed to forward message:", error);
+      toast.error("Failed to forward message");
     }
   };
 
