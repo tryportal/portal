@@ -20,7 +20,7 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { getIconComponent } from "@/components/icon-picker"
 import type { Message } from "@/components/preview/message-list"
 import { parseMentions } from "./mention"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 function formatFullDateTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -261,16 +261,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             {channelInfo && (
                               <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <p className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default">{message.timestamp}</p>
-                              </TooltipTrigger>
-                              {message.createdAt && (
-                                <TooltipContent>
-                                  {formatFullDateTime(message.createdAt)}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
+                            <p 
+                              className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default"
+                              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                            >
+                              {message.timestamp}
+                            </p>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames
@@ -327,16 +323,12 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                             {channelInfo && (
                               <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
                             )}
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <p className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default">{message.timestamp}</p>
-                              </TooltipTrigger>
-                              {message.createdAt && (
-                                <TooltipContent>
-                                  {formatFullDateTime(message.createdAt)}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
+                            <p 
+                              className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default"
+                              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                            >
+                              {message.timestamp}
+                            </p>
                           </div>
                           <p className="text-sm text-foreground/70 line-clamp-2">
                             {msgWithMentions.mentionUserNames

@@ -7,11 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+
 import { SmileyIcon } from "@phosphor-icons/react"
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "@/lib/theme-provider"
@@ -31,20 +27,16 @@ export function ReactionPicker({ onSelectReaction }: ReactionPickerProps) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger
-          render={<PopoverTrigger
-            render={<Button
-              variant="ghost"
-              size="icon-xs"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            />}
-          />}
-        >
-          <SmileyIcon className="size-3.5" />
-        </TooltipTrigger>
-        <TooltipContent>Add reaction</TooltipContent>
-      </Tooltip>
+      <PopoverTrigger
+        render={<Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-foreground hover:bg-muted"
+          title="Add reaction"
+        />}
+      >
+        <SmileyIcon className="size-3.5" />
+      </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-auto p-0 border-0 bg-transparent shadow-none">
         <EmojiPicker
           onEmojiClick={(emojiData: EmojiClickData) => handleSelect(emojiData.emoji)}
@@ -106,23 +98,18 @@ export function ReactionDisplay({
           .join(", ") + (users.length > 5 ? ` and ${users.length - 5} more` : "")
 
         return (
-          <Tooltip key={emoji}>
-            <TooltipTrigger
-              render={<button
-                onClick={() => onToggleReaction(emoji)}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${hasReacted
-                  ? "border-primary/20 bg-muted text-foreground"
-                  : "border-border bg-card text-foreground/70 hover:border-border/80"
-                  }`}
-              />}
-            >
-              <span>{emoji}</span>
-              <span className="font-medium">{count}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{tooltipText}</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            key={emoji}
+            onClick={() => onToggleReaction(emoji)}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${hasReacted
+              ? "border-primary/20 bg-muted text-foreground"
+              : "border-border bg-card text-foreground/70 hover:border-border/80"
+              }`}
+            title={tooltipText}
+          >
+            <span>{emoji}</span>
+            <span className="font-medium">{count}</span>
+          </button>
         )
       })}
     </div>

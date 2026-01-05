@@ -12,7 +12,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 function formatFullDateTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -105,18 +105,12 @@ export function PinnedMessagesDialog({
                         <span className="text-sm font-medium text-foreground">
                           {message.user.name}
                         </span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <span className="text-xs text-muted-foreground cursor-default">
-                              {message.timestamp}
-                            </span>
-                          </TooltipTrigger>
-                          {message.createdAt && (
-                            <TooltipContent>
-                              {formatFullDateTime(message.createdAt)}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
+                        <span 
+                          className="text-xs text-muted-foreground cursor-default"
+                          title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                        >
+                          {message.timestamp}
+                        </span>
                       </div>
                       <p className="text-sm text-foreground/70 line-clamp-3">
                         {message.content}

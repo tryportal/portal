@@ -37,7 +37,7 @@ import {
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -522,18 +522,12 @@ function MessageItem({
           </Avatar>
         ) : (
           <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default">
-                  {message.timestamp}
-                </span>
-              </TooltipTrigger>
-              {message.createdAt && (
-                <TooltipContent>
-                  {formatFullDateTime(message.createdAt)}
-                </TooltipContent>
-              )}
-            </Tooltip>
+            <span 
+              className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default"
+              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+            >
+              {message.timestamp}
+            </span>
           </div>
         )}
 
@@ -547,18 +541,12 @@ function MessageItem({
               >
                 {message.user.name}
               </button>
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default">
-                    {message.timestamp}
-                  </span>
-                </TooltipTrigger>
-                {message.createdAt && (
-                  <TooltipContent>
-                    {formatFullDateTime(message.createdAt)}
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <span 
+                className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default"
+                title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+              >
+                {message.timestamp}
+              </span>
               {message.editedAt && (
                 <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
               )}

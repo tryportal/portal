@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { parseMentions } from "./mention"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 function formatFullDateTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -230,18 +230,12 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
                               {channelInfo.name}
                             </span>
                           )}
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span className="text-xs text-muted-foreground ml-auto cursor-default">
-                                {message.timestamp}
-                              </span>
-                            </TooltipTrigger>
-                            {message.createdAt && (
-                              <TooltipContent>
-                                {formatFullDateTime(message.createdAt)}
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
+                          <span 
+                            className="text-xs text-muted-foreground ml-auto cursor-default"
+                            title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                          >
+                            {message.timestamp}
+                          </span>
                         </div>
                         <p className="text-sm text-foreground/70 line-clamp-3">
                           {parseMentions(message.content, message.mentionUserNames)}
