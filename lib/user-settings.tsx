@@ -99,11 +99,6 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
     return `${modifier}${isMac ? "" : "+"}${key}`;
   }, []);
 
-  // Don't render children until settings are loaded to prevent hydration mismatch
-  if (!isLoaded) {
-    return null;
-  }
-
   return (
     <UserSettingsContext.Provider
       value={{

@@ -62,6 +62,12 @@ export default function UserSettingsPage() {
     if (!isRecording) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Handle Escape key to cancel recording
+      if (e.key === "Escape") {
+        setIsRecording(false);
+        return;
+      }
+
       e.preventDefault();
 
       // Detect modifier
@@ -80,18 +86,10 @@ export default function UserSettingsPage() {
       }
     };
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsRecording(false);
-      }
-    };
-
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keydown", handleEscape);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keydown", handleEscape);
     };
   }, [isRecording, updateSidebarHotkey]);
 
