@@ -18,8 +18,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   HashIcon,
   MagnifyingGlassIcon,
-  CaretDownIcon,
-  CaretRightIcon,
   ChatCircleIcon,
   UserIcon,
   PaperclipIcon,
@@ -65,7 +63,6 @@ export function ForwardMessageDialog({
     name: string
   } | null>(null)
   const [isForwarding, setIsForwarding] = React.useState(false)
-  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set())
 
   // Reset state when dialog opens/closes
   React.useEffect(() => {
@@ -73,7 +70,6 @@ export function ForwardMessageDialog({
       setSearchQuery("")
       setSelectedDestination(null)
       setIsForwarding(false)
-      setExpandedCategories(new Set())
     }
   }, [open])
 
@@ -104,21 +100,22 @@ export function ForwardMessageDialog({
     return Object.fromEntries(userData.map((u) => [u.userId, u]))
   }, [userData])
 
-  // Filter channels based on search
-  const filteredCategories = React.useMemo(() => {
+  // Flatten all channels from all categories into a single list
+  const allChannels = React.useMemo(() => {
     if (!categoriesAndChannels) return []
-    if (!searchQuery.trim()) return categoriesAndChannels
+    return categoriesAndChannels.flatMap((category) => category.channels)
+  }, [categoriesAndChannels])
+
+  // Filter channels based on search
+  const filteredChannels = React.useMemo(() => {
+    if (!allChannels.length) return []
+    if (!searchQuery.trim()) return allChannels
 
     const query = searchQuery.toLowerCase().trim()
-    return categoriesAndChannels
-      .map((category) => ({
-        ...category,
-        channels: category.channels.filter((channel) =>
-          channel.name.toLowerCase().includes(query)
-        ),
-      }))
-      .filter((category) => category.channels.length > 0)
-  }, [categoriesAndChannels, searchQuery])
+    return allChannels.filter((channel) =>
+      channel.name.toLowerCase().includes(query)
+    )
+  }, [allChannels, searchQuery])
 
   // Filter conversations based on search
   const filteredConversations = React.useMemo(() => {
@@ -135,25 +132,6 @@ export function ForwardMessageDialog({
     })
   }, [conversations, searchQuery, userDataMap])
 
-  // Toggle category expansion
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev)
-      if (next.has(categoryId)) {
-        next.delete(categoryId)
-      } else {
-        next.add(categoryId)
-      }
-      return next
-    })
-  }
-
-  // Auto-expand all categories on first load
-  React.useEffect(() => {
-    if (categoriesAndChannels && expandedCategories.size === 0) {
-      setExpandedCategories(new Set(categoriesAndChannels.map((c) => c._id)))
-    }
-  }, [categoriesAndChannels])
 
   // Check if a channel is the current location
   const isCurrentChannel = (channelId: string) => {
@@ -265,75 +243,53 @@ export function ForwardMessageDialog({
           <div className="space-y-1 pb-4">
             {destinationType === "channel" ? (
               // Channel list
-              filteredCategories.length === 0 ? (
+              filteredChannels.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {searchQuery ? "No channels found" : "No channels available"}
                 </p>
               ) : (
-                filteredCategories.map((category) => (
-                  <div key={category._id} className="space-y-0.5">
-                    {/* Category header */}
+                filteredChannels.map((channel) => {
+                  const isCurrent = isCurrentChannel(channel._id)
+                  const isSelected =
+                    selectedDestination?.type === "channel" &&
+                    selectedDestination.id === channel._id
+                  const Icon = channel.icon ? getIconComponent(channel.icon) : HashIcon
+
+                  return (
                     <button
-                      onClick={() => toggleCategory(category._id)}
-                      className="flex items-center gap-1 w-full px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground"
+                      key={channel._id}
+                      onClick={() =>
+                        !isCurrent &&
+                        setSelectedDestination({
+                          type: "channel",
+                          id: channel._id,
+                          name: channel.name,
+                        })
+                      }
+                      disabled={isCurrent}
+                      className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
+                        isCurrent
+                          ? "opacity-50 cursor-not-allowed"
+                          : isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
                     >
-                      {expandedCategories.has(category._id) ? (
-                        <CaretDownIcon className="h-3 w-3" />
-                      ) : (
-                        <CaretRightIcon className="h-3 w-3" />
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{channel.name}</span>
+                      {isCurrent && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          (current)
+                        </span>
                       )}
-                      {category.name}
+                      {channel.permissions === "readOnly" && !isCurrent && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          read-only
+                        </span>
+                      )}
                     </button>
-
-                    {/* Channels in category */}
-                    {expandedCategories.has(category._id) && (
-                      <div className="space-y-0.5 ml-2">
-                        {category.channels.map((channel) => {
-                          const isCurrent = isCurrentChannel(channel._id)
-                          const isSelected =
-                            selectedDestination?.type === "channel" &&
-                            selectedDestination.id === channel._id
-                          const Icon = channel.icon ? getIconComponent(channel.icon) : HashIcon
-
-                          return (
-                            <button
-                              key={channel._id}
-                              onClick={() =>
-                                !isCurrent &&
-                                setSelectedDestination({
-                                  type: "channel",
-                                  id: channel._id,
-                                  name: channel.name,
-                                })
-                              }
-                              disabled={isCurrent}
-                              className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
-                                isCurrent
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : isSelected
-                                  ? "bg-primary text-primary-foreground"
-                                  : "hover:bg-muted"
-                              }`}
-                            >
-                              <Icon className="h-4 w-4 shrink-0" />
-                              <span className="truncate">{channel.name}</span>
-                              {isCurrent && (
-                                <span className="ml-auto text-xs text-muted-foreground">
-                                  (current)
-                                </span>
-                              )}
-                              {channel.permissions === "readOnly" && !isCurrent && (
-                                <span className="ml-auto text-xs text-muted-foreground">
-                                  read-only
-                                </span>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))
+                  )
+                })
               )
             ) : (
               // Conversation list
