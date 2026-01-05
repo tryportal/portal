@@ -652,7 +652,7 @@ export function MessageInput({
       )}
 
       <div 
-        className="relative flex flex-col rounded-lg border border-border bg-card shadow-sm"
+        className="relative flex flex-col"
         onClick={(e) => {
           // Focus textarea when clicking blank areas (not interactive elements)
           const target = e.target as HTMLElement
