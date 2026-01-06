@@ -422,7 +422,11 @@ function MessageItem({
   const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const isOwner = currentUserId === message.user.id
+
+  // Keep hover actions visible when hovered OR when a menu/popover is open
+  const showHoverActions = isHovered || isMenuOpen
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -642,7 +646,7 @@ function MessageItem({
       </div>
 
       {/* Hover actions */}
-      {isHovered && (
+      {showHoverActions && (
         <div className="absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md">
           <Button
             variant="ghost"
@@ -666,9 +670,10 @@ function MessageItem({
 
           <ReactionPicker
             onSelectReaction={(emoji) => onReaction?.(message.id, emoji)}
+            onOpenChange={setIsMenuOpen}
           />
 
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={setIsMenuOpen}>
             <DropdownMenuTrigger
               render={<Button
                 variant="ghost"

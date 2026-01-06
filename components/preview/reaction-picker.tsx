@@ -14,19 +14,25 @@ import { useTheme } from "@/lib/theme-provider"
 
 interface ReactionPickerProps {
   onSelectReaction: (emoji: string) => void
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ReactionPicker({ onSelectReaction }: ReactionPickerProps) {
+export function ReactionPicker({ onSelectReaction, onOpenChange }: ReactionPickerProps) {
   const [open, setOpen] = React.useState(false)
   const { resolvedTheme } = useTheme()
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    onOpenChange?.(newOpen)
+  }
+
   const handleSelect = (emoji: string) => {
     onSelectReaction(emoji)
-    setOpen(false)
+    handleOpenChange(false)
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={<Button
           variant="ghost"
