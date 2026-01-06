@@ -356,7 +356,9 @@ function isEmojiOnlyMessage(content: string): boolean {
   const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji}(?:\u200D\p{Emoji})+)+$/u
 
   // Split by grapheme clusters to properly count emojis
-  const graphemes = [...new Intl.Segmenter().segment(trimmed)].map(s => s.segment)
+  const graphemes = typeof Intl.Segmenter !== 'undefined'
+    ? [...new Intl.Segmenter().segment(trimmed)].map(s => s.segment)
+    : [...trimmed]
 
   // Must be 1-3 graphemes and each must be an emoji
   if (graphemes.length < 1 || graphemes.length > 3) return false
