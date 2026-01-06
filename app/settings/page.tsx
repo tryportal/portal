@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useUserSettings } from "@/lib/user-settings";
@@ -17,6 +18,8 @@ import {
   KeyboardIcon,
   ArrowLeftIcon,
   SidebarIcon,
+  HouseIcon,
+  CheckIcon,
 } from "@phosphor-icons/react";
 
 const MODIFIER_OPTIONS = [
@@ -42,6 +45,10 @@ export default function UserSettingsPage() {
 
   // Get user organizations to redirect back
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
+
+  // Primary workspace
+  const primaryWorkspace = useQuery(api.users.getPrimaryWorkspace);
+  const setPrimaryWorkspace = useMutation(api.users.setPrimaryWorkspace);
 
   const [selectedModifier, setSelectedModifier] = React.useState(
     settings.sidebarHotkey.modifier
@@ -94,11 +101,18 @@ export default function UserSettingsPage() {
   }, [isRecording, updateSidebarHotkey]);
 
   const handleBack = () => {
-    if (userOrgs && userOrgs.length > 0) {
+    // Prefer primary workspace, then fall back to first org
+    if (primaryWorkspace) {
+      router.push(`/w/${primaryWorkspace.slug}`);
+    } else if (userOrgs && userOrgs.length > 0) {
       router.push(`/w/${userOrgs[0].slug}`);
     } else {
       router.push("/");
     }
+  };
+
+  const handleSetPrimaryWorkspace = async (workspaceId: Id<"organizations"> | null) => {
+    await setPrimaryWorkspace({ workspaceId });
   };
 
   const handleSaveHotkey = () => {
@@ -195,6 +209,105 @@ export default function UserSettingsPage() {
                   >
                     Manage Account
                   </Button>
+                </div>
+              </div>
+            </section>
+
+            {/* Primary Workspace Section */}
+            <section className="space-y-6">
+              <div>
+                <h2 className="text-base sm:text-lg font-medium text-foreground flex items-center gap-2">
+                  <HouseIcon className="size-5" weight="fill" />
+                  Primary Workspace
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Set your default workspace when visiting the site
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="space-y-3">
+                  {userOrgs && userOrgs.length > 0 ? (
+                    <>
+                      {/* None option */}
+                      <button
+                        onClick={() => handleSetPrimaryWorkspace(null)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                          !primaryWorkspace
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted"
+                        }`}
+                      >
+                        <div className="flex size-8 items-center justify-center rounded bg-muted">
+                          <HouseIcon
+                            className="size-4 text-muted-foreground"
+                            weight="regular"
+                          />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-foreground">
+                            None
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Go to the first workspace in the list
+                          </p>
+                        </div>
+                        {!primaryWorkspace && (
+                          <CheckIcon className="size-4 text-primary" weight="bold" />
+                        )}
+                      </button>
+
+                      {/* Workspace options */}
+                      {userOrgs.map((org) => {
+                        const isPrimary = primaryWorkspace?._id === org._id;
+                        return (
+                          <button
+                            key={org._id}
+                            onClick={() => handleSetPrimaryWorkspace(org._id)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                              isPrimary
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:bg-muted"
+                            }`}
+                          >
+                            {org.logoUrl ? (
+                              <Image
+                                src={org.logoUrl}
+                                alt={org.name || "Organization"}
+                                width={32}
+                                height={32}
+                                className="rounded"
+                              />
+                            ) : (
+                              <div className="flex size-8 items-center justify-center rounded bg-foreground">
+                                <Image
+                                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                                  alt="Workspace"
+                                  width={16}
+                                  height={16}
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {org.name || "Organization"}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                /{org.slug}
+                              </p>
+                            </div>
+                            {isPrimary && (
+                              <CheckIcon className="size-4 text-primary" weight="bold" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No workspaces available
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

@@ -87,6 +87,98 @@ export const getUserData = query({
 });
 
 // ============================================================================
+// Primary Workspace
+// ============================================================================
+
+/**
+ * Get the current user's primary workspace
+ */
+export const getPrimaryWorkspace = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user?.primaryWorkspaceId) return null;
+
+    // Verify the user is still a member of this workspace
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", user.primaryWorkspaceId!).eq("userId", identity.subject)
+      )
+      .first();
+
+    if (!membership) {
+      // User is no longer a member, clear the primary workspace
+      return null;
+    }
+
+    // Get the organization details
+    const org = await ctx.db.get(user.primaryWorkspaceId);
+    if (!org) return null;
+
+    // Resolve logo URL
+    let logoUrl: string | undefined = org.imageUrl;
+    if (org.logoId) {
+      const url = await ctx.storage.getUrl(org.logoId);
+      logoUrl = url ?? undefined;
+    }
+
+    return { ...org, logoUrl };
+  },
+});
+
+/**
+ * Set the current user's primary workspace
+ */
+export const setPrimaryWorkspace = mutation({
+  args: {
+    workspaceId: v.union(v.id("organizations"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // If setting a workspace, verify membership
+    if (args.workspaceId) {
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", args.workspaceId!).eq("userId", identity.subject)
+        )
+        .first();
+
+      if (!membership) {
+        throw new Error("You are not a member of this workspace");
+      }
+    }
+
+    await ctx.db.patch(user._id, {
+      primaryWorkspaceId: args.workspaceId ?? undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
 // User Mutations
 // ============================================================================
 

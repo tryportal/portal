@@ -11,6 +11,8 @@ export default defineSchema({
     lastName: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     updatedAt: v.number(),
+    // User preferences
+    primaryWorkspaceId: v.optional(v.id("organizations")), // User's preferred default workspace
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"]),

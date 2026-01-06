@@ -14,6 +14,7 @@ import {
   SunIcon,
   DesktopIcon,
   MoonIcon,
+  StarIcon,
 } from "@phosphor-icons/react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
@@ -69,6 +70,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const userInitials = user?.firstName
     ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) || ""}`.toUpperCase()
     : user?.primaryEmailAddress?.emailAddress?.charAt(0).toUpperCase() || "U";
+
+  // Get primary workspace
+  const primaryWorkspace = useQuery(api.users.getPrimaryWorkspace);
 
   // Get total unread message count for DMs
   const totalUnreadCount = useQuery(api.conversations.getTotalUnreadCount) ?? 0;
@@ -182,6 +186,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             {userOrgs && userOrgs.length > 0 ? (
               userOrgs.map((org) => {
                 const isActive = currentOrg?._id === org._id;
+                const isPrimary = primaryWorkspace?._id === org._id;
                 return (
                   <DropdownMenuItem
                     key={org._id}
@@ -209,6 +214,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                     <span className="text-sm flex-1 truncate min-w-0">
                       {org.name || "Organization"}
                     </span>
+                    {isPrimary && (
+                      <StarIcon className="size-3.5 text-amber-500" weight="fill" />
+                    )}
                     {isActive && (
                       <CheckIcon className="size-3.5 text-foreground" />
                     )}
