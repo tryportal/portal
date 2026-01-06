@@ -413,11 +413,13 @@ function MessageItem({
   onUnsave,
   onAvatarClick,
   onNameClick,
+  onScrollToMessage,
   isSaved,
   userNames,
   isAdmin,
   isGrouped,
   searchQuery,
+  isHighlighted,
 }: {
   message: Message
   currentUserId?: string
@@ -431,11 +433,13 @@ function MessageItem({
   onUnsave?: (messageId: string) => void
   onAvatarClick?: (userId: string) => void
   onNameClick?: (userId: string) => void
+  onScrollToMessage?: (messageId: string) => void
   isSaved?: boolean
   userNames?: Record<string, string>
   isAdmin?: boolean
   isGrouped?: boolean
   searchQuery?: string
+  isHighlighted?: boolean
 }) {
   const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
@@ -490,19 +494,22 @@ function MessageItem({
 
   return (
     <div
-      className="group relative px-4 hover:bg-muted/50 transition-colors"
+      className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""}`}
       style={{ paddingTop: isGrouped ? "1px" : "6px", paddingBottom: isGrouped ? "1px" : "6px" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Reply indicator */}
-      {message.parentMessage && (
-        <div className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-muted-foreground">
+      {message.parentMessage && message.parentMessageId && (
+        <button
+          onClick={() => onScrollToMessage?.(message.parentMessageId!)}
+          className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        >
           <ArrowBendUpLeftIcon className="size-3" />
           <span>Replying to</span>
           <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
           <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
-        </div>
+        </button>
       )}
 
       {/* Forwarded indicator */}
@@ -831,6 +838,7 @@ export function MessageList({
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
+  const messageRefs = React.useRef<Map<string, HTMLDivElement>>(new Map())
   const previousMessageCount = React.useRef(0)
   const hasInitialScrolled = React.useRef(false)
   // Track if user is near the bottom - only auto-scroll if they are
@@ -839,6 +847,8 @@ export function MessageList({
   const isInitialLoad = React.useRef(true)
   // State for showing the scroll-to-bottom button
   const [showScrollButton, setShowScrollButton] = React.useState(false)
+  // State for highlighting a message after scrolling to it
+  const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
 
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
@@ -881,6 +891,20 @@ export function MessageList({
       })
       isUserNearBottom.current = true
       setShowScrollButton(false)
+    }
+  }, [])
+
+  // Callback to scroll to a specific message
+  const scrollToMessage = React.useCallback((messageId: string) => {
+    const messageElement = messageRefs.current.get(messageId)
+    if (messageElement && scrollRef.current) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Highlight the message briefly
+      setHighlightedMessageId(messageId)
+      // Clear highlight after animation completes
+      setTimeout(() => {
+        setHighlightedMessageId(null)
+      }, 1500)
     }
   }, [])
 
@@ -972,9 +996,6 @@ export function MessageList({
     }
   }, [messages.length, scrollToBottom])
 
-  // lastMessageRef - must be called before any early returns to maintain hook order
-  const lastMessageRef = React.useRef<HTMLDivElement>(null)
-
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
     return (
@@ -1024,7 +1045,6 @@ export function MessageList({
               {messages.map((message, index) => {
                 const previousMessage = index > 0 ? messages[index - 1] : undefined
                 const isGrouped = shouldGroupMessages(message, previousMessage)
-                const isLastMessage = index === messages.length - 1
 
                 // Check if we need a date separator
                 const showDateSeparator =
@@ -1037,7 +1057,15 @@ export function MessageList({
                     {showDateSeparator && message.createdAt && (
                       <DateSeparator date={formatDateForSeparator(message.createdAt)} />
                     )}
-                    <div ref={isLastMessage ? lastMessageRef : undefined}>
+                    <div
+                      ref={(el) => {
+                        if (el) {
+                          messageRefs.current.set(message.id, el)
+                        } else {
+                          messageRefs.current.delete(message.id)
+                        }
+                      }}
+                    >
                       <MessageItem
                         message={message}
                         currentUserId={currentUserId}
@@ -1051,11 +1079,13 @@ export function MessageList({
                         onUnsave={onUnsave}
                         onAvatarClick={onAvatarClick}
                         onNameClick={onNameClick}
+                        onScrollToMessage={scrollToMessage}
                         isSaved={savedMessageIds.has(message.id)}
                         userNames={userNames}
                         isAdmin={isAdmin}
                         isGrouped={isGrouped}
                         searchQuery={searchQuery}
+                        isHighlighted={highlightedMessageId === message.id}
                       />
                     </div>
                   </React.Fragment>

@@ -328,3 +328,17 @@
 .dark [class*="cl-"] div {
   color: inherit;
 }
+
+/* Message highlight animation for scroll-to-message */
+@keyframes highlight-message {
+  0% {
+    background-color: hsl(var(--primary) / 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-highlight-message {
+  animation: highlight-message 1.5s ease-out forwards;
+}
