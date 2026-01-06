@@ -372,7 +372,7 @@ export default function UserSettingsPage() {
                                   {org.name || "Organization"}
                                 </p>
                                 <p className="text-xs text-muted-foreground truncate">
-                                  portal.app/w/{org.slug}
+                                  tryportal.app/w/{org.slug}
                                 </p>
                               </div>
                               {isPrimary && (

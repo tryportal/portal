@@ -429,8 +429,8 @@ export function WorkspaceSettingsPage({
                             URL Slug
                           </label>
                           <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
-                            <span className="px-3 text-sm text-muted-foreground bg-muted border-r border-border">
-                              portal.app/w/
+                            <span className="px-3 py-2 text-sm text-muted-foreground bg-muted border-r border-border flex items-center h-full">
+                              tryportal.app/w/
                             </span>
                             <input
                               id="slug"
