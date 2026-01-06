@@ -4,7 +4,7 @@ import * as React from "react"
 import { useQuery, useAction } from "convex/react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
-import { HashIcon, BookmarkIcon, AtIcon, ArrowRightIcon } from "@phosphor-icons/react"
+import { HashIcon, BookmarkIcon, AtIcon, ArrowRightIcon, LockIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardHeader,
@@ -186,6 +186,7 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
         name: channel.name,
         icon: channel.icon,
         categoryName: category.name,
+        isPrivate: channel.isPrivate,
       }))
     )
   }, [categoriesData])
@@ -374,9 +375,14 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
                       <Icon className="size-3.5 sm:size-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs sm:text-sm font-medium text-foreground">
-                        {channel.name}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-xs sm:text-sm font-medium text-foreground">
+                          {channel.name}
+                        </p>
+                        {channel.isPrivate && (
+                          <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+                        )}
+                      </div>
                       <p className="truncate text-[10px] sm:text-xs text-muted-foreground">
                         {channel.categoryName}
                       </p>
