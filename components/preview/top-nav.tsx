@@ -11,6 +11,9 @@ import {
   ListIcon,
   GearIcon,
   SignOutIcon,
+  SunIcon,
+  DesktopIcon,
+  MoonIcon,
 } from "@phosphor-icons/react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
@@ -27,7 +30,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/lib/theme-provider";
 
 interface TopNavProps {
@@ -45,7 +47,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const router = useRouter();
   const params = useParams();
   const currentSlug = params?.slug as string | undefined;
-  const { resolvedTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -274,9 +276,8 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </nav>
       </div>
 
-      {/* Right: Theme Toggle + User Account */}
+      {/* Right: User Account */}
       <div className="flex justify-end items-center gap-2">
-        <ThemeToggle variant="icon" className="hidden sm:flex" />
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
@@ -292,6 +293,49 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               <p className="text-xs text-muted-foreground truncate">
                 {user?.primaryEmailAddress?.emailAddress}
               </p>
+            </div>
+            <DropdownMenuSeparator />
+            {/* Theme Switcher */}
+            <div className="px-2 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground">Theme</span>
+                <div className="relative flex items-center bg-secondary rounded-full p-1">
+                  {/* Animated pill indicator */}
+                  <div
+                    className="absolute h-7 w-7 bg-primary/20 rounded-full transition-transform duration-200 ease-out"
+                    style={{
+                      transform: `translateX(${theme === "light" ? "0" : theme === "system" ? "28px" : "56px"})`,
+                    }}
+                  />
+                  <button
+                    onClick={() => setTheme("light")}
+                    className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                      theme === "light" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Light"
+                  >
+                    <SunIcon className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => setTheme("system")}
+                    className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                      theme === "system" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="System"
+                  >
+                    <DesktopIcon className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => setTheme("dark")}
+                    className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                      theme === "dark" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Dark"
+                  >
+                    <MoonIcon className="size-4" />
+                  </button>
+                </div>
+              </div>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
