@@ -346,6 +346,24 @@ const MarkdownComponents = {
   ),
 }
 
+// Check if content is only emojis (1-3 emojis with optional whitespace)
+function isEmojiOnlyMessage(content: string): boolean {
+  // Remove all whitespace
+  const trimmed = content.replace(/\s/g, '')
+  if (!trimmed) return false
+
+  // Regex to match emoji sequences (including compound emojis with ZWJ, skin tones, etc.)
+  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji}(?:\u200D\p{Emoji})+)+$/u
+
+  // Split by grapheme clusters to properly count emojis
+  const graphemes = [...new Intl.Segmenter().segment(trimmed)].map(s => s.segment)
+
+  // Must be 1-3 graphemes and each must be an emoji
+  if (graphemes.length < 1 || graphemes.length > 3) return false
+
+  return graphemes.every(g => emojiRegex.test(g))
+}
+
 // Replace mention user IDs with user names in content
 function processMentions(content: string, mentions?: string[], userNames?: Record<string, string>): string {
   if (!mentions || mentions.length === 0 || !userNames) return content
@@ -597,22 +615,29 @@ function MessageItem({
           ) : (
             <>
               {message.content && (
-                <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden [overflow-wrap:anywhere]" style={{ marginTop: isGrouped ? "0" : "0" }}>
-                  {searchQuery && searchQuery.trim() ? (
-                    // When searching, render with highlights (no markdown)
-                    <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                      {renderWithHighlights(processedContent, searchQuery)}
-                    </p>
-                  ) : (
-                    // When not searching, render with full markdown support
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={MarkdownComponents}
-                    >
-                      {processedContent}
-                    </ReactMarkdown>
-                  )}
-                </div>
+                isEmojiOnlyMessage(message.content) ? (
+                  // Emoji-only messages (1-3 emojis) - render larger
+                  <div className="text-4xl leading-tight">
+                    {message.content}
+                  </div>
+                ) : (
+                  <div className="text-sm text-foreground/90 leading-[1.46] prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden [overflow-wrap:anywhere]" style={{ marginTop: isGrouped ? "0" : "0" }}>
+                    {searchQuery && searchQuery.trim() ? (
+                      // When searching, render with highlights (no markdown)
+                      <p className="mb-1 last:mb-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                        {renderWithHighlights(processedContent, searchQuery)}
+                      </p>
+                    ) : (
+                      // When not searching, render with full markdown support
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={MarkdownComponents}
+                      >
+                        {processedContent}
+                      </ReactMarkdown>
+                    )}
+                  </div>
+                )
               )}
             </>
           )}
