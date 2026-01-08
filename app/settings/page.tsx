@@ -26,7 +26,10 @@ import {
   CircleHalfIcon,
   SignOutIcon,
   CaretRightIcon,
+  BellIcon,
 } from "@phosphor-icons/react";
+import { useNotificationContext } from "@/components/notifications/notification-provider";
+import type { BrowserNotificationsSetting } from "@/lib/user-settings";
 
 const MODIFIER_OPTIONS = [
   { value: "meta", label: "⌘ Cmd" },
@@ -39,7 +42,7 @@ const KEY_OPTIONS = "abcdefghijklmnopqrstuvwxyz".split("").map((key) => ({
   label: key.toUpperCase(),
 }));
 
-type SettingsSection = "account" | "appearance" | "shortcuts";
+type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts";
 
 export default function UserSettingsPage() {
   usePageTitle("Settings - Portal");
@@ -49,7 +52,8 @@ export default function UserSettingsPage() {
   const { openUserProfile, signOut } = useClerk();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const { settings, updateSidebarHotkey, formatHotkey } = useUserSettings();
+  const { settings, updateSidebarHotkey, updateBrowserNotifications, formatHotkey } = useUserSettings();
+  const { permission: notificationPermission, isSupported: notificationsSupported, requestPermission } = useNotificationContext();
 
   // Get user organizations to redirect back
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
@@ -135,6 +139,7 @@ export default function UserSettingsPage() {
   const sections = [
     { id: "account" as const, label: "Account", icon: UserIcon },
     { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
+    { id: "notifications" as const, label: "Notifications", icon: BellIcon },
     { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
   ];
 
@@ -456,6 +461,113 @@ export default function UserSettingsPage() {
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Notifications Section */}
+            {activeSection === "notifications" && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Control how Portal sends you notifications
+                  </p>
+                </div>
+
+                {/* Browser Notifications */}
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-4">Browser Notifications</h3>
+                  <div className="space-y-2">
+                    {(
+                      [
+                        {
+                          value: "enabled",
+                          label: "Enabled",
+                          description: "Receive notifications for mentions and direct messages",
+                        },
+                        {
+                          value: "disabled",
+                          label: "Disabled",
+                          description: "Never show notification prompts or send notifications",
+                        },
+                      ] as const
+                    ).map((option) => {
+                      const isSelected = settings.browserNotifications === option.value ||
+                        (option.value === "enabled" && settings.browserNotifications === "ask" && notificationPermission === "granted") ||
+                        (option.value === "disabled" && notificationPermission === "denied");
+                      const isDisabledByBrowser = notificationPermission === "denied" && option.value === "enabled";
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={async () => {
+                            if (isDisabledByBrowser) return;
+                            if (option.value === "enabled" && notificationPermission === "default") {
+                              const result = await requestPermission();
+                              if (result === "granted") {
+                                updateBrowserNotifications("enabled");
+                              }
+                            } else {
+                              updateBrowserNotifications(option.value);
+                            }
+                          }}
+                          disabled={isDisabledByBrowser}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                              : "border-border bg-card hover:bg-muted/50",
+                            isDisabledByBrowser && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          <div className={cn(
+                            "flex size-10 items-center justify-center rounded-lg",
+                            isSelected ? "bg-primary/10" : "bg-muted"
+                          )}>
+                            <BellIcon
+                              className={cn(
+                                "size-5",
+                                isSelected ? "text-primary" : "text-muted-foreground"
+                              )}
+                              weight={isSelected ? "fill" : "regular"}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                              {option.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {isDisabledByBrowser
+                                ? "Blocked in browser settings"
+                                : option.description}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                              <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Info box */}
+                {notificationPermission === "denied" && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="font-medium text-foreground">Note:</strong> Browser notifications are currently blocked. To enable them, update your browser&apos;s notification settings for this site.
+                    </p>
+                  </div>
+                )}
+
+                {!notificationsSupported && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="font-medium text-foreground">Note:</strong> Your browser doesn&apos;t support notifications.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
