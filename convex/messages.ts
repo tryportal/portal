@@ -2358,6 +2358,7 @@ export const searchUsersForDM = action({
 /**
  * Get unread mentions for the current user in a specific organization
  * Returns channel messages where the user was mentioned and hasn't marked as read
+ * Excludes mentions from muted channels
  */
 export const getUnreadMentions = query({
   args: { organizationId: v.id("organizations"), limit: v.optional(v.number()) },
@@ -2386,6 +2387,18 @@ export const getUnreadMentions = query({
 
     const channelIds = channels.map((c) => c._id);
 
+    // Get user's muted channels
+    const mutedChannels = await ctx.db
+      .query("channelMutes")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const mutedChannelIds = new Set(
+      mutedChannels
+        .filter((m) => channelIds.includes(m.channelId))
+        .map((m) => m.channelId)
+    );
+
     // Get user's read mention statuses
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
@@ -2398,6 +2411,9 @@ export const getUnreadMentions = query({
     const allMentions: Array<Doc<"messages"> & { channelName?: string; categoryName?: string }> = [];
 
     for (const channelId of channelIds) {
+      // Skip muted channels
+      if (mutedChannelIds.has(channelId)) continue;
+
       const messages = await ctx.db
         .query("messages")
         .withIndex("by_channel_and_created", (q) => q.eq("channelId", channelId))

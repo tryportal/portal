@@ -197,4 +197,14 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_message", ["userId", "messageId"]),
+
+  // Tracks which channels are muted by users (no notifications from muted channels)
+  channelMutes: defineTable({
+    userId: v.string(), // Clerk user ID
+    channelId: v.id("channels"), // The muted channel
+    mutedAt: v.number(), // When the channel was muted
+  })
+    .index("by_user", ["userId"])
+    .index("by_channel", ["channelId"])
+    .index("by_user_and_channel", ["userId", "channelId"]),
 });
