@@ -1,16 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { PlusIcon, UsersIcon } from "@phosphor-icons/react";
 
 interface ChoiceStepProps {
   onCreateNew: () => void;
-  onJoinWorkspace: (slug: string) => void;
+  onJoinWorkspace?: () => void;
 }
 
-export function ChoiceStep({ onCreateNew }: ChoiceStepProps) {
-  const router = useRouter();
-
+export function ChoiceStep({ onCreateNew, onJoinWorkspace }: ChoiceStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -57,7 +54,7 @@ export function ChoiceStep({ onCreateNew }: ChoiceStepProps) {
 
         {/* Join Public Workspace Button */}
         <button
-          onClick={() => router.push('/setup/public-workspaces')}
+          onClick={() => onJoinWorkspace?.()}
           className="w-full p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-left group"
         >
           <div className="flex items-start gap-3">
