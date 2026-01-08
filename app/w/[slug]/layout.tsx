@@ -3,6 +3,7 @@
 import * as React from "react";
 import { WorkspaceProvider, useWorkspace, useWorkspaceData } from "@/components/workspace-context";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
+import { MessagesDataCacheProvider } from "@/components/messages-data-cache";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
 import { NotificationPermissionPrompt } from "@/components/notifications/permission-prompt";
 import { useAuth } from "@clerk/nextjs";
@@ -116,30 +117,32 @@ function WorkspaceLayoutContent({
   const showSidebar = activeTab !== "messages";
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
-      {/* Top Navigation */}
-      <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
+    <MessagesDataCacheProvider organizationId={organization?._id}>
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+        {/* Top Navigation */}
+        <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* Main Content Area - add bottom padding on mobile for bottom nav */}
-      <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
-        {/* Sidebar - hidden on messages tab */}
-        {showSidebar && (
-          <Sidebar
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen((prev) => !prev)}
-          />
-        )}
+        {/* Main Content Area - add bottom padding on mobile for bottom nav */}
+        <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+          {/* Sidebar - hidden on messages tab */}
+          {showSidebar && (
+            <Sidebar
+              isOpen={sidebarOpen}
+              onToggle={() => setSidebarOpen((prev) => !prev)}
+            />
+          )}
 
-        {/* Page Content - show loading state during tab transitions */}
-        {isTransitioning ? (
-          <div className="flex-1 overflow-hidden">
-            <LoadingSpinner fullScreen />
-          </div>
-        ) : (
-          children
-        )}
+          {/* Page Content - show loading state during tab transitions */}
+          {isTransitioning ? (
+            <div className="flex-1 overflow-hidden">
+              <LoadingSpinner fullScreen />
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </div>
-    </div>
+    </MessagesDataCacheProvider>
   );
 }
 

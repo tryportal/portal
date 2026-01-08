@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { parseMentions } from "./mention"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { useSavedMessages } from "@/components/messages-data-cache"
 
 
 function formatFullDateTime(timestamp: number): string {
@@ -36,11 +38,8 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
   const { user } = useUser()
   const orgSlug = params?.slug as string | undefined
 
-  // Fetch saved messages
-  const savedMessages = useQuery(
-    api.messages.getSavedMessages,
-    organizationId ? { organizationId, limit: 50 } : "skip"
-  )
+  // Use cached saved messages
+  const { savedMessages, isLoading: savedMessagesLoading } = useSavedMessages()
 
   // Fetch channels for navigation
   const categoriesData = useQuery(
@@ -192,7 +191,11 @@ export function SavedMessagesPage({ organizationId }: SavedMessagesPageProps) {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {formattedMessages.length === 0 ? (
+          {savedMessagesLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <LoadingSpinner size="md" />
+            </div>
+          ) : formattedMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <BookmarkIcon className="size-12 text-foreground/20 mb-4" />
               <p className="text-sm text-muted-foreground mb-1">No saved messages</p>

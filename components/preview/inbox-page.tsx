@@ -17,6 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { parseMentions } from "./mention"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { useUnreadMentions } from "@/components/messages-data-cache"
 
 
 function formatFullDateTime(timestamp: number): string {
@@ -49,11 +51,8 @@ export function InboxPage({ organizationId }: InboxPageProps) {
   const { user } = useUser()
   const orgSlug = params?.slug as string | undefined
 
-  // Fetch unread mentions
-  const unreadMentions = useQuery(
-    api.messages.getUnreadMentions,
-    organizationId ? { organizationId, limit: 50 } : "skip"
-  )
+  // Use cached unread mentions
+  const { unreadMentions, isLoading: unreadMentionsLoading } = useUnreadMentions()
 
   // Fetch unread DMs grouped by sender
   const unreadDMs = useQuery(api.messages.getUnreadDMsGroupedBySender)
@@ -220,7 +219,7 @@ export function InboxPage({ organizationId }: InboxPageProps) {
 
   const hasMentions = (unreadMentions?.length ?? 0) > 0
   const hasDMs = (unreadDMs?.length ?? 0) > 0
-  const isEmpty = !hasMentions && !hasDMs
+  const isEmpty = !unreadMentionsLoading && !hasMentions && !hasDMs
 
   return (
     <ScrollArea className="h-full flex-1">
@@ -246,7 +245,11 @@ export function InboxPage({ organizationId }: InboxPageProps) {
           )}
         </div>
 
-        {isEmpty ? (
+        {unreadMentionsLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16">
+            <LoadingSpinner size="md" />
+          </div>
+        ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
             <div className="flex size-14 sm:size-16 items-center justify-center rounded-full bg-muted mb-3 sm:mb-4">
               <CheckIcon className="size-6 sm:size-8 text-muted-foreground" weight="light" />
