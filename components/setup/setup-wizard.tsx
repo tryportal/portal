@@ -160,9 +160,8 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     setStep(1);
   };
 
-  const handleJoinWorkspace = (slug: string) => {
-    analytics.workspaceJoined({ slug });
-    router.replace(`/w/${slug}`);
+  const handleJoinWorkspace = () => {
+    router.push('/setup/public-workspaces');
   };
 
   const handleContinue = async () => {
