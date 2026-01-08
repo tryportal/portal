@@ -47,12 +47,11 @@ const KEY_OPTIONS = "abcdefghijklmnopqrstuvwxyz".split("").map((key) => ({
   label: key.toUpperCase(),
 }));
 
-type SettingsSection = "account" | "appearance" | "messages" | "notifications" | "shortcuts";
+type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts";
 
 const sections = [
   { id: "account" as const, label: "Account", icon: UserIcon },
   { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
-  { id: "messages" as const, label: "Messages", icon: ChatCircleIcon },
   { id: "notifications" as const, label: "Notifications", icon: BellIcon },
   { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
 ];
@@ -589,12 +588,7 @@ export default function UserSettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Messages Section */}
-        {activeSection === "messages" && (
-          <div className="space-y-6">
             {/* Channel Messages Style */}
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <div className="p-4 sm:p-6">
