@@ -5,9 +5,11 @@ import Image from "next/image";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { ArrowLeft, UsersIcon, Spinner } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useTheme } from "@/lib/theme-provider";
+import { analytics } from "@/lib/analytics";
 
 export default function PublicWorkspacesPage() {
   const router = useRouter();
@@ -22,9 +24,13 @@ export default function PublicWorkspacesPage() {
     setJoiningOrgId(orgId);
     try {
       const result = await joinOrg({ organizationId: orgId });
+      analytics.workspaceJoined({ slug: result.slug });
       router.push(`/w/${result.slug}`);
+      setJoiningOrgId(null);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Failed to join workspace:", error);
+      toast.error(`Failed to join workspace: ${errorMessage}`);
       setJoiningOrgId(null);
     }
   };
