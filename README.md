@@ -62,7 +62,7 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 
 ## Analytics Proxy & Security
 
-Portal includes built-in analytics proxy endpoints to prevent ad-blockers from interfering with optional analytics services (PostHog and Databuddy). These proxies are protected by middleware that implements:
+Portal includes built-in analytics proxy endpoints to prevent ad-blockers from interfering with optional analytics services (PostHog and Databuddy). These proxies are protected by the proxy handler (`proxy.ts`) that implements:
 
 ### Rate Limiting
 
@@ -102,9 +102,9 @@ All proxy requests are logged in structured JSON format with:
 
 1. **In-memory rate limiting**: Fast and simple for development, but doesn't scale horizontally and loses state on restart. For production, migrate to Redis-backed storage (example below).
 
-2. **Path allowlist maintenance**: Adding new analytics endpoints requires updating the `ALLOWED_INGEST_PATHS` patterns in `middleware.ts`. This prevents arbitrary proxy usage but adds maintenance overhead.
+2. **Path allowlist maintenance**: Adding new analytics endpoints requires updating the `ALLOWED_INGEST_PATHS` patterns in `proxy.ts`. This prevents arbitrary proxy usage but adds maintenance overhead.
 
-3. **Performance impact**: Middleware runs on every request matching `/ingest/*` and `/db-ingest/*`. The overhead is minimal (<1ms per request) for allowlist checks and in-memory rate limiting.
+3. **Performance impact**: The proxy handler runs on analytics routes (`/ingest/*` and `/db-ingest/*`). The overhead is minimal (<1ms per request) for allowlist checks and in-memory rate limiting.
 
 4. **DDoS protection**: The rate limit provides basic protection but may need tuning based on legitimate traffic patterns. Monitor `rate_limited` logs to identify if limits are too restrictive.
 
