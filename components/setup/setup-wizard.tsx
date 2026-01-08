@@ -336,7 +336,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
         {step === 0 && (
           <ChoiceStep
             onCreateNew={handleCreateNew}
-            onJoinWorkspace={() => handleJoinWorkspace("")}
+            onJoinWorkspace={handleJoinWorkspace}
           />
         )}
 
