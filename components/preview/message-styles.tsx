@@ -32,6 +32,7 @@ import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import rehypeRaw from "rehype-raw"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
@@ -190,6 +191,36 @@ function getMarkdownComponents(isOwn?: boolean) {
         {children}
       </a>
     ),
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className={`text-2xl font-bold mb-2 mt-3 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 className={`text-xl font-bold mb-1.5 mt-2.5 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>
+        {children}
+      </h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className={`text-lg font-semibold mb-1 mt-2 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>
+        {children}
+      </h3>
+    ),
+    h4: ({ children }: { children?: React.ReactNode }) => (
+      <h4 className={`text-base font-semibold mb-1 mt-1.5 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>
+        {children}
+      </h4>
+    ),
+    h5: ({ children }: { children?: React.ReactNode }) => (
+      <h5 className={`text-sm font-semibold mb-0.5 mt-1 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>
+        {children}
+      </h5>
+    ),
+    h6: ({ children }: { children?: React.ReactNode }) => (
+      <h6 className={`text-sm font-medium mb-0.5 mt-1 first:mt-0 ${isOwn ? "text-primary-foreground" : "text-foreground/90"}`}>
+        {children}
+      </h6>
+    ),
     pre: ({ children }: { children?: React.ReactNode }) => (
       <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
         {children}
@@ -253,6 +284,12 @@ function getMarkdownComponents(isOwn?: boolean) {
     },
     em: ({ children }: { children?: React.ReactNode }) => (
       <em className={isOwn ? "italic text-primary-foreground/90" : "italic text-foreground/85"}>{children}</em>
+    ),
+    del: ({ children }: { children?: React.ReactNode }) => (
+      <del className={isOwn ? "line-through text-primary-foreground/70" : "line-through text-foreground/70"}>{children}</del>
+    ),
+    u: ({ children }: { children?: React.ReactNode }) => (
+      <u className={isOwn ? "underline underline-offset-2 text-primary-foreground" : "underline underline-offset-2 text-foreground"}>{children}</u>
     ),
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className={isOwn
@@ -436,6 +473,7 @@ function MessageContent({
             ) : (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
                 components={getMarkdownComponents(isOwn)}
               >
                 {processedContent}
