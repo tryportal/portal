@@ -81,22 +81,45 @@ function checkRateLimit(key: string, maxRequests: number = RATE_LIMIT_MAX_REQUES
   cleanupRateLimitStore();
   
   const now = Date.now();
-  const entry = rateLimitStore.get(key);
   
-  if (!entry || now > entry.resetTime) {
-    // Create new entry
-    const resetTime = now + RATE_LIMIT_WINDOW_MS;
-    rateLimitStore.set(key, { count: 1, resetTime });
-    return { allowed: true, remaining: maxRequests - 1, resetTime };
+  // Atomic read-modify-write loop to prevent race conditions
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const entry = rateLimitStore.get(key);
+    
+    if (!entry || now > entry.resetTime) {
+      // Create new entry - atomically
+      const resetTime = now + RATE_LIMIT_WINDOW_MS;
+      const newEntry = { count: 1, resetTime };
+      
+      // Only set if no concurrent modification occurred (simple compare-and-set)
+      // In Node.js single-threaded async model, this is safe because:
+      // - The map access is synchronous and non-blocking
+      // - No other code can execute between this read and the following set
+      // - All async operations are scheduled on the event loop
+      if (!rateLimitStore.has(key) || rateLimitStore.get(key)!.resetTime <= now) {
+        rateLimitStore.set(key, newEntry);
+        return { allowed: true, remaining: maxRequests - 1, resetTime };
+      }
+      // Retry if entry was just created by another concurrent request
+      continue;
+    }
+    
+    if (entry.count >= maxRequests) {
+      return { allowed: false, remaining: 0, resetTime: entry.resetTime };
+    }
+    
+    // Compute new count and attempt atomic update
+    const newCount = entry.count + 1;
+    const newEntry = { count: newCount, resetTime: entry.resetTime };
+    
+    // Verify the entry hasn't changed and atomically update it
+    if (rateLimitStore.get(key) === entry) {
+      rateLimitStore.set(key, newEntry);
+      return { allowed: true, remaining: maxRequests - newCount, resetTime: entry.resetTime };
+    }
+    // Retry if entry was modified concurrently
   }
-  
-  if (entry.count >= maxRequests) {
-    return { allowed: false, remaining: 0, resetTime: entry.resetTime };
-  }
-  
-  // Increment counter
-  entry.count++;
-  return { allowed: true, remaining: maxRequests - entry.count, resetTime: entry.resetTime };
 }
 
 function isPathAllowed(pathname: string): boolean {
