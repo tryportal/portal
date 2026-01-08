@@ -903,6 +903,20 @@ export const toggleChannelMute = mutation({
       throw new Error("Not a member of this organization");
     }
 
+    // Check private channel access
+    if (channel.isPrivate && membership.role !== "admin") {
+      const channelMember = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", userId)
+        )
+        .first();
+
+      if (!channelMember) {
+        throw new Error("You don't have access to this channel");
+      }
+    }
+
     // Check if currently muted
     const existingMute = await ctx.db
       .query("channelMutes")
