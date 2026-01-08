@@ -386,8 +386,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   )
 
   // Create a Set for efficient lookup
+  // Create a Set for efficient lookup
   const mutedChannelIds = React.useMemo(
-    () => new Set(mutedChannels?.map(id => id) || []),
+    () => new Set(mutedChannels || []),
     [mutedChannels]
   )
 
