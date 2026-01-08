@@ -328,9 +328,16 @@ function isEmojiOnlyMessage(content: string): boolean {
 
   const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji}(?:\u200D\p{Emoji})+)+$/u
 
-  const graphemes = typeof Intl.Segmenter !== 'undefined'
-    ? [...new Intl.Segmenter().segment(trimmed)].map(s => s.segment)
-    : [...trimmed]
+  // Split into grapheme clusters using Intl.Segmenter (widely supported)
+  // Fallback uses regex to match emoji sequences for environments without Intl.Segmenter
+  let graphemes: string[]
+  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter !== 'undefined') {
+    graphemes = [...new Intl.Segmenter().segment(trimmed)].map(s => s.segment)
+  } else {
+    // Regex fallback that matches multi-codepoint emojis (ZWJ sequences, modifiers, etc.)
+    const emojiMatchRegex = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji}(?:\u200D\p{Emoji})+/gu
+    graphemes = trimmed.match(emojiMatchRegex) ?? []
+  }
 
   if (graphemes.length < 1 || graphemes.length > 3) return false
 
