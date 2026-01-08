@@ -201,9 +201,11 @@ export const getPublicOrganizations = query({
     const identity = await ctx.auth.getUserIdentity();
     const userId = identity?.subject;
 
-    // Get all public organizations
-    const allOrgs = await ctx.db.query("organizations").collect();
-    const publicOrgs = allOrgs.filter((org) => org.isPublic === true);
+    // Get all public organizations using index
+    const publicOrgs = await ctx.db
+      .query("organizations")
+      .withIndex("by_is_public", (q) => q.eq("isPublic", true))
+      .collect();
 
     // If user is authenticated, filter out orgs they're already a member of
     let filteredOrgs = publicOrgs;

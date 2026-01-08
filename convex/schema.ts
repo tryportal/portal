@@ -77,7 +77,8 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()), // If true, anyone can join this workspace without an invite
   })
     .index("by_slug", ["slug"])
-    .index("by_created_by", ["createdBy"]),
+    .index("by_created_by", ["createdBy"])
+    .index("by_is_public", ["isPublic"]),
 
   organizationMembers: defineTable({
     organizationId: v.id("organizations"),
