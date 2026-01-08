@@ -20,6 +20,8 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { getIconComponent } from "@/components/icon-picker"
 import type { Message } from "@/components/preview/message-list"
 import { parseMentions } from "./mention"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { useSavedMessages, useMentions } from "@/components/messages-data-cache"
 
 
 function formatFullDateTime(timestamp: number): string {
@@ -51,16 +53,9 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     organizationId ? { organizationId } : "skip"
   )
 
-  // Fetch saved messages instead of recent messages
-  const savedMessagesRaw = useQuery(
-    api.messages.getSavedMessages,
-    organizationId ? { organizationId, limit: 3 } : "skip"
-  )
-
-  const mentionsRaw = useQuery(
-    api.messages.getMentions,
-    organizationId ? { organizationId, limit: 3 } : "skip"
-  )
+  // Use cached saved messages and mentions
+  const { savedMessages: savedMessagesRaw, isLoading: savedMessagesLoading } = useSavedMessages()
+  const { mentions: mentionsRaw, isLoading: mentionsLoading } = useMentions()
 
   // Fetch user data
   const getUserDataAction = useAction(api.messages.getUserData)
@@ -231,7 +226,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
               <ArrowRightIcon className="absolute top-4 right-4 size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {savedMessages.length === 0 ? (
+              {savedMessagesLoading ? (
+                <div className="flex h-20 sm:h-24 items-center justify-center">
+                  <LoadingSpinner size="sm" />
+                </div>
+              ) : savedMessages.length === 0 ? (
                 <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
                   <p className="text-xs sm:text-sm text-muted-foreground">No saved messages</p>
                 </div>
@@ -294,7 +293,11 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
               <CardDescription className="text-xs sm:text-sm">Messages where you were mentioned</CardDescription>
             </CardHeader>
             <CardContent>
-              {mentions.length === 0 ? (
+              {mentionsLoading ? (
+                <div className="flex h-20 sm:h-24 items-center justify-center">
+                  <LoadingSpinner size="sm" />
+                </div>
+              ) : mentions.length === 0 ? (
                 <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
                   <p className="text-xs sm:text-sm text-muted-foreground">No mentions</p>
                 </div>

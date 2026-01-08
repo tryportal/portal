@@ -533,6 +533,7 @@ export default function ConversationPage({
         channelDescription="Direct message"
         isAdmin={false}
         searchQuery={searchQuery}
+        isDirectMessage
       />
 
       {/* Message Input with Typing Indicator */}

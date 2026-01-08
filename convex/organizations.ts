@@ -192,6 +192,48 @@ export const checkMultipleOrganizationsSetup = query({
   },
 });
 
+/**
+ * Get all public organizations that the current user is NOT a member of
+ */
+export const getPublicOrganizations = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.subject;
+
+    // Get all public organizations using index
+    const publicOrgs = await ctx.db
+      .query("organizations")
+      .withIndex("by_is_public", (q) => q.eq("isPublic", true))
+      .collect();
+
+    // If user is authenticated, filter out orgs they're already a member of
+    let filteredOrgs = publicOrgs;
+    if (userId) {
+      const memberships = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      const memberOrgIds = new Set(memberships.map((m) => m.organizationId));
+      filteredOrgs = publicOrgs.filter((org) => !memberOrgIds.has(org._id));
+    }
+
+    // Resolve logo URLs
+    const orgsWithLogos = await Promise.all(
+      filteredOrgs.map(async (org) => {
+        let logoUrl: string | undefined = org.imageUrl;
+        if (org.logoId) {
+          const url = await ctx.storage.getUrl(org.logoId);
+          logoUrl = url ?? undefined;
+        }
+        return { ...org, logoUrl };
+      })
+    );
+
+    return orgsWithLogos;
+  },
+});
+
 // ============================================================================
 // Organization Mutations
 // ============================================================================

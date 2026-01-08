@@ -37,13 +37,18 @@ import {
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
+import { useUserSettings } from "@/lib/user-settings"
+import { CompactMessageItem, BubbleMessageItem } from "./message-styles"
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
+import { sanitizeSchema } from "@/lib/markdown-config"
 
 export type { LinkEmbedData as LinkEmbed }
 
@@ -110,6 +115,7 @@ interface MessageListProps {
   channelIcon?: React.ElementType
   isAdmin?: boolean
   searchQuery?: string
+  isDirectMessage?: boolean
 }
 
 function formatFileSize(bytes: number): string {
@@ -280,6 +286,24 @@ const MarkdownComponents = {
       {children}
     </a>
   ),
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 className="text-2xl font-bold mb-2 mt-3 first:mt-0 text-foreground">{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className="text-xl font-bold mb-1.5 mt-2.5 first:mt-0 text-foreground">{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className="text-lg font-semibold mb-1 mt-2 first:mt-0 text-foreground">{children}</h3>
+  ),
+  h4: ({ children }: { children?: React.ReactNode }) => (
+    <h4 className="text-base font-semibold mb-1 mt-1.5 first:mt-0 text-foreground">{children}</h4>
+  ),
+  h5: ({ children }: { children?: React.ReactNode }) => (
+    <h5 className="text-sm font-semibold mb-0.5 mt-1 first:mt-0 text-foreground">{children}</h5>
+  ),
+  h6: ({ children }: { children?: React.ReactNode }) => (
+    <h6 className="text-sm font-medium mb-0.5 mt-1 first:mt-0 text-foreground/90">{children}</h6>
+  ),
   pre: ({ children }: { children?: React.ReactNode }) => (
     <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
       {children}
@@ -338,6 +362,12 @@ const MarkdownComponents = {
   },
   em: ({ children }: { children?: React.ReactNode }) => (
     <em className="italic text-foreground/85">{children}</em>
+  ),
+  del: ({ children }: { children?: React.ReactNode }) => (
+    <del className="line-through text-foreground/70">{children}</del>
+  ),
+  u: ({ children }: { children?: React.ReactNode }) => (
+    <u className="underline underline-offset-2 text-foreground">{children}</u>
   ),
   blockquote: ({ children }: { children?: React.ReactNode }) => (
     <blockquote className="pl-2.5 py-0.5 my-1 border-l-2 border-border text-muted-foreground italic">
@@ -640,6 +670,7 @@ function MessageItem({
                       // When not searching, render with full markdown support
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
                         components={MarkdownComponents}
                       >
                         {processedContent}
@@ -834,6 +865,7 @@ export function MessageList({
   channelIcon,
   isAdmin,
   searchQuery = "",
+  isDirectMessage = false,
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
@@ -848,6 +880,15 @@ export function MessageList({
   const [showScrollButton, setShowScrollButton] = React.useState(false)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
+
+  // Get user message style settings
+  const { settings } = useUserSettings()
+  const messageStyle = isDirectMessage 
+    ? settings.messageStyles.directMessages 
+    : settings.messageStyles.channels
+
+  // Choose the appropriate message component based on style
+  const MessageItemComponent = messageStyle === "bubble" ? BubbleMessageItem : CompactMessageItem
 
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
@@ -1089,7 +1130,7 @@ export function MessageList({
                         }
                       }}
                     >
-                      <MessageItem
+                      <MessageItemComponent
                         message={message}
                         currentUserId={currentUserId}
                         onDeleteMessage={onDeleteMessage}

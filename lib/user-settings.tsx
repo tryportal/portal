@@ -9,15 +9,24 @@ export interface HotkeyConfig {
 
 export type BrowserNotificationsSetting = "enabled" | "disabled" | "ask";
 
+export type MessageStyle = "compact" | "bubble";
+
+export interface MessageStyleSettings {
+  channels: MessageStyle;
+  directMessages: MessageStyle;
+}
+
 interface UserSettings {
   sidebarHotkey: HotkeyConfig;
   browserNotifications: BrowserNotificationsSetting;
+  messageStyles: MessageStyleSettings;
 }
 
 interface UserSettingsContextType {
   settings: UserSettings;
   updateSidebarHotkey: (hotkey: HotkeyConfig) => void;
   updateBrowserNotifications: (setting: BrowserNotificationsSetting) => void;
+  updateMessageStyles: (styles: MessageStyleSettings) => void;
   resetToDefaults: () => void;
   formatHotkey: (hotkey: HotkeyConfig) => string;
 }
@@ -30,9 +39,15 @@ const DEFAULT_SIDEBAR_HOTKEY: HotkeyConfig = {
   modifier: "meta", // meta = Cmd on Mac, Ctrl on Windows/Linux
 };
 
+const DEFAULT_MESSAGE_STYLES: MessageStyleSettings = {
+  channels: "compact",
+  directMessages: "bubble",
+};
+
 const defaultSettings: UserSettings = {
   sidebarHotkey: DEFAULT_SIDEBAR_HOTKEY,
   browserNotifications: "ask",
+  messageStyles: DEFAULT_MESSAGE_STYLES,
 };
 
 const UserSettingsContext = React.createContext<UserSettingsContextType | undefined>(undefined);
@@ -91,6 +106,14 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  const updateMessageStyles = React.useCallback((styles: MessageStyleSettings) => {
+    setSettings((prev) => {
+      const newSettings = { ...prev, messageStyles: styles };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const resetToDefaults = React.useCallback(() => {
     setSettings(defaultSettings);
     saveSettings(defaultSettings);
@@ -118,6 +141,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         settings,
         updateSidebarHotkey,
         updateBrowserNotifications,
+        updateMessageStyles,
         resetToDefaults,
         formatHotkey,
       }}

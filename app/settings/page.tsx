@@ -30,9 +30,11 @@ import {
   CaretRightIcon,
   BellIcon,
   GearIcon,
+  ChatCircleIcon,
 } from "@phosphor-icons/react";
 import { useNotificationContext } from "@/components/notifications/notification-provider";
-import type { BrowserNotificationsSetting } from "@/lib/user-settings";
+import type { BrowserNotificationsSetting, MessageStyle } from "@/lib/user-settings";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const MODIFIER_OPTIONS = [
   { value: "meta", label: "⌘ Cmd" },
@@ -54,6 +56,62 @@ const sections = [
   { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
 ];
 
+// Mini preview components for message style settings
+function CompactPreviewMessage({ 
+  name, 
+  content, 
+  isOwn,
+  isGrouped = false 
+}: { 
+  name: string
+  content: string
+  isOwn: boolean
+  isGrouped?: boolean
+}) {
+  return (
+    <div className="flex gap-1.5 items-start">
+      {!isGrouped ? (
+        <Avatar className="size-4 flex-shrink-0">
+          <AvatarFallback className="bg-muted text-foreground text-[6px] font-medium">
+            {name[0]}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <div className="w-4 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        {!isGrouped && (
+          <span className="text-[9px] font-medium text-foreground mr-1">{name}</span>
+        )}
+        <span className="text-[9px] text-muted-foreground">{content}</span>
+      </div>
+    </div>
+  );
+}
+
+function BubblePreviewMessage({ 
+  content, 
+  isOwn 
+}: { 
+  content: string
+  isOwn: boolean
+}) {
+  return (
+    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "px-2 py-1 rounded-lg text-[9px] max-w-[80%]",
+          isOwn
+            ? "bg-primary text-primary-foreground rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm"
+        )}
+      >
+        {content}
+      </div>
+    </div>
+  );
+}
+
 export default function UserSettingsPage() {
   usePageTitle("Settings - Portal");
 
@@ -62,7 +120,7 @@ export default function UserSettingsPage() {
   const { openUserProfile, signOut } = useClerk();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const { settings, updateSidebarHotkey, updateBrowserNotifications, formatHotkey } = useUserSettings();
+  const { settings, updateSidebarHotkey, updateBrowserNotifications, updateMessageStyles, formatHotkey } = useUserSettings();
   const { permission: notificationPermission, isSupported: notificationsSupported, requestPermission } = useNotificationContext();
 
   // Get user organizations to redirect back
@@ -524,6 +582,142 @@ export default function UserSettingsPage() {
                             <CheckIcon className="size-2.5 text-primary-foreground" weight="bold" />
                           </div>
                         )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Channel Messages Style */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <ChatCircleIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">Channel Messages</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Choose how messages appear in channels
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {(["compact", "bubble"] as const).map((style) => {
+                    const isSelected = settings.messageStyles.channels === style;
+                    return (
+                      <button
+                        key={style}
+                        onClick={() => {
+                          updateMessageStyles({
+                            ...settings.messageStyles,
+                            channels: style,
+                          });
+                        }}
+                        className={cn(
+                          "flex flex-col rounded-xl border p-3 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={cn(
+                            "text-sm font-medium capitalize",
+                            isSelected ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {style}
+                          </span>
+                          {isSelected && (
+                            <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                              <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Mini Preview */}
+                        <div className="rounded-lg border border-border bg-muted/30 p-2 space-y-1.5">
+                          {style === "compact" ? (
+                            <>
+                              <CompactPreviewMessage name="Sarah" content="Hey team!" isOwn={false} />
+                              <CompactPreviewMessage name="You" content="Hello!" isOwn={true} isGrouped />
+                            </>
+                          ) : (
+                            <>
+                              <BubblePreviewMessage content="Hey team!" isOwn={false} />
+                              <BubblePreviewMessage content="Hello!" isOwn={true} />
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Direct Messages Style */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <UserIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">Direct Messages</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Choose how messages appear in DMs
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {(["compact", "bubble"] as const).map((style) => {
+                    const isSelected = settings.messageStyles.directMessages === style;
+                    return (
+                      <button
+                        key={style}
+                        onClick={() => {
+                          updateMessageStyles({
+                            ...settings.messageStyles,
+                            directMessages: style,
+                          });
+                        }}
+                        className={cn(
+                          "flex flex-col rounded-xl border p-3 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={cn(
+                            "text-sm font-medium capitalize",
+                            isSelected ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {style}
+                          </span>
+                          {isSelected && (
+                            <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                              <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Mini Preview */}
+                        <div className="rounded-lg border border-border bg-muted/30 p-2 space-y-1.5">
+                          {style === "compact" ? (
+                            <>
+                              <CompactPreviewMessage name="Alex" content="Hey!" isOwn={false} />
+                              <CompactPreviewMessage name="You" content="Hi there!" isOwn={true} isGrouped />
+                            </>
+                          ) : (
+                            <>
+                              <BubblePreviewMessage content="Hey!" isOwn={false} />
+                              <BubblePreviewMessage content="Hi there!" isOwn={true} />
+                            </>
+                          )}
+                        </div>
                       </button>
                     );
                   })}
