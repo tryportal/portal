@@ -773,9 +773,6 @@ function shouldGroupMessages(current: Message, previous: Message | undefined): b
   // Don't group if different users
   if (current.user.id !== previous.user.id) return false
 
-  // Don't group if there's a parent message (reply)
-  if (current.parentMessageId || previous.parentMessageId) return false
-
   // Don't group if either message is pinned
   if (current.pinned || previous.pinned) return false
 
