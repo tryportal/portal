@@ -497,7 +497,7 @@ function MessageItem({
   return (
     <div
       className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""}`}
-      style={{ paddingTop: isGrouped ? "1px" : "6px", paddingBottom: isGrouped ? "1px" : "6px" }}
+      style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -505,7 +505,7 @@ function MessageItem({
       {message.parentMessage && message.parentMessageId && (
         <button
           onClick={() => onScrollToMessage?.(message.parentMessageId!)}
-          className="flex items-center gap-2 mb-1 ml-[44px] text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          className="flex items-center gap-2 mb-1 ml-[48px] text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           <ArrowBendUpLeftIcon className="size-3" />
           <span>Replying to</span>
@@ -516,7 +516,7 @@ function MessageItem({
 
       {/* Forwarded indicator */}
       {message.forwardedFrom && (
-        <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-muted-foreground">
           <ArrowBendDoubleUpRightIcon className="size-3" />
           <span>Forwarded from</span>
           <span className="font-medium text-foreground/70">
@@ -531,17 +531,17 @@ function MessageItem({
 
       {/* Pin indicator */}
       {message.pinned && (
-        <div className="flex items-center gap-1.5 mb-1 ml-[44px] text-xs text-amber-600 font-medium">
+        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-amber-600 font-medium">
           <PushPinIcon className="size-3" weight="fill" />
           <span>Pinned message</span>
         </div>
       )}
 
-      <div className="flex gap-2.5">
+      <div className="flex gap-3">
         {/* Avatar - hidden when grouped */}
         {!isGrouped ? (
           <Avatar
-            className="size-8 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+            className="size-9 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
             onClick={() => onAvatarClick?.(message.user.id)}
           >
             {message.user.avatar ? (
@@ -552,7 +552,7 @@ function MessageItem({
             </AvatarFallback>
           </Avatar>
         ) : (
-          <div className="w-8 flex-shrink-0 flex items-start justify-center pt-[2px]">
+          <div className="w-9 flex-shrink-0 flex items-start justify-center pt-[2px]">
             <span 
               className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default"
               title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
