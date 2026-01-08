@@ -835,6 +835,14 @@ export const getMutedChannels = query({
 
     const userId = identity.subject;
 
+    // Get all channels in this organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    const channelIds = new Set(channels.map((c) => c._id));
+
     // Get all muted channels for this user
     const mutedChannels = await ctx.db
       .query("mutedChannels")
@@ -842,14 +850,8 @@ export const getMutedChannels = query({
       .collect();
 
     // Filter to only include channels in the specified organization
-    const mutedChannelIds: Id<"channels">[] = [];
-    for (const mute of mutedChannels) {
-      const channel = await ctx.db.get(mute.channelId);
-      if (channel && channel.organizationId === args.organizationId) {
-        mutedChannelIds.push(mute.channelId);
-      }
-    }
-
-    return mutedChannelIds;
+    return mutedChannels
+      .filter((mute) => channelIds.has(mute.channelId))
+      .map((mute) => mute.channelId);
   },
 });
