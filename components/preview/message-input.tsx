@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/popover"
 import { MentionAutocomplete, type MentionUser } from "./mention-autocomplete"
 import { LinkPreview, LinkPreviewSkeleton, type LinkEmbedData } from "./link-preview"
+import { FormattingToolbar, type FormattingAction } from "./formatting-toolbar"
 import { TypingIndicator, type TypingUser } from "@/components/typing-indicator"
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "@/lib/theme-provider"
@@ -117,6 +118,10 @@ export function MessageInput({
   const [mentionQuery, setMentionQuery] = React.useState("")
   const [mentionSelectedIndex, setMentionSelectedIndex] = React.useState(0)
   const [mentionStartPos, setMentionStartPos] = React.useState<number | null>(null)
+
+  // Formatting toolbar state
+  const [formattingToolbarVisible, setFormattingToolbarVisible] = React.useState(false)
+  const [formattingToolbarPosition, setFormattingToolbarPosition] = React.useState({ x: 0, y: 0 })
 
   // Debounced typing indicator
   const handleTyping = React.useCallback(() => {
@@ -503,6 +508,85 @@ export function MessageInput({
     textareaRef.current?.focus()
   }
 
+  // Handle text selection for formatting toolbar
+  const handleSelectionChange = React.useCallback(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const { selectionStart, selectionEnd } = textarea
+    const hasSelection = selectionStart !== selectionEnd
+
+    if (hasSelection) {
+      // Get the position of the selection in the viewport
+      const textareaRect = textarea.getBoundingClientRect()
+      
+      // Calculate approximate position based on selection
+      // We use the middle of the textarea horizontally and position above it
+      const x = textareaRect.left + textareaRect.width / 2
+      const y = textareaRect.top - 8
+
+      setFormattingToolbarPosition({ x, y })
+      setFormattingToolbarVisible(true)
+    } else {
+      setFormattingToolbarVisible(false)
+    }
+  }, [])
+
+  // Handle formatting action
+  const handleFormat = React.useCallback((action: FormattingAction) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const { selectionStart, selectionEnd } = textarea
+    const selectedText = displayMessage.slice(selectionStart, selectionEnd)
+    
+    if (!selectedText) {
+      setFormattingToolbarVisible(false)
+      return
+    }
+
+    let newText: string
+    let newCursorPos: number
+
+    if (action.blockLevel) {
+      // For block-level formatting, apply prefix to each line
+      const lines = selectedText.split('\n')
+      const formattedLines = lines.map((line, index) => {
+        if (action.label === "Numbered List") {
+          return `${index + 1}. ${line}`
+        }
+        return `${action.prefix}${line}`
+      })
+      const formattedText = formattedLines.join('\n')
+      newText = displayMessage.slice(0, selectionStart) + formattedText + displayMessage.slice(selectionEnd)
+      newCursorPos = selectionStart + formattedText.length
+    } else {
+      // Wrap selected text with prefix and suffix
+      const formattedText = `${action.prefix}${selectedText}${action.suffix}`
+      newText = displayMessage.slice(0, selectionStart) + formattedText + displayMessage.slice(selectionEnd)
+      newCursorPos = selectionStart + formattedText.length
+    }
+
+    setDisplayMessage(newText)
+    
+    // Update the backend message as well
+    let backendValue = newText
+    const sortedEntries = Object.entries(mentionMap).sort(([, a], [, b]) => b.length - a.length)
+    sortedEntries.forEach(([userId, userName]) => {
+      const userNamePattern = new RegExp(`@${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+      backendValue = backendValue.replace(userNamePattern, `@${userId}`)
+    })
+    setMessage(backendValue)
+
+    setFormattingToolbarVisible(false)
+    
+    // Restore focus and set cursor position
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }, [displayMessage, mentionMap])
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -681,6 +765,14 @@ export function MessageInput({
           onSelectedIndexChange={setMentionSelectedIndex}
         />
 
+        {/* Formatting toolbar for text selection */}
+        <FormattingToolbar
+          visible={formattingToolbarVisible}
+          position={formattingToolbarPosition}
+          onFormat={handleFormat}
+          onClose={() => setFormattingToolbarVisible(false)}
+        />
+
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -718,6 +810,8 @@ export function MessageInput({
             className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"
             rows={1}
             style={{ height: '20px' }}
+            onSelect={handleSelectionChange}
+            onMouseUp={handleSelectionChange}
           />
         </div>
 
