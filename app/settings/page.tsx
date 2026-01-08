@@ -8,9 +8,11 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUserSettings } from "@/lib/user-settings";
 import { useTheme } from "@/lib/theme-provider";
 import { usePageTitle } from "@/lib/use-page-title";
+import { analytics } from "@/lib/analytics";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { cn } from "@/lib/utils";
 import {
@@ -26,7 +28,11 @@ import {
   CircleHalfIcon,
   SignOutIcon,
   CaretRightIcon,
+  BellIcon,
+  GearIcon,
 } from "@phosphor-icons/react";
+import { useNotificationContext } from "@/components/notifications/notification-provider";
+import type { BrowserNotificationsSetting } from "@/lib/user-settings";
 
 const MODIFIER_OPTIONS = [
   { value: "meta", label: "⌘ Cmd" },
@@ -39,7 +45,14 @@ const KEY_OPTIONS = "abcdefghijklmnopqrstuvwxyz".split("").map((key) => ({
   label: key.toUpperCase(),
 }));
 
-type SettingsSection = "account" | "appearance" | "shortcuts";
+type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts";
+
+const sections = [
+  { id: "account" as const, label: "Account", icon: UserIcon },
+  { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
+  { id: "notifications" as const, label: "Notifications", icon: BellIcon },
+  { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
+];
 
 export default function UserSettingsPage() {
   usePageTitle("Settings - Portal");
@@ -49,7 +62,8 @@ export default function UserSettingsPage() {
   const { openUserProfile, signOut } = useClerk();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const { settings, updateSidebarHotkey, formatHotkey } = useUserSettings();
+  const { settings, updateSidebarHotkey, updateBrowserNotifications, formatHotkey } = useUserSettings();
+  const { permission: notificationPermission, isSupported: notificationsSupported, requestPermission } = useNotificationContext();
 
   // Get user organizations to redirect back
   const userOrgs = useQuery(api.organizations.getUserOrganizations);
@@ -67,11 +81,32 @@ export default function UserSettingsPage() {
   );
   const [isRecording, setIsRecording] = React.useState(false);
 
+  // Track settings page view on mount
+  const trackedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!trackedRef.current) {
+      analytics.settingsOpened({ section: "account" });
+      trackedRef.current = true;
+    }
+  }, []);
+
+  const handleSectionChange = (section: SettingsSection) => {
+    setActiveSection(section);
+    analytics.settingsOpened({ section });
+  };
+
   // Update local state when settings change
   React.useEffect(() => {
     setSelectedModifier(settings.sidebarHotkey.modifier);
     setSelectedKey(settings.sidebarHotkey.key);
   }, [settings.sidebarHotkey]);
+
+  // Auto-upgrade "ask" to "enabled" when permission is granted
+  React.useEffect(() => {
+    if (settings.browserNotifications === "ask" && notificationPermission === "granted") {
+      updateBrowserNotifications("enabled");
+    }
+  }, [settings.browserNotifications, notificationPermission, updateBrowserNotifications]);
 
   // Handle keyboard shortcut recording
   React.useEffect(() => {
@@ -117,71 +152,107 @@ export default function UserSettingsPage() {
     await setPrimaryWorkspace({ workspaceId });
   };
 
-  const handleSaveHotkey = () => {
-    updateSidebarHotkey({
-      key: selectedKey,
-      modifier: selectedModifier,
-    });
-  };
-
-  const hasHotkeyChanges =
-    selectedModifier !== settings.sidebarHotkey.modifier ||
-    selectedKey !== settings.sidebarHotkey.key;
-
   if (!userLoaded) {
     return <LoadingSpinner fullScreen />;
   }
 
-  const sections = [
-    { id: "account" as const, label: "Account", icon: UserIcon },
-    { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
-    { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
-  ];
-
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleBack}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeftIcon className="size-4" weight="bold" />
-          </Button>
-          <Image
-            src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
-            alt="Portal"
-            width={100}
-            height={21}
-            className="h-5 w-auto"
-          />
-        </div>
-      </header>
-
-      {/* Content */}
+    <div className="flex h-screen flex-col bg-background">
+      {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside className="hidden sm:flex w-56 shrink-0 flex-col border-r border-border bg-background">
-          <div className="p-4">
-            <h1 className="text-lg font-semibold text-foreground">Settings</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Manage your preferences
-            </p>
+        {/* Sidebar */}
+        <aside className="hidden sm:flex w-64 shrink-0 flex-col border-r border-border bg-background">
+          {/* Sidebar Header */}
+          <div className="flex h-12 items-center gap-2 border-b border-border px-4">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleBack}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeftIcon className="size-4" weight="bold" />
+            </Button>
+            <GearIcon className="size-5 text-foreground" weight="fill" />
+            <h1 className="text-base font-semibold text-foreground">Settings</h1>
           </div>
-          <nav className="flex-1 px-2 pb-4">
-            <div className="space-y-0.5">
+
+          {/* Navigation */}
+          <ScrollArea className="flex-1">
+            <nav className="p-2">
+              <div className="space-y-1">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => handleSectionChange(section.id)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-secondary text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="size-5" weight={isActive ? "fill" : "regular"} />
+                      {section.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </ScrollArea>
+
+          {/* Sign Out */}
+          <div className="border-t border-border p-2">
+            <button
+              onClick={() => signOut()}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <SignOutIcon className="size-5" />
+              Sign out
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile Header */}
+        <div className="sm:hidden flex flex-col w-full">
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleBack}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeftIcon className="size-4" weight="bold" />
+            </Button>
+            <GearIcon className="size-4 text-foreground" weight="fill" />
+            <h1 className="text-sm font-semibold text-foreground">Settings</h1>
+            <div className="ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => signOut()}
+                className="text-muted-foreground hover:text-foreground text-xs"
+              >
+                <SignOutIcon className="size-3.5 mr-1.5" />
+                Sign out
+              </Button>
+            </div>
+          </header>
+
+          {/* Mobile Section Tabs */}
+          <div className="border-b border-border bg-background overflow-x-auto">
+            <div className="flex gap-1 p-2">
               {sections.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.id;
                 return (
                   <button
                     key={section.id}
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => handleSectionChange(section.id)}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                       isActive
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -193,383 +264,492 @@ export default function UserSettingsPage() {
                 );
               })}
             </div>
-          </nav>
-
-          {/* Sign Out */}
-          <div className="border-t border-border p-2">
-            <button
-              onClick={() => signOut()}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <SignOutIcon className="size-4" />
-              Sign out
-            </button>
           </div>
-        </aside>
 
-        {/* Mobile section selector */}
-        <div className="sm:hidden border-b border-border bg-background">
-          <div className="flex gap-1 p-2 overflow-x-auto">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-                    isActive
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
-                  {section.label}
-                </button>
-              );
-            })}
+          {/* Mobile Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="py-6 px-4">
+              {renderContent()}
+            </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-2xl py-6 sm:py-10 px-4 sm:px-8">
-            {/* Account Section */}
-            {activeSection === "account" && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Account</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Manage your profile and workspace preferences
-                  </p>
-                </div>
-
-                {/* Profile Card */}
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                  <div className="p-5 sm:p-6">
-                    <div className="flex items-center gap-4">
-                      {user?.imageUrl ? (
-                        <Image
-                          src={user.imageUrl}
-                          alt={user.fullName || "User"}
-                          width={64}
-                          height={64}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <div className="flex size-16 items-center justify-center rounded-full bg-muted">
-                          <UserIcon className="size-7 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-foreground truncate">
-                          {user?.fullName || user?.firstName || "User"}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {user?.primaryEmailAddress?.emailAddress}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-border bg-muted/30 px-5 sm:px-6 py-3">
-                    <button
-                      onClick={() => openUserProfile()}
-                      className="flex w-full items-center justify-between text-sm font-medium text-foreground hover:text-primary transition-colors"
-                    >
-                      <span>Manage account</span>
-                      <CaretRightIcon className="size-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Primary Workspace */}
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <HouseIcon className="size-4" weight="fill" />
-                      Default Workspace
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Choose where to go when you open Portal
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    {userOrgs && userOrgs.length > 0 ? (
-                      <>
-                        {/* None option */}
-                        <button
-                          onClick={() => handleSetPrimaryWorkspace(null)}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
-                            !primaryWorkspace
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "border-border bg-card hover:bg-muted/50"
-                          )}
-                        >
-                          <div className={cn(
-                            "flex size-10 items-center justify-center rounded-lg",
-                            !primaryWorkspace ? "bg-primary/10" : "bg-muted"
-                          )}>
-                            <HouseIcon
-                              className={cn(
-                                "size-5",
-                                !primaryWorkspace ? "text-primary" : "text-muted-foreground"
-                              )}
-                              weight={!primaryWorkspace ? "fill" : "regular"}
-                            />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-sm font-medium text-foreground">
-                              First available
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Opens the first workspace in your list
-                            </p>
-                          </div>
-                          {!primaryWorkspace && (
-                            <div className="flex size-5 items-center justify-center rounded-full bg-primary">
-                              <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
-                            </div>
-                          )}
-                        </button>
-
-                        {/* Workspace options */}
-                        {userOrgs.map((org) => {
-                          const isPrimary = primaryWorkspace?._id === org._id;
-                          return (
-                            <button
-                              key={org._id}
-                              onClick={() => handleSetPrimaryWorkspace(org._id)}
-                              className={cn(
-                                "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
-                                isPrimary
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                  : "border-border bg-card hover:bg-muted/50"
-                              )}
-                            >
-                              {org.logoUrl ? (
-                                <Image
-                                  src={org.logoUrl}
-                                  alt={org.name || "Organization"}
-                                  width={40}
-                                  height={40}
-                                  className="rounded-lg"
-                                />
-                              ) : (
-                                <div className="flex size-10 items-center justify-center rounded-lg bg-foreground">
-                                  <Image
-                                    src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                                    alt="Workspace"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 text-left min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {org.name || "Organization"}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  tryportal.app/w/{org.slug}
-                                </p>
-                              </div>
-                              {isPrimary && (
-                                <div className="flex size-5 items-center justify-center rounded-full bg-primary">
-                                  <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </>
-                    ) : (
-                      <div className="rounded-xl border border-border bg-card p-6 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          No workspaces available
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+        {/* Desktop Content */}
+        <main className="hidden sm:flex flex-1 flex-col overflow-hidden">
+          {/* Content Header */}
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-6">
+            {sections.find(s => s.id === activeSection)?.icon && (
+              React.createElement(sections.find(s => s.id === activeSection)!.icon, {
+                className: "size-5 text-foreground",
+                weight: "fill"
+              })
             )}
+            <h2 className="text-base font-semibold text-foreground">
+              {sections.find(s => s.id === activeSection)?.label}
+            </h2>
+          </header>
 
-            {/* Appearance Section */}
-            {activeSection === "appearance" && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Customize how Portal looks on your device
-                  </p>
-                </div>
-
-                {/* Theme Selection */}
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-4">Theme</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: "light", label: "Light", icon: SunIcon },
-                      { value: "dark", label: "Dark", icon: MoonIcon },
-                      { value: "system", label: "System", icon: CircleHalfIcon },
-                    ].map((option) => {
-                      const Icon = option.icon;
-                      const isSelected = theme === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          onClick={() => setTheme(option.value as "light" | "dark" | "system")}
-                          className={cn(
-                            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "border-border bg-card hover:bg-muted/50"
-                          )}
-                        >
-                          <div className={cn(
-                            "flex size-10 items-center justify-center rounded-lg",
-                            isSelected ? "bg-primary/10" : "bg-muted"
-                          )}>
-                            <Icon
-                              className={cn(
-                                "size-5",
-                                isSelected ? "text-primary" : "text-muted-foreground"
-                              )}
-                              weight={isSelected ? "fill" : "regular"}
-                            />
-                          </div>
-                          <span className={cn(
-                            "text-sm font-medium",
-                            isSelected ? "text-foreground" : "text-muted-foreground"
-                          )}>
-                            {option.label}
-                          </span>
-                          {isSelected && (
-                            <div className="flex size-4 items-center justify-center rounded-full bg-primary">
-                              <CheckIcon className="size-2.5 text-primary-foreground" weight="bold" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Shortcuts Section */}
-            {activeSection === "shortcuts" && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Keyboard Shortcuts</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Customize your keyboard shortcuts for faster navigation
-                  </p>
-                </div>
-
-                {/* Sidebar Toggle Shortcut */}
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                  <div className="p-5 sm:p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        <SidebarIcon className="size-5 text-muted-foreground" weight="fill" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-foreground">
-                              Toggle Sidebar
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Show or hide the navigation sidebar
-                            </p>
-                          </div>
-                          <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                            {formatHotkey(settings.sidebarHotkey)}
-                          </kbd>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-border">
-                          {isRecording ? (
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 flex items-center justify-center h-10 rounded-lg border-2 border-dashed border-primary bg-primary/5 text-sm text-primary">
-                                <span className="animate-pulse">Press a key combination...</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsRecording(false)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <select
-                                value={selectedModifier}
-                                onChange={(e) => {
-                                  setSelectedModifier(e.target.value as typeof selectedModifier);
-                                  updateSidebarHotkey({
-                                    key: selectedKey,
-                                    modifier: e.target.value as typeof selectedModifier,
-                                  });
-                                }}
-                                className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
-                                {MODIFIER_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="text-muted-foreground text-sm">+</span>
-                              <select
-                                value={selectedKey}
-                                onChange={(e) => {
-                                  setSelectedKey(e.target.value);
-                                  updateSidebarHotkey({
-                                    key: e.target.value,
-                                    modifier: selectedModifier,
-                                  });
-                                }}
-                                className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
-                                {KEY_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <div className="flex-1" />
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setIsRecording(true)}
-                              >
-                                <KeyboardIcon className="size-4 mr-1.5" />
-                                Record
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shortcut hints */}
-                <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    <strong className="font-medium text-foreground">Tip:</strong> Click "Record" and press your preferred key combination to quickly set a shortcut. Press Escape to cancel.
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-2xl py-8 px-6">
+              {renderContent()}
+            </div>
           </div>
         </main>
       </div>
     </div>
   );
+
+  function renderContent() {
+    return (
+      <>
+        {/* Account Section */}
+        {activeSection === "account" && (
+          <div className="space-y-6">
+            {/* Profile Card */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center gap-4">
+                  {user?.imageUrl ? (
+                    <Image
+                      src={user.imageUrl}
+                      alt={user.fullName || "User"}
+                      width={64}
+                      height={64}
+                      className="rounded-full size-14 sm:size-16"
+                    />
+                  ) : (
+                    <div className="flex size-14 sm:size-16 items-center justify-center rounded-full bg-muted">
+                      <UserIcon className="size-6 sm:size-7 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm sm:text-base font-medium text-foreground truncate">
+                      {user?.fullName || user?.firstName || "User"}
+                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                      {user?.primaryEmailAddress?.emailAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-border bg-muted/30 px-4 sm:px-6 py-3">
+                <button
+                  onClick={() => openUserProfile()}
+                  className="flex w-full items-center justify-between text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  <span>Manage account</span>
+                  <CaretRightIcon className="size-4 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+
+            {/* Primary Workspace */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <HouseIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">Default Workspace</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Choose where to go when you open Portal
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {userOrgs && userOrgs.length > 0 ? (
+                    <>
+                      {/* None option */}
+                      <button
+                        onClick={() => handleSetPrimaryWorkspace(null)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                          !primaryWorkspace
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex size-10 items-center justify-center rounded-lg",
+                          !primaryWorkspace ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          <HouseIcon
+                            className={cn(
+                              "size-5",
+                              !primaryWorkspace ? "text-primary" : "text-muted-foreground"
+                            )}
+                            weight={!primaryWorkspace ? "fill" : "regular"}
+                          />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-foreground">
+                            First available
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Opens the first workspace in your list
+                          </p>
+                        </div>
+                        {!primaryWorkspace && (
+                          <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                            <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Workspace options */}
+                      {userOrgs.map((org) => {
+                        const isPrimary = primaryWorkspace?._id === org._id;
+                        return (
+                          <button
+                            key={org._id}
+                            onClick={() => handleSetPrimaryWorkspace(org._id)}
+                            className={cn(
+                              "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                              isPrimary
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border bg-background hover:bg-muted/50"
+                            )}
+                          >
+                            {org.logoUrl ? (
+                              <Image
+                                src={org.logoUrl}
+                                alt={org.name || "Organization"}
+                                width={40}
+                                height={40}
+                                className="rounded-lg"
+                              />
+                            ) : (
+                              <div className="flex size-10 items-center justify-center rounded-lg bg-foreground">
+                                <Image
+                                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                                  alt="Workspace"
+                                  width={20}
+                                  height={20}
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {org.name || "Organization"}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                tryportal.app/w/{org.slug}
+                              </p>
+                            </div>
+                            {isPrimary && (
+                              <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                                <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-border bg-background p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No workspaces available
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Appearance Section */}
+        {activeSection === "appearance" && (
+          <div className="space-y-6">
+            {/* Theme Selection */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <PaletteIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">Theme</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Customize how Portal looks on your device
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: "light", label: "Light", icon: SunIcon },
+                    { value: "dark", label: "Dark", icon: MoonIcon },
+                    { value: "system", label: "System", icon: CircleHalfIcon },
+                  ].map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = theme === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setTheme(option.value as "light" | "dark" | "system");
+                          analytics.themeChanged({ theme: option.value as "light" | "dark" | "system" });
+                        }}
+                        className={cn(
+                          "flex flex-col items-center gap-2 rounded-xl border p-3 sm:p-4 transition-all",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex size-8 sm:size-10 items-center justify-center rounded-lg",
+                          isSelected ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          <Icon
+                            className={cn(
+                              "size-4 sm:size-5",
+                              isSelected ? "text-primary" : "text-muted-foreground"
+                            )}
+                            weight={isSelected ? "fill" : "regular"}
+                          />
+                        </div>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-medium",
+                          isSelected ? "text-foreground" : "text-muted-foreground"
+                        )}>
+                          {option.label}
+                        </span>
+                        {isSelected && (
+                          <div className="flex size-4 items-center justify-center rounded-full bg-primary">
+                            <CheckIcon className="size-2.5 text-primary-foreground" weight="bold" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Section */}
+        {activeSection === "notifications" && (
+          <div className="space-y-6">
+            {/* Browser Notifications */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <BellIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">Browser Notifications</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Control how Portal sends you notifications
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {(
+                    [
+                      {
+                        value: "enabled",
+                        label: "Enabled",
+                        description: "Receive notifications for mentions and direct messages",
+                      },
+                      {
+                        value: "disabled",
+                        label: "Disabled",
+                        description: "Never show notification prompts or send notifications",
+                      },
+                    ] as const
+                  ).map((option) => {
+                    const isSelected = settings.browserNotifications === option.value;
+                    const isDisabledByBrowser = notificationPermission === "denied" && option.value === "enabled";
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={async () => {
+                          if (isDisabledByBrowser) return;
+                          if (option.value === "enabled" && notificationPermission === "default") {
+                            const result = await requestPermission();
+                            if (result === "granted") {
+                              updateBrowserNotifications("enabled");
+                              analytics.notificationsEnabled();
+                            }
+                          } else {
+                            updateBrowserNotifications(option.value);
+                            if (option.value === "enabled") {
+                              analytics.notificationsEnabled();
+                            }
+                          }
+                        }}
+                        disabled={isDisabledByBrowser}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50",
+                          isDisabledByBrowser && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex size-10 items-center justify-center rounded-lg",
+                          isSelected ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          <BellIcon
+                            className={cn(
+                              "size-5",
+                              isSelected ? "text-primary" : "text-muted-foreground"
+                            )}
+                            weight={isSelected ? "fill" : "regular"}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {option.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {isDisabledByBrowser
+                              ? "Blocked in browser settings"
+                              : option.description}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                            <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Info box */}
+                {notificationPermission === "denied" && (
+                  <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="font-medium text-foreground">Note:</strong> Browser notifications are currently blocked. To enable them, update your browser&apos;s notification settings for this site.
+                    </p>
+                  </div>
+                )}
+
+                {!notificationsSupported && (
+                  <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="font-medium text-foreground">Note:</strong> Your browser doesn&apos;t support notifications.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Shortcuts Section */}
+        {activeSection === "shortcuts" && (
+          <div className="space-y-6">
+            {/* Sidebar Toggle Shortcut */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <SidebarIcon className="size-5 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <h3 className="text-sm font-medium text-foreground">
+                          Toggle Sidebar
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Show or hide the navigation sidebar
+                        </p>
+                      </div>
+                      <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
+                        {formatHotkey(settings.sidebarHotkey)}
+                      </kbd>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-border">
+                      {isRecording ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 flex items-center justify-center h-10 rounded-lg border-2 border-dashed border-primary bg-primary/5 text-sm text-primary">
+                            <span className="animate-pulse">Press a key combination...</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsRecording(false)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={selectedModifier}
+                            onChange={(e) => {
+                              setSelectedModifier(e.target.value as typeof selectedModifier);
+                              updateSidebarHotkey({
+                                key: selectedKey,
+                                modifier: e.target.value as typeof selectedModifier,
+                              });
+                            }}
+                            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {MODIFIER_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="text-muted-foreground text-sm">+</span>
+                          <select
+                            value={selectedKey}
+                            onChange={(e) => {
+                              setSelectedKey(e.target.value);
+                              updateSidebarHotkey({
+                                key: e.target.value,
+                                modifier: selectedModifier,
+                              });
+                            }}
+                            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {KEY_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex-1" />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsRecording(true)}
+                          >
+                            <KeyboardIcon className="size-4 mr-1.5" />
+                            Record
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Shortcut hints */}
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="text-xs text-muted-foreground">
+                <strong className="font-medium text-foreground">Tip:</strong> Click "Record" and press your preferred key combination to quickly set a shortcut. Press Escape to cancel.
+              </p>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 }

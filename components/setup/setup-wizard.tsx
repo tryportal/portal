@@ -187,6 +187,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
             logoId,
           });
           await setOrgIdParam(orgId);
+          analytics.workspaceCreated({ workspaceId: orgId, name: name.trim() });
         } else {
           // Update existing organization
           await updateOrg({

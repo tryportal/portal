@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { analytics } from "@/lib/analytics";
 
 // Type for member data
 type MemberWithUserData = {
@@ -145,7 +146,10 @@ export default function MemberProfilePage({
           setMember(result.member);
           setSelectedRole(result.member.role);
           setIsAdmin(result.isAdmin);
-          
+
+          // Track profile view
+          analytics.profileViewed({ isOwnProfile: result.member.userId === currentUserId });
+
           // Initialize form
           setProfileForm({
             jobTitle: result.member.jobTitle || "",
@@ -238,7 +242,8 @@ export default function MemberProfilePage({
         membershipId: member._id,
         role: newRole,
       });
-      
+
+      analytics.roleChanged();
       setMember({ ...member, role: newRole });
       setRoleSaveSuccess(true);
       
@@ -263,7 +268,8 @@ export default function MemberProfilePage({
         organizationId: organization._id,
         membershipId: member._id,
       });
-      
+
+      analytics.memberRemoved();
       // Navigate back to people list
       router.push(`/w/${slug}/people`);
     } catch (err) {

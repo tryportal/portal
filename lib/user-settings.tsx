@@ -7,13 +7,17 @@ export interface HotkeyConfig {
   modifier: "meta" | "ctrl" | "alt" | "shift";
 }
 
+export type BrowserNotificationsSetting = "enabled" | "disabled" | "ask";
+
 interface UserSettings {
   sidebarHotkey: HotkeyConfig;
+  browserNotifications: BrowserNotificationsSetting;
 }
 
 interface UserSettingsContextType {
   settings: UserSettings;
   updateSidebarHotkey: (hotkey: HotkeyConfig) => void;
+  updateBrowserNotifications: (setting: BrowserNotificationsSetting) => void;
   resetToDefaults: () => void;
   formatHotkey: (hotkey: HotkeyConfig) => string;
 }
@@ -28,6 +32,7 @@ const DEFAULT_SIDEBAR_HOTKEY: HotkeyConfig = {
 
 const defaultSettings: UserSettings = {
   sidebarHotkey: DEFAULT_SIDEBAR_HOTKEY,
+  browserNotifications: "ask",
 };
 
 const UserSettingsContext = React.createContext<UserSettingsContextType | undefined>(undefined);
@@ -78,6 +83,14 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  const updateBrowserNotifications = React.useCallback((setting: BrowserNotificationsSetting) => {
+    setSettings((prev) => {
+      const newSettings = { ...prev, browserNotifications: setting };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const resetToDefaults = React.useCallback(() => {
     setSettings(defaultSettings);
     saveSettings(defaultSettings);
@@ -104,6 +117,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
       value={{
         settings,
         updateSidebarHotkey,
+        updateBrowserNotifications,
         resetToDefaults,
         formatHotkey,
       }}

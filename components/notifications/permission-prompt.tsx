@@ -12,10 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useNotificationContext } from "./notification-provider";
-import {
-  wasPromptDismissedRecently,
-  markPromptDismissed,
-} from "@/lib/use-notifications";
+import { useUserSettings } from "@/lib/user-settings";
 
 interface NotificationPermissionPromptProps {
   /**
@@ -29,6 +26,7 @@ export function NotificationPermissionPrompt({
   delay = 5000,
 }: NotificationPermissionPromptProps) {
   const { permission, isSupported, requestPermission } = useNotificationContext();
+  const { settings, updateBrowserNotifications } = useUserSettings();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isRequesting, setIsRequesting] = React.useState(false);
 
@@ -39,8 +37,8 @@ export function NotificationPermissionPrompt({
       return;
     }
 
-    // Don't show if recently dismissed
-    if (wasPromptDismissedRecently()) {
+    // Don't show if user has disabled notifications in settings
+    if (settings.browserNotifications === "disabled") {
       return;
     }
 
@@ -50,12 +48,17 @@ export function NotificationPermissionPrompt({
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [isSupported, permission, delay]);
+  }, [isSupported, permission, delay, settings.browserNotifications]);
 
   const handleEnable = async () => {
     setIsRequesting(true);
     try {
-      await requestPermission();
+      const result = await requestPermission();
+      if (result === "granted") {
+        updateBrowserNotifications("enabled");
+      } else if (result === "denied") {
+        updateBrowserNotifications("disabled");
+      }
     } finally {
       setIsRequesting(false);
       setIsOpen(false);
@@ -63,7 +66,7 @@ export function NotificationPermissionPrompt({
   };
 
   const handleDismiss = () => {
-    markPromptDismissed();
+    updateBrowserNotifications("disabled");
     setIsOpen(false);
   };
 
@@ -110,6 +113,7 @@ export function NotificationPermissionPrompt({
 // Inline banner variant for less intrusive prompts
 export function NotificationPermissionBanner() {
   const { permission, isSupported, requestPermission } = useNotificationContext();
+  const { settings, updateBrowserNotifications } = useUserSettings();
   const [isVisible, setIsVisible] = React.useState(false);
   const [isRequesting, setIsRequesting] = React.useState(false);
 
@@ -119,25 +123,31 @@ export function NotificationPermissionBanner() {
       return;
     }
 
-    if (wasPromptDismissedRecently()) {
+    // Don't show if user has disabled notifications in settings
+    if (settings.browserNotifications === "disabled") {
       return;
     }
 
     // Show immediately for banner variant
     setIsVisible(true);
-  }, [isSupported, permission]);
+  }, [isSupported, permission, settings.browserNotifications]);
 
   const handleEnable = async () => {
     setIsRequesting(true);
     try {
-      await requestPermission();
+      const result = await requestPermission();
+      if (result === "granted") {
+        updateBrowserNotifications("enabled");
+      } else if (result === "denied") {
+        updateBrowserNotifications("disabled");
+      }
     } finally {
       setIsRequesting(false);
     }
   };
 
   const handleDismiss = () => {
-    markPromptDismissed();
+    updateBrowserNotifications("disabled");
     setIsVisible(false);
   };
 

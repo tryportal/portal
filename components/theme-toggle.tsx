@@ -3,6 +3,7 @@
 import * as React from "react";
 import { SunIcon, MoonIcon } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme-provider";
+import { analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,13 +21,18 @@ interface ThemeToggleProps {
 export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
 
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    analytics.themeChanged({ theme: newTheme });
+  };
+
   // Simple icon toggle between light/dark
   if (variant === "icon") {
     return (
       <Button
         variant="ghost"
         size="icon-sm"
-        onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+        onClick={() => handleThemeChange(resolvedTheme === "light" ? "dark" : "light")}
         className={`text-muted-foreground hover:text-foreground ${className}`}
         title={resolvedTheme === "light" ? "Dark mode" : "Light mode"}
       >
@@ -54,17 +60,17 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         <span className="sr-only">Toggle theme</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           <SunIcon className="size-4 mr-2" />
           Light
           {theme === "light" && <span className="ml-auto text-xs opacity-60">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           <MoonIcon className="size-4 mr-2" />
           Dark
           {theme === "dark" && <span className="ml-auto text-xs opacity-60">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           <span className="size-4 mr-2 flex items-center justify-center text-xs">💻</span>
           System
           {theme === "system" && <span className="ml-auto text-xs opacity-60">✓</span>}
