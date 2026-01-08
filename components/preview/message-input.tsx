@@ -13,6 +13,7 @@ import {
   ArrowBendUpLeftIcon,
 } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
+import { analytics } from "@/lib/analytics"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -353,6 +354,9 @@ export function MessageInput({
         }
 
         const { storageId } = await response.json()
+
+        // Track file upload
+        analytics.fileUploaded({ type: attachment.type, size: attachment.size })
 
         // Update status to uploaded
         setAttachments(prev => prev.map(a =>

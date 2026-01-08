@@ -77,4 +77,27 @@ export const analytics = {
   tabChanged: (props: { tab: string }) => {
     posthog.capture("tab_changed", props);
   },
+
+  // Engagement events (non-invasive)
+  searchUsed: (props: { context: "channel" | "dm" | "global"; hasResults: boolean }) => {
+    posthog.capture("search_used", props);
+  },
+  profileViewed: (props: { isOwnProfile: boolean }) => {
+    posthog.capture("profile_viewed", props);
+  },
+  settingsOpened: (props: { section?: string }) => {
+    posthog.capture("settings_opened", props);
+  },
+  themeChanged: (props: { theme: "light" | "dark" | "system" }) => {
+    posthog.capture("theme_changed", props);
+  },
+  notificationsEnabled: () => {
+    posthog.capture("notifications_enabled");
+  },
+  memberRemoved: () => {
+    posthog.capture("member_removed");
+  },
+  roleChanged: () => {
+    posthog.capture("role_changed");
+  },
 };

@@ -305,10 +305,12 @@ export default function ChannelPage({
   const channelName = channelData?.channel?.name;
   usePageTitle(channelName ? `${channelName} - Portal` : "Portal");
 
-  // Track channel view - must be called before any early returns to maintain hook order
+  // Track channel view with duplicate prevention
+  const trackedChannelRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (channelId && channelName) {
+    if (channelId && channelName && trackedChannelRef.current !== channelId) {
       analytics.channelViewed({ channelId, name: channelName });
+      trackedChannelRef.current = channelId;
     }
   }, [channelId, channelName]);
 

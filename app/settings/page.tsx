@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useUserSettings } from "@/lib/user-settings";
 import { useTheme } from "@/lib/theme-provider";
 import { usePageTitle } from "@/lib/use-page-title";
+import { analytics } from "@/lib/analytics";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { cn } from "@/lib/utils";
 import {
@@ -70,6 +71,20 @@ export default function UserSettingsPage() {
     settings.sidebarHotkey.key
   );
   const [isRecording, setIsRecording] = React.useState(false);
+
+  // Track settings page view on mount
+  const trackedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!trackedRef.current) {
+      analytics.settingsOpened({ section: "account" });
+      trackedRef.current = true;
+    }
+  }, []);
+
+  const handleSectionChange = (section: SettingsSection) => {
+    setActiveSection(section);
+    analytics.settingsOpened({ section });
+  };
 
   // Update local state when settings change
   React.useEffect(() => {
@@ -184,7 +199,7 @@ export default function UserSettingsPage() {
                 return (
                   <button
                     key={section.id}
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => handleSectionChange(section.id)}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
@@ -221,7 +236,7 @@ export default function UserSettingsPage() {
               return (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => handleSectionChange(section.id)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                     isActive
@@ -425,7 +440,10 @@ export default function UserSettingsPage() {
                       return (
                         <button
                           key={option.value}
-                          onClick={() => setTheme(option.value as "light" | "dark" | "system")}
+                          onClick={() => {
+                            setTheme(option.value as "light" | "dark" | "system");
+                            analytics.themeChanged({ theme: option.value as "light" | "dark" | "system" });
+                          }}
                           className={cn(
                             "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all",
                             isSelected
@@ -505,9 +523,13 @@ export default function UserSettingsPage() {
                               const result = await requestPermission();
                               if (result === "granted") {
                                 updateBrowserNotifications("enabled");
+                                analytics.notificationsEnabled();
                               }
                             } else {
                               updateBrowserNotifications(option.value);
+                              if (option.value === "enabled") {
+                                analytics.notificationsEnabled();
+                              }
                             }
                           }}
                           disabled={isDisabledByBrowser}

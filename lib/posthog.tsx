@@ -6,12 +6,15 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+// Use the proxy endpoint to avoid adblockers
+const POSTHOG_HOST = "/ingest";
+const POSTHOG_UI_HOST = "https://us.i.posthog.com";
 
 // Initialize PostHog only once
 if (typeof window !== "undefined" && POSTHOG_KEY) {
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
+    ui_host: POSTHOG_UI_HOST,
     person_profiles: "identified_only",
     capture_pageview: true,
     capture_pageleave: true,
