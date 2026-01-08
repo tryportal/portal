@@ -53,6 +53,7 @@ interface ChatInterfaceProps {
   channelId?: Id<"channels">
   searchQuery?: string
   onSearchChange?: (query: string) => void
+  isDirectMessage?: boolean
 }
 
 export function ChatInterface({
@@ -86,6 +87,7 @@ export function ChatInterface({
   channelId,
   searchQuery = "",
   onSearchChange,
+  isDirectMessage = false,
 }: ChatInterfaceProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
   const [pinnedDialogOpen, setPinnedDialogOpen] = React.useState(false)
@@ -187,6 +189,7 @@ export function ChatInterface({
         channelIcon={channelIcon}
         isAdmin={isAdmin}
         searchQuery={searchQuery}
+        isDirectMessage={isDirectMessage}
       />
 
       {/* Message Input with Typing Indicator */}

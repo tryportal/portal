@@ -37,6 +37,8 @@ import {
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
+import { useUserSettings } from "@/lib/user-settings"
+import { CompactMessageItem, BubbleMessageItem } from "./message-styles"
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -110,6 +112,7 @@ interface MessageListProps {
   channelIcon?: React.ElementType
   isAdmin?: boolean
   searchQuery?: string
+  isDirectMessage?: boolean
 }
 
 function formatFileSize(bytes: number): string {
@@ -834,6 +837,7 @@ export function MessageList({
   channelIcon,
   isAdmin,
   searchQuery = "",
+  isDirectMessage = false,
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
@@ -848,6 +852,15 @@ export function MessageList({
   const [showScrollButton, setShowScrollButton] = React.useState(false)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
+
+  // Get user message style settings
+  const { settings } = useUserSettings()
+  const messageStyle = isDirectMessage 
+    ? settings.messageStyles.directMessages 
+    : settings.messageStyles.channels
+
+  // Choose the appropriate message component based on style
+  const MessageItemComponent = messageStyle === "bubble" ? BubbleMessageItem : CompactMessageItem
 
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
@@ -1089,7 +1102,7 @@ export function MessageList({
                         }
                       }}
                     >
-                      <MessageItem
+                      <MessageItemComponent
                         message={message}
                         currentUserId={currentUserId}
                         onDeleteMessage={onDeleteMessage}
