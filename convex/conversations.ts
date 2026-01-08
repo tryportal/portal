@@ -490,4 +490,3 @@ export const getUnreadCountsForAllConversations = query({
     return unreadCounts;
   },
 });
-
