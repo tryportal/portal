@@ -706,3 +706,150 @@ export const createDefaultCategoryAndChannel = mutation({
     return { categoryId, channelId };
   },
 });
+
+// ============================================================================
+// Channel Muting
+// ============================================================================
+
+/**
+ * Mute a channel for the current user
+ */
+export const muteChannel = mutation({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Check if user is a member of the organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Not a member of this organization");
+    }
+
+    // Check if already muted
+    const existingMute = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user_and_channel", (q) =>
+        q.eq("userId", userId).eq("channelId", args.channelId)
+      )
+      .first();
+
+    if (existingMute) {
+      // Already muted, return success
+      return { success: true, alreadyMuted: true };
+    }
+
+    // Mute the channel
+    await ctx.db.insert("mutedChannels", {
+      userId,
+      channelId: args.channelId,
+      mutedAt: Date.now(),
+    });
+
+    return { success: true, alreadyMuted: false };
+  },
+});
+
+/**
+ * Unmute a channel for the current user
+ */
+export const unmuteChannel = mutation({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Find and delete the mute record
+    const existingMute = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user_and_channel", (q) =>
+        q.eq("userId", userId).eq("channelId", args.channelId)
+      )
+      .first();
+
+    if (existingMute) {
+      await ctx.db.delete(existingMute._id);
+      return { success: true, wasMuted: true };
+    }
+
+    return { success: true, wasMuted: false };
+  },
+});
+
+/**
+ * Check if a channel is muted by the current user
+ */
+export const isChannelMuted = query({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+
+    const userId = identity.subject;
+
+    const existingMute = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user_and_channel", (q) =>
+        q.eq("userId", userId).eq("channelId", args.channelId)
+      )
+      .first();
+
+    return existingMute !== null;
+  },
+});
+
+/**
+ * Get all muted channel IDs for the current user in an organization
+ */
+export const getMutedChannels = query({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Get all muted channels for this user
+    const mutedChannels = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Filter to only include channels in the specified organization
+    const mutedChannelIds: Id<"channels">[] = [];
+    for (const mute of mutedChannels) {
+      const channel = await ctx.db.get(mute.channelId);
+      if (channel && channel.organizationId === args.organizationId) {
+        mutedChannelIds.push(mute.channelId);
+      }
+    }
+
+    return mutedChannelIds;
+  },
+});
