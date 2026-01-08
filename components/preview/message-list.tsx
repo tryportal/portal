@@ -43,12 +43,46 @@ import { CompactMessageItem, BubbleMessageItem } from "./message-styles"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 
 export type { LinkEmbedData as LinkEmbed }
+
+// Restrictive sanitize schema for markdown content
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [
+    // Basic formatting
+    "b", "i", "strong", "em", "code", "pre",
+    // Links
+    "a",
+    // Lists
+    "ul", "ol", "li",
+    // Block elements
+    "p", "br", "blockquote",
+    // Headings
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    // Tables (for GFM)
+    "table", "thead", "tbody", "tr", "th", "td",
+    // Code blocks
+    "span", "div",
+  ],
+  attributes: {
+    ...defaultSchema.attributes,
+    a: ["href", "title"],
+    code: ["className"],
+    pre: ["className"],
+    span: ["className", "style"],
+    div: ["className"],
+  },
+  protocols: {
+    href: ["http", "https", "mailto"],
+  },
+  strip: ["script", "style", "iframe", "object", "embed", "form", "input"],
+}
 
 // Context for attachment URLs (batch loaded at MessageList level)
 const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
@@ -668,7 +702,7 @@ function MessageItem({
                       // When not searching, render with full markdown support
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw]}
+                        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
                         components={MarkdownComponents}
                       >
                         {processedContent}
