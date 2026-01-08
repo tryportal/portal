@@ -83,6 +83,18 @@ function NotificationListener({ showNotification, isTabVisible }: NotificationLi
     organization?._id ? { organizationId: organization._id, limit: 5 } : "skip"
   );
 
+  // Get muted channels to filter out notifications
+  const mutedChannels = useQuery(
+    api.channels.getMutedChannels,
+    organization?._id ? { organizationId: organization._id } : "skip"
+  );
+
+  // Create a Set of muted channel IDs for efficient lookup
+  const mutedChannelIds = React.useMemo(
+    () => new Set(mutedChannels || []),
+    [mutedChannels]
+  );
+
   // Subscribe to user conversations to get details about new DMs
   const conversations = useQuery(
     api.conversations.getUserConversations,
@@ -126,8 +138,14 @@ function NotificationListener({ showNotification, isTabVisible }: NotificationLi
       return;
     }
 
-    // Find new mentions
-    const newMentions = mentions.filter((mention) => !seenMentionIds.current.has(mention._id));
+    // Find new mentions (excluding muted channels)
+    const newMentions = mentions.filter((mention) => {
+      // Skip if already seen
+      if (seenMentionIds.current.has(mention._id)) return false;
+      // Skip if the channel is muted
+      if (mention.channelId && mutedChannelIds.has(mention.channelId)) return false;
+      return true;
+    });
 
     for (const mention of newMentions) {
       seenMentionIds.current.add(mention._id);
@@ -155,7 +173,7 @@ function NotificationListener({ showNotification, isTabVisible }: NotificationLi
         url,
       });
     }
-  }, [mentions, slug, getUserData, showNotification]);
+  }, [mentions, slug, getUserData, showNotification, mutedChannelIds]);
 
   // Handle new DMs
   React.useEffect(() => {

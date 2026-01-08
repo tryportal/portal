@@ -13,6 +13,7 @@ import {
   CaretRightIcon,
   FolderIcon,
   BellIcon,
+  BellSlashIcon,
   TrashIcon,
   PencilIcon,
   LinkIcon,
@@ -93,6 +94,8 @@ interface SortableChannelProps {
   isAdmin: boolean
   onEdit: () => void
   onDelete: () => void
+  isMuted: boolean
+  onMuteToggle: () => void
 }
 
 function SortableChannel({
@@ -103,6 +106,8 @@ function SortableChannel({
   isAdmin,
   onEdit,
   onDelete,
+  isMuted,
+  onMuteToggle,
 }: SortableChannelProps) {
   const {
     attributes,
@@ -134,7 +139,7 @@ function SortableChannel({
           isActive
             ? "bg-secondary text-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        } ${isAdmin ? "pl-1" : ""}`}
+        } ${isAdmin ? "pl-1" : ""} ${isMuted ? "opacity-60" : ""}`}
         onClick={onSelect}
       >
         {isAdmin && (
@@ -154,6 +159,9 @@ function SortableChannel({
         {channel.isPrivate && (
           <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
         )}
+        {isMuted && (
+          <BellSlashIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
       </Button>
 
       {/* More button on hover */}
@@ -170,9 +178,18 @@ function SortableChannel({
           <DotsThreeIcon className="size-4" weight="bold" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem>
-            <BellIcon className="size-4" />
-            Mute channel
+          <DropdownMenuItem onClick={onMuteToggle}>
+            {isMuted ? (
+              <>
+                <BellIcon className="size-4" />
+                Unmute channel
+              </>
+            ) : (
+              <>
+                <BellSlashIcon className="size-4" />
+                Mute channel
+              </>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem>
             <LinkIcon className="size-4" />
@@ -217,6 +234,8 @@ interface SortableCategoryProps {
   onEditChannel: (channelId: Id<"channels">) => void
   onDeleteChannel: (channelId: Id<"channels">) => void
   onDeleteCategory: (categoryId: Id<"channelCategories">) => void
+  mutedChannelIds: Set<string>
+  onMuteToggle: (channelId: Id<"channels">) => void
 }
 
 function SortableCategory({
@@ -230,6 +249,8 @@ function SortableCategory({
   onEditChannel,
   onDeleteChannel,
   onDeleteCategory,
+  mutedChannelIds,
+  onMuteToggle,
 }: SortableCategoryProps) {
   const {
     attributes,
@@ -310,6 +331,8 @@ function SortableCategory({
                 isAdmin={isAdmin}
                 onEdit={() => onEditChannel(channel._id)}
                 onDelete={() => onDeleteChannel(channel._id)}
+                isMuted={mutedChannelIds.has(channel._id)}
+                onMuteToggle={() => onMuteToggle(channel._id)}
               />
             ))}
           </SortableContext>
@@ -351,6 +374,23 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const reorderChannels = useMutation(api.channels.reorderChannels)
   const deleteChannel = useMutation(api.channels.deleteChannel)
   const deleteCategory = useMutation(api.channels.deleteCategory)
+
+  // Mute/unmute mutations
+  const muteChannel = useMutation(api.channels.muteChannel)
+  const unmuteChannel = useMutation(api.channels.unmuteChannel)
+
+  // Query muted channels
+  const mutedChannels = useQuery(
+    api.channels.getMutedChannels,
+    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+  )
+
+  // Create a Set for efficient lookup
+  // Create a Set for efficient lookup
+  const mutedChannelIds = React.useMemo(
+    () => new Set(mutedChannels || []),
+    [mutedChannels]
+  )
 
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([])
 
@@ -521,6 +561,18 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     setDeleteCategoryDialogOpen(true)
   }
 
+  const handleMuteToggle = async (channelId: Id<"channels">) => {
+    try {
+      if (mutedChannelIds.has(channelId)) {
+        await unmuteChannel({ channelId })
+      } else {
+        await muteChannel({ channelId })
+      }
+    } catch (error) {
+      console.error("Failed to toggle channel mute:", error)
+    }
+  }
+
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return
 
@@ -688,6 +740,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     onEditChannel={handleEditChannel}
                     onDeleteChannel={handleDeleteChannel}
                     onDeleteCategory={handleDeleteCategory}
+                    mutedChannelIds={mutedChannelIds}
+                    onMuteToggle={handleMuteToggle}
                   />
                 ))}
               </SortableContext>

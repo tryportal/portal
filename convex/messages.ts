@@ -268,7 +268,18 @@ export const getMentions = query({
       .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .collect();
 
-    const channelIds = channels.map((c) => c._id);
+    // Get user's muted channels
+    const mutedChannels = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const mutedChannelIds = new Set(mutedChannels.map((m) => m.channelId));
+
+    // Filter out muted channels
+    const channelIds = channels
+      .filter((c) => !mutedChannelIds.has(c._id))
+      .map((c) => c._id);
 
     // Build possible display name variants for fallback detection
     const displayNameParts = [
@@ -2384,7 +2395,18 @@ export const getUnreadMentions = query({
       .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .collect();
 
-    const channelIds = channels.map((c) => c._id);
+    // Get user's muted channels
+    const mutedChannels = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const mutedChannelIds = new Set(mutedChannels.map((m) => m.channelId));
+
+    // Filter out muted channels
+    const channelIds = channels
+      .filter((c) => !mutedChannelIds.has(c._id))
+      .map((c) => c._id);
 
     // Get user's read mention statuses
     const readStatuses = await ctx.db
@@ -2560,7 +2582,18 @@ export const getTotalInboxCount = query({
       .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .collect();
 
-    const channelIds = channels.map((c) => c._id);
+    // Get user's muted channels
+    const mutedChannels = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const mutedChannelIds = new Set(mutedChannels.map((m) => m.channelId));
+
+    // Filter out muted channels
+    const channelIds = channels
+      .filter((c) => !mutedChannelIds.has(c._id))
+      .map((c) => c._id);
 
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
