@@ -171,81 +171,98 @@ function formatFullDateTime(timestamp: number): string {
   })
 }
 
-// Markdown renderer components
-const MarkdownComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="mb-1 last:mb-0 [overflow-wrap:anywhere]">{children}</p>
-  ),
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium break-words"
-    >
-      {children}
-    </a>
-  ),
-  pre: ({ children }: { children?: React.ReactNode }) => (
-    <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
-      {children}
-    </pre>
-  ),
-  code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => {
-    const match = /language-(\w+)/.exec(className || "")
-    const codeString = String(children).replace(/\n$/, "")
+// Markdown renderer components - function to generate components based on context
+function getMarkdownComponents(isOwn?: boolean) {
+  return {
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <p className="mb-1 last:mb-0 [overflow-wrap:anywhere]">{children}</p>
+    ),
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={isOwn 
+          ? "text-primary-foreground/90 hover:text-primary-foreground hover:underline font-medium break-words underline-offset-2"
+          : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium break-words"
+        }
+      >
+        {children}
+      </a>
+    ),
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <pre className="rounded-md overflow-x-auto my-1.5 [&>code]:p-0 [&>code]:bg-transparent [&>code]:rounded-none">
+        {children}
+      </pre>
+    ),
+    code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => {
+      const match = /language-(\w+)/.exec(className || "")
+      const codeString = String(children).replace(/\n$/, "")
 
-    if (match) {
+      if (match) {
+        return (
+          <SyntaxHighlighter
+            style={oneDark}
+            language={match[1]}
+            PreTag="div"
+            customStyle={{
+              margin: 0,
+              padding: "0.5rem",
+              fontSize: "13px",
+              borderRadius: "0.375rem",
+              border: "1px solid hsl(var(--border))",
+            }}
+            {...props}
+          >
+            {codeString}
+          </SyntaxHighlighter>
+        )
+      }
+
       return (
-        <SyntaxHighlighter
-          style={oneDark}
-          language={match[1]}
-          PreTag="div"
-          customStyle={{
-            margin: 0,
-            padding: "0.5rem",
-            fontSize: "13px",
-            borderRadius: "0.375rem",
-            border: "1px solid hsl(var(--border))",
-          }}
+        <code 
+          className={isOwn
+            ? "px-1 py-0.5 bg-primary-foreground/20 rounded text-[13px] font-mono text-primary-foreground"
+            : "px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90"
+          }
           {...props}
         >
-          {codeString}
-        </SyntaxHighlighter>
-      )
-    }
-
-    return (
-      <code className="px-1 py-0.5 bg-muted rounded text-[13px] font-mono text-foreground/90" {...props}>
-        {children}
-      </code>
-    )
-  },
-  ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc list-inside my-1 space-y-0.5">{children}</ul>
-  ),
-  ol: ({ children, start }: { children?: React.ReactNode; start?: number }) => (
-    <ol start={start} className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
-  ),
-  strong: ({ children }: { children?: React.ReactNode }) => {
-    const text = typeof children === 'string' ? children : String(children)
-    if (text.startsWith('@')) {
-      return (
-        <span className="inline-flex items-center rounded px-1 py-0.5 font-medium bg-primary/10 text-foreground/80 hover:bg-primary/15 transition-colors">
           {children}
-        </span>
+        </code>
       )
-    }
-    return <strong className="font-semibold text-foreground">{children}</strong>
-  },
-  em: ({ children }: { children?: React.ReactNode }) => (
-    <em className="italic text-foreground/85">{children}</em>
-  ),
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="pl-2.5 py-0.5 my-1 border-l-2 border-border text-muted-foreground italic">
-      {children}
-    </blockquote>
-  ),
+    },
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="list-disc list-inside my-1 space-y-0.5">{children}</ul>
+    ),
+    ol: ({ children, start }: { children?: React.ReactNode; start?: number }) => (
+      <ol start={start} className="list-decimal list-inside my-1 space-y-0.5">{children}</ol>
+    ),
+    strong: ({ children }: { children?: React.ReactNode }) => {
+      const text = typeof children === 'string' ? children : String(children)
+      if (text.startsWith('@')) {
+        return (
+          <span className={isOwn
+            ? "inline-flex items-center rounded px-1 py-0.5 font-medium bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+            : "inline-flex items-center rounded px-1 py-0.5 font-medium bg-primary/10 text-foreground/80 hover:bg-primary/15 transition-colors"
+          }>
+            {children}
+          </span>
+        )
+      }
+      return <strong className={isOwn ? "font-semibold text-primary-foreground" : "font-semibold text-foreground"}>{children}</strong>
+    },
+    em: ({ children }: { children?: React.ReactNode }) => (
+      <em className={isOwn ? "italic text-primary-foreground/90" : "italic text-foreground/85"}>{children}</em>
+    ),
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
+      <blockquote className={isOwn
+        ? "pl-2.5 py-0.5 my-1 border-l-2 border-primary-foreground/30 text-primary-foreground/80 italic"
+        : "pl-2.5 py-0.5 my-1 border-l-2 border-border text-muted-foreground italic"
+      }>
+        {children}
+      </blockquote>
+    ),
+  }
 }
 
 // Check if content is only emojis (1-3 emojis)
@@ -350,16 +367,28 @@ function MessageContent({
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
           onKeyDown={handleEditKeyDown}
-          className="min-h-[80px] text-sm"
+          className={`min-h-[80px] text-sm ${
+            isOwn 
+              ? "bg-primary-foreground/10 text-primary-foreground border-primary-foreground/30 placeholder:text-primary-foreground/50" 
+              : ""
+          }`}
           autoFocus
         />
-        <div className="flex gap-2 text-xs text-muted-foreground">
+        <div className={`flex gap-2 text-xs ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
           <div className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border">Enter</kbd>
+            <kbd className={`px-1.5 py-0.5 rounded border ${
+              isOwn 
+                ? "bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground" 
+                : "bg-muted border-border"
+            }`}>Enter</kbd>
             <span>to save</span>
           </div>
           <div className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border">Esc</kbd>
+            <kbd className={`px-1.5 py-0.5 rounded border ${
+              isOwn 
+                ? "bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground" 
+                : "bg-muted border-border"
+            }`}>Esc</kbd>
             <span>to cancel</span>
           </div>
         </div>
@@ -368,6 +397,7 @@ function MessageContent({
             size="sm"
             onClick={handleEditSave}
             disabled={!editContent.trim() || editContent === message.content}
+            className={isOwn ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : ""}
           >
             <CheckIcon className="size-4 mr-1" />
             Save
@@ -376,6 +406,7 @@ function MessageContent({
             size="sm"
             variant="outline"
             onClick={handleEditCancel}
+            className={isOwn ? "border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" : ""}
           >
             <XIcon className="size-4 mr-1" />
             Cancel
@@ -405,7 +436,7 @@ function MessageContent({
             ) : (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={MarkdownComponents}
+                components={getMarkdownComponents(isOwn)}
               >
                 {processedContent}
               </ReactMarkdown>
