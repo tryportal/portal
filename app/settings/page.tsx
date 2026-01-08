@@ -560,8 +560,7 @@ export default function UserSettingsPage() {
                     ] as const
                   ).map((option) => {
                     const isSelected = settings.browserNotifications === option.value ||
-                      (option.value === "enabled" && settings.browserNotifications === "ask" && notificationPermission === "granted") ||
-                      (option.value === "disabled" && notificationPermission === "denied");
+                      (option.value === "enabled" && settings.browserNotifications === "ask" && notificationPermission === "granted");
                     const isDisabledByBrowser = notificationPermission === "denied" && option.value === "enabled";
                     return (
                       <button
