@@ -56,6 +56,8 @@ export function NotificationPermissionPrompt({
       const result = await requestPermission();
       if (result === "granted") {
         updateBrowserNotifications("enabled");
+      } else if (result === "denied") {
+        updateBrowserNotifications("disabled");
       }
     } finally {
       setIsRequesting(false);
@@ -136,6 +138,8 @@ export function NotificationPermissionBanner() {
       const result = await requestPermission();
       if (result === "granted") {
         updateBrowserNotifications("enabled");
+      } else if (result === "denied") {
+        updateBrowserNotifications("disabled");
       }
     } finally {
       setIsRequesting(false);

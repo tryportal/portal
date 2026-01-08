@@ -101,6 +101,13 @@ export default function UserSettingsPage() {
     setSelectedKey(settings.sidebarHotkey.key);
   }, [settings.sidebarHotkey]);
 
+  // Auto-upgrade "ask" to "enabled" when permission is granted
+  React.useEffect(() => {
+    if (settings.browserNotifications === "ask" && notificationPermission === "granted") {
+      updateBrowserNotifications("enabled");
+    }
+  }, [settings.browserNotifications, notificationPermission, updateBrowserNotifications]);
+
   // Handle keyboard shortcut recording
   React.useEffect(() => {
     if (!isRecording) return;
@@ -559,8 +566,7 @@ export default function UserSettingsPage() {
                       },
                     ] as const
                   ).map((option) => {
-                    const isSelected = settings.browserNotifications === option.value ||
-                      (option.value === "enabled" && settings.browserNotifications === "ask" && notificationPermission === "granted");
+                    const isSelected = settings.browserNotifications === option.value;
                     const isDisabledByBrowser = notificationPermission === "denied" && option.value === "enabled";
                     return (
                       <button
