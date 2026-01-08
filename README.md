@@ -67,12 +67,18 @@ Portal includes built-in analytics proxy endpoints to prevent ad-blockers from i
 ### Rate Limiting
 
 - **Default limit**: 100 requests per minute per IP address
+- **No-IP fallback limit**: 10 requests per minute (development only)
 - **Window**: Rolling 1-minute window
 - **Headers**: Standard rate limit headers (`X-RateLimit-*`) included in responses
 - **Response**: `429 Too Many Requests` when quota exceeded, with `Retry-After` header
 - **Storage**: 
   - **Development**: In-memory store (resets on server restart)
   - **Production**: Recommended to use Redis-backed counters (e.g., Upstash, Vercel KV)
+
+**Missing IP Headers:**
+- **Production**: Requests without valid IP headers (`x-forwarded-for` or `x-real-ip`) are rejected with `400 Bad Request` to prevent shared bucket exhaustion
+- **Development**: A stricter shared rate limit bucket (10 req/min) is used to allow local testing while preventing abuse
+- This prevents malicious clients from stripping IP headers to exhaust a shared "unknown" quota
 
 ### Path Validation
 
@@ -93,9 +99,9 @@ Requests to non-allowlisted paths return `403 Forbidden`.
 ### Logging & Monitoring
 
 All proxy requests are logged in structured JSON format with:
-- Timestamp, IP address, user agent
+- Timestamp, IP address (or "unknown" if missing), user agent
 - Request method and full URL
-- Status (`allowed`, `rate_limited`, `blocked_invalid_path`)
+- Status (`allowed`, `rate_limited`, `blocked_invalid_path`, `blocked_missing_ip`, `rate_limited_no_ip`, `allowed_no_ip`)
 - Additional details (rate limit remaining, blocked path, etc.)
 
 **Operational Trade-offs:**
@@ -134,9 +140,10 @@ async function checkRateLimit(key: string) {
 ```
 
 **Monitoring setup:**
-- Set up alerts for high `rate_limited` or `blocked_invalid_path` counts
+- Set up alerts for high `rate_limited`, `blocked_invalid_path`, or `blocked_missing_ip` counts
 - Track P99 latency for `/ingest/*` and `/db-ingest/*` routes
 - Monitor rate limit effectiveness with analytics on blocked requests
+- Watch for `allowed_no_ip` logs in production (should not occur with proper deployment)
 
 ## License
 

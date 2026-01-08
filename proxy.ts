@@ -26,6 +26,7 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 // Configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests per minute per IP
+const RATE_LIMIT_MAX_REQUESTS_NO_IP = 10; // Much stricter limit for requests without valid IP
 const CLEANUP_INTERVAL = 5 * 60 * 1000; // Clean up stale entries every 5 minutes
 
 // Allowed path patterns for analytics proxies
@@ -53,21 +54,30 @@ function cleanupRateLimitStore() {
   if (now - lastCleanup < CLEANUP_INTERVAL) return;
   
   lastCleanup = now;
-  for (const [key, value] of rateLimitStore.entries()) {
+  const keysToDelete: string[] = [];
+  rateLimitStore.forEach((value, key) => {
     if (now > value.resetTime) {
-      rateLimitStore.delete(key);
+      keysToDelete.push(key);
     }
-  }
+  });
+  keysToDelete.forEach(key => rateLimitStore.delete(key));
 }
 
-function getRateLimitKey(request: NextRequest): string {
-  // Use IP address or fallback to a default key
+function getRateLimitKey(request: NextRequest): string | null {
+  // Extract IP from headers
   const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0] : request.headers.get("x-real-ip") || "unknown";
+  const ip = forwarded ? forwarded.split(",")[0].trim() : request.headers.get("x-real-ip");
+  
+  // Return null if no valid IP is available
+  // This prevents all requests without IP headers from sharing one rate-limit bucket
+  if (!ip) {
+    return null;
+  }
+  
   return `ratelimit:${ip}`;
 }
 
-function checkRateLimit(key: string): { allowed: boolean; remaining: number; resetTime: number } {
+function checkRateLimit(key: string, maxRequests: number = RATE_LIMIT_MAX_REQUESTS): { allowed: boolean; remaining: number; resetTime: number } {
   cleanupRateLimitStore();
   
   const now = Date.now();
@@ -77,16 +87,16 @@ function checkRateLimit(key: string): { allowed: boolean; remaining: number; res
     // Create new entry
     const resetTime = now + RATE_LIMIT_WINDOW_MS;
     rateLimitStore.set(key, { count: 1, resetTime });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, resetTime };
+    return { allowed: true, remaining: maxRequests - 1, resetTime };
   }
   
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+  if (entry.count >= maxRequests) {
     return { allowed: false, remaining: 0, resetTime: entry.resetTime };
   }
   
   // Increment counter
   entry.count++;
-  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - entry.count, resetTime: entry.resetTime };
+  return { allowed: true, remaining: maxRequests - entry.count, resetTime: entry.resetTime };
 }
 
 function isPathAllowed(pathname: string): boolean {
@@ -136,6 +146,58 @@ function handleAnalyticsProxy(request: NextRequest): NextResponse | null {
   
   // Rate limiting
   const rateLimitKey = getRateLimitKey(request);
+  
+  // Handle missing IP headers - reject in production or apply stricter rate limit
+  if (rateLimitKey === null) {
+    const isProduction = process.env.NODE_ENV === "production";
+    
+    if (isProduction) {
+      // In production, reject requests without valid IP headers
+      logRequest(request, "blocked_missing_ip", "No valid IP header found");
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid request headers" }),
+        { 
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    } else {
+      // In development, use a much stricter shared rate limit bucket
+      // This allows local testing but prevents abuse if deployed without proper IP headers
+      const fallbackKey = "ratelimit:no-ip-fallback";
+      const { allowed, remaining, resetTime } = checkRateLimit(fallbackKey, RATE_LIMIT_MAX_REQUESTS_NO_IP);
+      
+      if (!allowed) {
+        logRequest(request, "rate_limited_no_ip", `fallback bucket exhausted`);
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "Too many requests (no IP header)",
+            retryAfter: Math.ceil((resetTime - Date.now()) / 1000)
+          }),
+          { 
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": String(Math.ceil((resetTime - Date.now()) / 1000)),
+              "X-RateLimit-Limit": String(RATE_LIMIT_MAX_REQUESTS_NO_IP),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(Math.floor(resetTime / 1000)),
+            }
+          }
+        );
+      }
+      
+      logRequest(request, "allowed_no_ip", `remaining: ${remaining} (fallback bucket)`);
+      
+      const response = NextResponse.next();
+      response.headers.set("X-RateLimit-Limit", String(RATE_LIMIT_MAX_REQUESTS_NO_IP));
+      response.headers.set("X-RateLimit-Remaining", String(remaining));
+      response.headers.set("X-RateLimit-Reset", String(Math.floor(resetTime / 1000)));
+      return response;
+    }
+  }
+  
+  // Normal rate limiting with valid IP
   const { allowed, remaining, resetTime } = checkRateLimit(rateLimitKey);
   
   if (!allowed) {
