@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { UsersIcon, Spinner } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useTheme } from "@/lib/theme-provider";
@@ -37,8 +38,11 @@ export function JoinWorkspaceDialog({ open, onOpenChange }: JoinWorkspaceDialogP
       analytics.workspaceJoined({ slug: result.slug });
       onOpenChange(false);
       router.push(`/w/${result.slug}`);
+      setJoiningOrgId(null);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Failed to join workspace:", error);
+      toast.error(`Failed to join workspace: ${errorMessage}`);
       setJoiningOrgId(null);
     }
   };
