@@ -6,6 +6,9 @@ export const analytics = {
   workspaceCreated: (props: { workspaceId: string; name: string }) => {
     posthog.capture("workspace_created", props);
   },
+  workspaceJoined: (props: { slug: string }) => {
+    posthog.capture("workspace_joined", props);
+  },
   workspaceViewed: (props: { workspaceId: string; slug: string }) => {
     posthog.capture("workspace_viewed", props);
   },

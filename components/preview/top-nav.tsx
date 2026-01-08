@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   HouseIcon,
@@ -8,6 +9,7 @@ import {
   CaretDownIcon,
   CheckIcon,
   PlusIcon,
+  UsersIcon,
   ListIcon,
   GearIcon,
   SignOutIcon,
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/lib/theme-provider";
+import { JoinWorkspaceDialog } from "@/components/join-workspace-dialog";
 
 interface TopNavProps {
   activeTab: string;
@@ -52,6 +55,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const isDark = resolvedTheme === "dark";
   const { user } = useUser();
   const { signOut } = useClerk();
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } =
@@ -88,7 +92,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   };
 
   const handleCreateOrganization = () => {
-    router.push("/setup?new=true");
+    router.push("/setup?new=true&step=1");
+  };
+
+  const handleJoinOrganization = () => {
+    setJoinDialogOpen(true);
   };
 
   const handleTabChange = (tabId: string) => {
@@ -236,7 +244,14 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               className="gap-2 px-2 py-1.5 cursor-pointer"
             >
               <PlusIcon className="size-3.5 text-foreground" />
-              <span className="text-sm">Create Organization</span>
+              <span className="text-sm">Create Workspace</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleJoinOrganization}
+              className="gap-2 px-2 py-1.5 cursor-pointer"
+            >
+              <UsersIcon className="size-3.5 text-foreground" />
+              <span className="text-sm">Join Workspace</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -408,6 +423,9 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           })}
         </div>
       </nav>
+
+      {/* Join Workspace Dialog */}
+      <JoinWorkspaceDialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen} />
     </header>
   );
 }

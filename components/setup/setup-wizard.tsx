@@ -11,6 +11,7 @@ import { analytics } from "@/lib/analytics";
 import { useUserDataCache } from "@/components/user-data-cache";
 import { Button } from "@/components/ui/button";
 import { SetupProgress } from "@/components/setup/setup-progress";
+import { ChoiceStep } from "@/components/setup/steps/choice-step";
 import { IdentityStep } from "@/components/setup/steps/identity-step";
 import { AboutStep } from "@/components/setup/steps/about-step";
 import { InviteStep } from "@/components/setup/steps/invite-step";
@@ -51,6 +52,7 @@ const RESERVED_ROUTES = [
 ];
 
 const STEPS = [
+  { id: "choice", label: "Choice" },
   { id: "identity", label: "Identity" },
   { id: "about", label: "About" },
   { id: "invite", label: "Invite" },
@@ -147,20 +149,29 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       setLogoId(existingOrg.logoId ?? undefined);
       setHasInitialized(true);
 
-      // If org already has name and slug, start from appropriate step
+      // If org already has name and slug, start from about step (step 2)
       if (existingOrg.name && existingOrg.slug && step === 0) {
-        setStep(1);
+        setStep(2);
       }
     }
   }, [existingOrg, hasInitialized, step, setStep]);
+
+  const handleCreateNew = () => {
+    setStep(1);
+  };
+
+  const handleJoinWorkspace = (slug: string) => {
+    analytics.workspaceJoined({ slug });
+    router.replace(`/w/${slug}`);
+  };
 
   const handleContinue = async () => {
     setIsSaving(true);
     setError(null);
 
     try {
-      // Validate on step 0
-      if (step === 0) {
+      // Validate on step 1 (identity step)
+      if (step === 1) {
         if (!name.trim() || name.trim().length < 2) {
           throw new Error("Workspace name must be at least 2 characters");
         }
@@ -177,7 +188,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
 
       let orgId = currentOrgId;
 
-      if (step === 0) {
+      if (step === 1) {
         if (!orgId) {
           // Create new organization
           orgId = await createOrg({
@@ -198,7 +209,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
             logoId,
           });
         }
-      } else if (step === 1 && orgId) {
+      } else if (step === 2 && orgId) {
         // Update description
         await updateOrg({
           id: orgId,
@@ -302,22 +313,35 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     }));
 
   const isStepValid = () => {
-    if (step === 0) {
+    if (step === 1) {
       return name.trim().length >= 2 && slug.trim().length >= 2;
     }
     return true;
   };
 
+  // For choice step, don't show progress or continue button
+  const showProgress = step > 0;
+  const progressSteps = STEPS.slice(1); // Exclude choice step from progress
+
   return (
     <div className="w-full max-w-[95%] sm:max-w-md mx-auto px-2 sm:px-0">
-      {/* Progress indicator */}
-      <div className="mb-8">
-        <SetupProgress currentStep={step} steps={STEPS} />
-      </div>
+      {/* Progress indicator - only show for create flow */}
+      {showProgress && (
+        <div className="mb-8">
+          <SetupProgress currentStep={step - 1} steps={progressSteps} />
+        </div>
+      )}
 
       {/* Step content */}
       <div className="min-h-[300px]">
         {step === 0 && (
+          <ChoiceStep
+            onCreateNew={handleCreateNew}
+            onJoinWorkspace={handleJoinWorkspace}
+          />
+        )}
+
+        {step === 1 && (
           <IdentityStep
             name={name}
             setName={setName}
@@ -329,11 +353,11 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
           />
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <AboutStep description={description} setDescription={setDescription} />
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <InviteStep
             onInvite={handleInvite}
             pendingInvitations={formattedInvitations}
@@ -353,38 +377,40 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
         </div>
       )}
 
-      {/* Actions */}
-      <div className="mt-8 flex items-center justify-between pt-4 border-t border-border">
-        <div>
-          {step === 2 && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleSkip}
-              disabled={isSaving}
-              className="text-muted-foreground"
-            >
-              Skip for now
-            </Button>
-          )}
-        </div>
+      {/* Actions - only show for create flow (steps 1-3) */}
+      {step > 0 && (
+        <div className="mt-8 flex items-center justify-between pt-4 border-t border-border">
+          <div>
+            {step === 3 && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSkip}
+                disabled={isSaving}
+                className="text-muted-foreground"
+              >
+                Skip for now
+              </Button>
+            )}
+          </div>
 
-        <Button
-          type="button"
-          onClick={handleContinue}
-          disabled={isSaving || !isStepValid()}
-          className="gap-2 min-w-[120px]"
-        >
-          {isSaving ? (
-            <Spinner className="size-4 animate-spin" />
-          ) : (
-            <>
-              {step === STEPS.length - 1 ? "Finish" : "Continue"}
-              <ArrowRight className="size-4" weight="bold" />
-            </>
-          )}
-        </Button>
-      </div>
+          <Button
+            type="button"
+            onClick={handleContinue}
+            disabled={isSaving || !isStepValid()}
+            className="gap-2 min-w-[120px]"
+          >
+            {isSaving ? (
+              <Spinner className="size-4 animate-spin" />
+            ) : (
+              <>
+                {step === STEPS.length - 1 ? "Finish" : "Continue"}
+                <ArrowRight className="size-4" weight="bold" />
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
