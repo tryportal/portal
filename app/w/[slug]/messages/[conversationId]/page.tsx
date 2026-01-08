@@ -506,7 +506,7 @@ export default function ConversationPage({
   }
 
   return (
-    <main className="flex flex-1 flex-col h-full bg-background overflow-hidden">
+    <main className="flex flex-1 flex-col h-full min-h-0 bg-background overflow-hidden">
       {/* DM Header */}
       <DmHeader
         participantName={participantName}

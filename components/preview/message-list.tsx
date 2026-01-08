@@ -946,6 +946,28 @@ export function MessageList({
     return () => resizeObserver.disconnect()
   }, [scrollToBottom])
 
+  // ResizeObserver to detect scroll container size changes (e.g., when message input grows/shrinks)
+  // and maintain scroll position at bottom if user was at bottom
+  React.useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    let lastClientHeight = container.clientHeight
+
+    const resizeObserver = new ResizeObserver(() => {
+      const newClientHeight = container.clientHeight
+      // If container shrunk (message input grew) and user was near bottom, scroll to bottom
+      if (newClientHeight < lastClientHeight && isUserNearBottom.current) {
+        scrollToBottom()
+      }
+      lastClientHeight = newClientHeight
+    })
+
+    resizeObserver.observe(container)
+
+    return () => resizeObserver.disconnect()
+  }, [scrollToBottom])
+
   // Scroll to bottom on initial load and when new messages arrive (if user is near bottom)
   React.useLayoutEffect(() => {
     if (messages.length > 0) {
@@ -1001,19 +1023,21 @@ export function MessageList({
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
     return (
-      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
-        <EmptyChannelState
-          channelName={channelName}
-          channelDescription={channelDescription}
-          channelIcon={channelIcon}
-        />
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
+          <EmptyChannelState
+            channelName={channelName}
+            channelDescription={channelDescription}
+            channelIcon={channelIcon}
+          />
+        </div>
       </div>
     )
   }
 
   return (
     <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto overflow-x-hidden flex flex-col"

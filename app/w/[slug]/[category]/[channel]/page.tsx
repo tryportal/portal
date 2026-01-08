@@ -565,7 +565,7 @@ export default function ChannelPage({
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-card">
+    <div className="flex flex-1 flex-col h-full min-h-0 bg-card overflow-hidden">
       <ChatInterface
         channelName={channel.name}
         channelDescription={channel.description}
