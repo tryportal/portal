@@ -34,11 +34,13 @@ import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 import type { Message, Attachment } from "./message-list"
+import { sanitizeSchema } from "@/lib/markdown-config"
 
 // Utility functions for attachments
 function formatFileSize(bytes: number): string {
@@ -499,7 +501,7 @@ function MessageContent({
             ) : (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
+                rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
                 components={getMarkdownComponents(isOwn)}
               >
                 {processedContent}
