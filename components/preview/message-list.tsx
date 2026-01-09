@@ -38,7 +38,7 @@ import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
 import { useUserSettings } from "@/lib/user-settings"
-import { CompactMessageItem, BubbleMessageItem } from "./message-styles"
+import { CompactMessageItem, BubbleMessageItem, AttachmentUrlContext } from "./message-styles"
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -51,9 +51,6 @@ import { LinkPreview, type LinkEmbedData } from "./link-preview"
 import { sanitizeSchema } from "@/lib/markdown-config"
 
 export type { LinkEmbedData as LinkEmbed }
-
-// Context for attachment URLs (batch loaded at MessageList level)
-const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
 
 export interface Attachment {
   storageId: string
