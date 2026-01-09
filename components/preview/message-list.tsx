@@ -909,8 +909,8 @@ export function MessageList({
   // Choose the appropriate message component based on style
   const MessageItemComponent = messageStyle === "bubble" ? BubbleMessageItem : CompactMessageItem
 
-  // Memoize messages array to prevent unnecessary re-renders and dependency issues
-  const memoizedMessages = React.useMemo(() => messages, [messages.length, messages[messages.length - 1]?.id])
+  // Memoize messages array to prevent unnecessary re-renders
+  const memoizedMessages = React.useMemo(() => messages, [messages])
 
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {

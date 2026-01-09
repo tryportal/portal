@@ -44,7 +44,7 @@ export default function RootLayout({
         <head>
           <meta name="theme-color" content="#26251E" />
         </head>
-        <body>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
             <ClerkThemeProvider>
               <UserSettingsProvider>

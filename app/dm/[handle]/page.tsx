@@ -48,7 +48,7 @@ export default function DmSharePage({
   const primaryWorkspace = useQuery(api.users.getPrimaryWorkspace)
 
   // Handle starting the conversation
-  const handleStartConversation = async () => {
+  const handleStartConversation = React.useCallback(async () => {
     if (!targetUser || isCreating) return
 
     setIsCreating(true)
@@ -71,7 +71,7 @@ export default function DmSharePage({
       setError(err instanceof Error ? err.message : "Failed to start conversation")
       setIsCreating(false)
     }
-  }
+  }, [targetUser, isCreating, getOrCreateConversation, primaryWorkspace, router])
 
   // Auto-start conversation when signed in (if not own profile)
   React.useEffect(() => {
@@ -86,8 +86,7 @@ export default function DmSharePage({
     ) {
       handleStartConversation()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoaded, isSignedIn, targetUser, currentUser, isCreating, error])
+  }, [authLoaded, isSignedIn, targetUser, currentUser, isCreating, error, handleStartConversation])
 
   // Check if visiting own profile
   const isOwnProfile = currentUser && targetUser && currentUser.clerkId === targetUser.clerkId
