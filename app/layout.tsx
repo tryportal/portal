@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/lib/convex-provider";
 import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
 import { UserSettingsProvider } from "@/lib/user-settings";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import { Toaster } from "sonner";
@@ -37,19 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-        appearance={{
-          baseTheme: undefined,
-          variables: {
-            colorBackground: "var(--card)",
-            colorText: "var(--foreground)",
-            colorTextSecondary: "var(--muted-foreground)",
-            colorInputBackground: "var(--background)",
-            colorInputText: "var(--foreground)",
-            colorPrimary: "var(--primary)",
-          },
-        }}
-      >
+    <ClerkProvider>
       <html lang="en" className={inter.variable} suppressHydrationWarning>
         <head>
           <meta name="theme-color" content="#26251E" />
@@ -76,18 +65,20 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-            <UserSettingsProvider>
-              <PostHogProvider>
-                <DatabuddyProvider>
-                  <ConvexClientProvider>
-                    <RootNotificationProvider>
-                      {children}
-                      <Toaster position="bottom-right" richColors />
-                    </RootNotificationProvider>
-                  </ConvexClientProvider>
-                </DatabuddyProvider>
-              </PostHogProvider>
-            </UserSettingsProvider>
+            <ClerkThemeProvider>
+              <UserSettingsProvider>
+                <PostHogProvider>
+                  <DatabuddyProvider>
+                    <ConvexClientProvider>
+                      <RootNotificationProvider>
+                        {children}
+                        <Toaster position="bottom-right" richColors />
+                      </RootNotificationProvider>
+                    </ConvexClientProvider>
+                  </DatabuddyProvider>
+                </PostHogProvider>
+              </UserSettingsProvider>
+            </ClerkThemeProvider>
           </ThemeProvider>
         </body>
       </html>
