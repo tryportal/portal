@@ -80,6 +80,9 @@ export interface MessageItemProps {
   isGrouped?: boolean
   searchQuery?: string
   isHighlighted?: boolean
+  // Controlled hover state from parent to prevent duplicate menus
+  isHovered?: boolean
+  onHover?: (messageId: string | null) => void
 }
 
 // Attachment context for getting URLs
@@ -680,8 +683,9 @@ export function CompactMessageItem({
   isGrouped,
   searchQuery,
   isHighlighted,
+  isHovered = false,
+  onHover,
 }: MessageItemProps) {
-  const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
@@ -726,8 +730,8 @@ export function CompactMessageItem({
     <div
       className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""}`}
       style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => onHover?.(message.id)}
+      onMouseLeave={() => onHover?.(null)}
     >
       {/* Reply indicator */}
       {message.parentMessage && message.parentMessageId && (
@@ -886,8 +890,9 @@ export function BubbleMessageItem({
   isGrouped,
   searchQuery,
   isHighlighted,
+  isHovered = false,
+  onHover,
 }: MessageItemProps) {
-  const [isHovered, setIsHovered] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
@@ -933,8 +938,8 @@ export function BubbleMessageItem({
     <div
       className={`group relative ${isHighlighted ? "animate-highlight-message" : ""}`}
       style={{ marginTop: isGrouped ? "2px" : "12px" }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => onHover?.(message.id)}
+      onMouseLeave={() => onHover?.(null)}
     >
       {/* Reply indicator */}
       {message.parentMessage && message.parentMessageId && (

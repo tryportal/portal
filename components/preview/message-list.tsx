@@ -877,6 +877,8 @@ export function MessageList({
   const [showScrollButton, setShowScrollButton] = React.useState(false)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
+  // Track which message is currently hovered (lifted state to prevent duplicate menus)
+  const [hoveredMessageId, setHoveredMessageId] = React.useState<string | null>(null)
 
   // Get user message style settings
   const { settings } = useUserSettings()
@@ -929,6 +931,11 @@ export function MessageList({
       isUserNearBottom.current = true
       setShowScrollButton(false)
     }
+  }, [])
+
+  // Callback to handle hover state change
+  const handleMessageHover = React.useCallback((messageId: string | null) => {
+    setHoveredMessageId(messageId)
   }, [])
 
   // Callback to scroll to a specific message
@@ -1147,6 +1154,8 @@ export function MessageList({
                         isGrouped={isGrouped}
                         searchQuery={searchQuery}
                         isHighlighted={highlightedMessageId === message.id}
+                        isHovered={hoveredMessageId === message.id}
+                        onHover={handleMessageHover}
                       />
                     </div>
                   </React.Fragment>
