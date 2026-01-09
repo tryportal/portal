@@ -31,27 +31,34 @@ export const metadata: Metadata = {
   description: "Team chat, reimagined.",
   manifest: "/manifest.json",
 };
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <head>
-        <meta name="theme-color" content="#26251E" />
-        suppressHydrationWarning
-      >
-        <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-          <ClerkThemeProvider>
-            <UserSettingsProvider>
-              <PostHogProvider>
-                <DatabuddyProvider>
-                  <ConvexClientProvider>
-                    <RootNotificationProvider>
-                      {children}
-                      <Toaster position="bottom-right" richColors />
-                    </RootNotificationProvider>
-                  </ConvexClientProvider>
-                </DatabuddyProvider>
-              </PostHogProvider>
-            </UserSettingsProvider>
-          </ClerkThemeProvider>
+    <ClerkProvider>
+      <html lang="en" className={inter.variable} suppressHydrationWarning>
+        <head>
+          <meta name="theme-color" content="#26251E" />
+        </head>
+        <body>
+          <ThemeProvider defaultTheme="system" storageKey="portal-theme">
+            <ClerkThemeProvider>
+              <UserSettingsProvider>
+                <PostHogProvider>
+                  <DatabuddyProvider>
+                    <ConvexClientProvider>
+                      <RootNotificationProvider>
+                        {children}
+                        <Toaster position="bottom-right" richColors />
+                      </RootNotificationProvider>
+                    </ConvexClientProvider>
+                  </DatabuddyProvider>
+                </PostHogProvider>
+              </UserSettingsProvider>
+            </ClerkThemeProvider>
           </ThemeProvider>
         </body>
       </html>
