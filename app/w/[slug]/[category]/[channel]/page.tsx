@@ -161,6 +161,16 @@ export default function ChannelPage({
   const saveMessage = useMutation(api.messages.saveMessage);
   const unsaveMessage = useMutation(api.messages.unsaveMessage);
   const forwardMessage = useMutation(api.messages.forwardMessage);
+  const markChannelAsRead = useMutation(api.channels.markChannelAsRead);
+
+  // Mark channel as read when viewing it
+  React.useEffect(() => {
+    if (channelId) {
+      markChannelAsRead({ channelId }).catch(() => {
+        // Ignore errors - user may not have access or channel may not exist
+      });
+    }
+  }, [channelId, markChannelAsRead]);
 
   // Real-time subscription for typing users (replaces polling)
   const typingUsersQuery = useQuery(

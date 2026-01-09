@@ -875,8 +875,12 @@ export function MessageList({
   const isInitialLoad = React.useRef(true)
   // Track the last message ID to detect new messages from current user
   const lastMessageId = React.useRef<string | null>(null)
+  // Track the last message ID seen at bottom (for new message indicator)
+  const lastSeenMessageId = React.useRef<string | null>(null)
   // State for showing the scroll-to-bottom button
   const [showScrollButton, setShowScrollButton] = React.useState(false)
+  // State for tracking new message count while scrolled up
+  const [newMessageCount, setNewMessageCount] = React.useState(0)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
   // Track which message is currently hovered (lifted state to prevent duplicate menus)
@@ -920,8 +924,16 @@ export function MessageList({
       if (!isInitialLoad.current) {
         setShowScrollButton(!nearBottom)
       }
+      // When user scrolls to bottom, mark all messages as seen
+      if (nearBottom && messages.length > 0) {
+        const latestId = messages[messages.length - 1].id
+        if (lastSeenMessageId.current !== latestId) {
+          lastSeenMessageId.current = latestId
+          setNewMessageCount(0)
+        }
+      }
     }
-  }, [])
+  }, [messages])
 
   // Callback to scroll to bottom
   const scrollToBottom = React.useCallback((smooth = false) => {
@@ -932,8 +944,13 @@ export function MessageList({
       })
       isUserNearBottom.current = true
       setShowScrollButton(false)
+      setNewMessageCount(0)
+      // Mark all messages as seen
+      if (messages.length > 0) {
+        lastSeenMessageId.current = messages[messages.length - 1].id
+      }
     }
-  }, [])
+  }, [messages])
 
   // Callback to handle hover state change
   const handleMessageHover = React.useCallback((messageId: string | null) => {
@@ -1035,10 +1052,18 @@ export function MessageList({
             })
           })
         }
+      } else if (isNewMessage && !isUserNearBottom.current && !isFromCurrentUser) {
+        // User is scrolled up and new message arrived from someone else - increment counter
+        setNewMessageCount(prev => prev + 1)
       }
 
       previousMessageCount.current = messages.length
       lastMessageId.current = latestMessage.id
+      
+      // Initialize lastSeenMessageId on first load
+      if (!lastSeenMessageId.current && isInitialLoad.current) {
+        lastSeenMessageId.current = latestMessage.id
+      }
 
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
@@ -1170,17 +1195,34 @@ export function MessageList({
           </div>
         </div>
 
-        {/* Scroll to bottom button */}
+        {/* Scroll to bottom button with new message indicator */}
         {showScrollButton && (
-          <Button
-            onClick={() => scrollToBottom(true)}
-            size="icon"
-            variant="secondary"
-            className="absolute bottom-4 right-4 z-20 rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
-            aria-label="Scroll to bottom"
-          >
-            <ArrowDownIcon className="size-4" />
-          </Button>
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col items-center gap-2">
+            {newMessageCount > 0 && (
+              <Button
+                onClick={() => scrollToBottom(true)}
+                variant="default"
+                size="sm"
+                className="rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200 px-3 gap-1.5"
+              >
+                <ArrowDownIcon className="size-3.5" />
+                <span className="text-xs font-medium">
+                  {newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'}
+                </span>
+              </Button>
+            )}
+            {newMessageCount === 0 && (
+              <Button
+                onClick={() => scrollToBottom(true)}
+                size="icon"
+                variant="secondary"
+                className="rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+                aria-label="Scroll to bottom"
+              >
+                <ArrowDownIcon className="size-4" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </AttachmentUrlContext.Provider>

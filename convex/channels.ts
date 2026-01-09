@@ -869,3 +869,136 @@ export const getMutedChannels = query({
       .map((mute) => mute.channelId);
   },
 });
+
+// ============================================================================
+// Channel Read Status
+// ============================================================================
+
+/**
+ * Mark a channel as read by the current user
+ * This updates the lastReadAt timestamp to the latest message's createdAt
+ */
+export const markChannelAsRead = mutation({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Check if user is a member of the organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Not a member of this organization");
+    }
+
+    // Get the latest message in the channel to use its timestamp
+    const latestMessage = await ctx.db
+      .query("messages")
+      .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId))
+      .order("desc")
+      .first();
+
+    // Use the latest message timestamp, or current time if no messages
+    const readTimestamp = latestMessage?.createdAt ?? Date.now();
+
+    // Check if there's already a read status entry
+    const existingStatus = await ctx.db
+      .query("channelReadStatus")
+      .withIndex("by_channel_and_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", userId)
+      )
+      .first();
+
+    if (existingStatus) {
+      // Only update if the new timestamp is greater
+      if (readTimestamp > existingStatus.lastReadAt) {
+        await ctx.db.patch(existingStatus._id, { lastReadAt: readTimestamp });
+      }
+    } else {
+      // Create new read status
+      await ctx.db.insert("channelReadStatus", {
+        channelId: args.channelId,
+        userId,
+        lastReadAt: readTimestamp,
+      });
+    }
+  },
+});
+
+/**
+ * Get unread status for all channels in an organization
+ * Returns a map of channelId -> hasUnread (boolean)
+ */
+export const getUnreadChannels = query({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return {};
+
+    const userId = identity.subject;
+
+    // Check if user is a member of the organization
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return {};
+
+    // Get all channels in this organization
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .collect();
+
+    // Get all read statuses for this user
+    const readStatuses = await ctx.db
+      .query("channelReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const readStatusMap = new Map(
+      readStatuses.map((rs) => [rs.channelId, rs.lastReadAt])
+    );
+
+    const unreadChannels: Record<string, boolean> = {};
+
+    // Check each channel for unread messages
+    for (const channel of channels) {
+      const lastReadAt = readStatusMap.get(channel._id) ?? 0;
+
+      // Get latest message in this channel
+      const latestMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) => q.eq("channelId", channel._id))
+        .order("desc")
+        .first();
+
+      // Channel has unread if latest message is after lastReadAt and not from current user
+      if (latestMessage && latestMessage.createdAt > lastReadAt && latestMessage.userId !== userId) {
+        unreadChannels[channel._id] = true;
+      }
+    }
+
+    return unreadChannels;
+  },
+});

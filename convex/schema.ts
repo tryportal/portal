@@ -210,4 +210,14 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_channel", ["channelId"])
     .index("by_user_and_channel", ["userId", "channelId"]),
+
+  // Tracks the last time a user read a channel (for unread indicators)
+  channelReadStatus: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID
+    lastReadAt: v.number(), // Timestamp of when user last read the channel
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_user", ["userId"])
+    .index("by_channel_and_user", ["channelId", "userId"]),
 });
