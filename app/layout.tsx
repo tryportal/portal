@@ -31,54 +31,27 @@ export const metadata: Metadata = {
   description: "Team chat, reimagined.",
   manifest: "/manifest.json",
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={inter.variable} suppressHydrationWarning>
-        <head>
-          <meta name="theme-color" content="#26251E" />
-          {/* Prevent flash of wrong theme */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function() {
-                  try {
-                    var theme = localStorage.getItem('portal-theme');
-                    var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    var resolved = theme === 'dark' || (theme === 'system' && systemDark) || (!theme && systemDark);
-                    if (resolved) {
-                      document.documentElement.classList.add('dark');
-                    }
-                  } catch (e) {}
-                })();
-              `,
-            }}
-          />
-        </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          suppressHydrationWarning
-        >
-          <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-            <ClerkThemeProvider>
-              <UserSettingsProvider>
-                <PostHogProvider>
-                  <DatabuddyProvider>
-                    <ConvexClientProvider>
-                      <RootNotificationProvider>
-                        {children}
-                        <Toaster position="bottom-right" richColors />
-                      </RootNotificationProvider>
-                    </ConvexClientProvider>
-                  </DatabuddyProvider>
-                </PostHogProvider>
-              </UserSettingsProvider>
-            </ClerkThemeProvider>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#26251E" />
+        suppressHydrationWarning
+      >
+        <ThemeProvider defaultTheme="system" storageKey="portal-theme">
+          <ClerkThemeProvider>
+            <UserSettingsProvider>
+              <PostHogProvider>
+                <DatabuddyProvider>
+                  <ConvexClientProvider>
+                    <RootNotificationProvider>
+                      {children}
+                      <Toaster position="bottom-right" richColors />
+                    </RootNotificationProvider>
+                  </ConvexClientProvider>
+                </DatabuddyProvider>
+              </PostHogProvider>
+            </UserSettingsProvider>
+          </ClerkThemeProvider>
           </ThemeProvider>
         </body>
       </html>
