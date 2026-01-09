@@ -159,7 +159,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         }
       );
 
-      // Reset form and close popover
+      // Reset form and close popover only on success
       setFeedbackTitle("");
       setFeedbackDescription("");
       setFeedbackType("bug");
@@ -167,6 +167,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       toast.success("Feedback submitted successfully!");
     } catch (error) {
       console.error("Failed to submit feedback:", error);
+      toast.error("Failed to submit feedback");
     } finally {
       setFeedbackSubmitting(false);
     }
