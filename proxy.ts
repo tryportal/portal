@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/home(.*)",
   "/privacy(.*)",
+  "/dm(.*)",
+  "/invite(.*)",
 ]);
 
 const isSetupRoute = createRouteMatcher(["/setup(.*)"]);
