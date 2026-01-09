@@ -19,8 +19,10 @@ export function ClerkThemeProvider({ children }: ClerkThemeProviderProps) {
 
   useEffect(() => {
     if (clerk) {
-      clerk.__unstable__updateComponentAppearance?.({
-        baseTheme: resolvedTheme === "dark" ? dark : undefined,
+      clerk.updateClerkOptions?.({
+        appearance: {
+          baseTheme: resolvedTheme === "dark" ? dark : undefined,
+        },
       });
     }
   }, [resolvedTheme, clerk]);
