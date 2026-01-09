@@ -247,7 +247,7 @@ export function ConversationsSidebar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setNewDmDialogOpen(true)}
-          className="bg-foreground text-background hover:bg-foreground/90 shrink-0"
+          className="bg-foreground text-background hover:bg-foreground/90 shrink-0 [&_svg]:text-background"
         >
           <PlusIcon className="size-4" weight="bold" />
         </Button>
