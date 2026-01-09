@@ -37,6 +37,7 @@ interface UserResult {
   lastName: string | null
   imageUrl: string | null
   isOrgMember: boolean
+  handle?: string | null
 }
 
 export function NewDmDialog({
@@ -128,7 +129,8 @@ export function NewDmDialog({
     return "Unknown User"
   }
 
-  const isEmailSearch = searchQuery.includes("@")
+  const isEmailSearch = searchQuery.includes("@") && !searchQuery.startsWith("@")
+  const isHandleSearch = searchQuery.startsWith("@")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,21 +138,21 @@ export function NewDmDialog({
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
           <DialogDescription>
-            Search for a team member by name or find anyone by email
+            Search by name, email, or @handle
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative">
-            {isEmailSearch ? (
+            {isHandleSearch || isEmailSearch ? (
               <AtIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             ) : (
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             )}
             <Input
               type="text"
-              placeholder="Search by name or enter email..."
+              placeholder="Search by name, email, or @handle..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -167,7 +169,9 @@ export function NewDmDialog({
               <div className="flex flex-col items-center justify-center h-[200px] text-center">
                 <UserIcon className="size-10 text-foreground/20 mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  {isEmailSearch
+                  {isHandleSearch
+                    ? "Enter a handle to find someone (e.g. @username)"
+                    : isEmailSearch
                     ? "Enter a full email address to find someone"
                     : "Start typing to search for team members"}
                 </p>
@@ -176,13 +180,15 @@ export function NewDmDialog({
               <div className="flex flex-col items-center justify-center h-[200px] text-center">
                 <MagnifyingGlassIcon className="size-10 text-foreground/20 mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  {isEmailSearch
+                  {isHandleSearch
+                    ? "No user found with that handle"
+                    : isEmailSearch
                     ? "No user found with that email"
                     : "No team members found"}
                 </p>
-                {!isEmailSearch && (
+                {!isEmailSearch && !isHandleSearch && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Try searching by email to find users outside your team
+                    Try searching by email or @handle to find users outside your team
                   </p>
                 )}
               </div>
@@ -217,11 +223,15 @@ export function NewDmDialog({
                             </span>
                           )}
                         </div>
-                        {user.email && (
+                        {user.handle ? (
+                          <p className="text-xs text-muted-foreground truncate">
+                            @{user.handle}
+                          </p>
+                        ) : user.email ? (
                           <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     </button>
                   ))}

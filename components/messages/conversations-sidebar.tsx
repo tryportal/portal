@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs"
 import {
   PlusIcon,
   MagnifyingGlassIcon,
+  ShareNetworkIcon,
 } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { useWorkspaceData } from "@/components/workspace-context"
@@ -16,6 +17,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
+import { ClaimHandleDialog } from "@/components/messages/claim-handle-dialog"
+import { ShareDmLinkDialog } from "@/components/messages/share-dm-link-dialog"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
 
@@ -66,10 +69,28 @@ export function ConversationsSidebar() {
   const { organization } = useWorkspaceData()
 
   const [newDmDialogOpen, setNewDmDialogOpen] = React.useState(false)
+  const [claimHandleDialogOpen, setClaimHandleDialogOpen] = React.useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [userDataCache, setUserDataCache] = React.useState<Record<string, UserData>>({})
   const [isLoadingUserData, setIsLoadingUserData] = React.useState(false)
   const [loadedImages, setLoadedImages] = React.useState<Set<string>>(new Set())
+
+  // Fetch current user's handle
+  const currentUserHandle = useQuery(api.users.getCurrentUserHandle)
+
+  const handleShareClick = () => {
+    if (currentUserHandle) {
+      setShareDialogOpen(true)
+    } else {
+      setClaimHandleDialogOpen(true)
+    }
+  }
+
+  const handleClaimSuccess = (handle: string) => {
+    // After claiming, open the share dialog
+    setShareDialogOpen(true)
+  }
 
   // Fetch conversations
   const conversations = useQuery(
@@ -243,14 +264,25 @@ export function ConversationsSidebar() {
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b border-border px-4 shrink-0">
         <h2 className="text-sm font-semibold text-foreground truncate">Messages</h2>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setNewDmDialogOpen(true)}
-          className="bg-foreground text-background hover:bg-foreground/90 shrink-0 [&_svg]:text-background"
-        >
-          <PlusIcon className="size-4" weight="bold" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleShareClick}
+            title="Share your DM link"
+            className="shrink-0"
+          >
+            <ShareNetworkIcon className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setNewDmDialogOpen(true)}
+            className="bg-foreground text-background hover:bg-foreground/90 shrink-0 [&_svg]:text-background"
+          >
+            <PlusIcon className="size-4" weight="bold" />
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -377,6 +409,20 @@ export function ConversationsSidebar() {
         open={newDmDialogOpen}
         onOpenChange={setNewDmDialogOpen}
         organizationId={organization._id}
+      />
+
+      {/* Claim Handle Dialog */}
+      <ClaimHandleDialog
+        open={claimHandleDialogOpen}
+        onOpenChange={setClaimHandleDialogOpen}
+        onSuccess={handleClaimSuccess}
+      />
+
+      {/* Share DM Link Dialog */}
+      <ShareDmLinkDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        handle={currentUserHandle || ""}
       />
     </ResizableSidebar>
   )

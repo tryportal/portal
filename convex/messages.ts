@@ -2252,6 +2252,7 @@ export const searchUsersForDM = action({
     lastName: string | null;
     imageUrl: string | null;
     isOrgMember: boolean;
+    handle?: string | null;
   }>> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -2265,6 +2266,35 @@ export const searchUsersForDM = action({
       return [];
     }
 
+    // Check if searching by handle (starts with @)
+    if (searchQuery.startsWith("@")) {
+      const handleQuery = searchQuery.slice(1); // Remove the @ prefix
+      if (handleQuery.length >= 2) {
+        const user = await ctx.runQuery(api.users.getUserByHandle, {
+          handle: handleQuery,
+        });
+
+        if (user && user.clerkId !== currentUserId) {
+          // Check if this user is an org member
+          const membership = await ctx.runQuery(api.organizations.checkUserMembership, {
+            organizationId: args.organizationId,
+            userId: user.clerkId,
+          });
+
+          return [{
+            userId: user.clerkId,
+            email: null,
+            firstName: user.firstName ?? null,
+            lastName: user.lastName ?? null,
+            imageUrl: user.imageUrl ?? null,
+            isOrgMember: membership?.isMember ?? false,
+            handle: user.handle,
+          }];
+        }
+      }
+      return [];
+    }
+
     const results: Array<{
       userId: string;
       email: string | null;
@@ -2272,6 +2302,7 @@ export const searchUsersForDM = action({
       lastName: string | null;
       imageUrl: string | null;
       isOrgMember: boolean;
+      handle?: string | null;
     }> = [];
 
     // Check if query looks like an email
