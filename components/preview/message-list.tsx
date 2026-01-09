@@ -873,6 +873,8 @@ export function MessageList({
   const isUserNearBottom = React.useRef(true)
   // Track if this is the initial load
   const isInitialLoad = React.useRef(true)
+  // Track the last message ID to detect new messages from current user
+  const lastMessageId = React.useRef<string | null>(null)
   // State for showing the scroll-to-bottom button
   const [showScrollButton, setShowScrollButton] = React.useState(false)
   // State for highlighting a message after scrolling to it
@@ -1010,13 +1012,15 @@ export function MessageList({
     return () => resizeObserver.disconnect()
   }, [scrollToBottom])
 
-  // Scroll to bottom on initial load and when new messages arrive (if user is near bottom)
+  // Scroll to bottom on initial load and when new messages arrive (if user is near bottom or sent by current user)
   React.useLayoutEffect(() => {
     if (messages.length > 0) {
-      const isNewMessage = messages.length > previousMessageCount.current
+      const latestMessage = messages[messages.length - 1]
+      const isNewMessage = latestMessage.id !== lastMessageId.current
+      const isFromCurrentUser = latestMessage.user.id === currentUserId
 
-      // Always scroll on initial load, or when new messages arrive and user is near bottom
-      if (isInitialLoad.current || (isNewMessage && isUserNearBottom.current)) {
+      // Always scroll on initial load, when current user sends a message, or when new messages arrive and user is near bottom
+      if (isInitialLoad.current || (isNewMessage && (isFromCurrentUser || isUserNearBottom.current))) {
         // Use requestAnimationFrame to ensure DOM has updated before scrolling
         requestAnimationFrame(() => {
           scrollToBottom()
@@ -1034,6 +1038,7 @@ export function MessageList({
       }
 
       previousMessageCount.current = messages.length
+      lastMessageId.current = latestMessage.id
 
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
@@ -1044,7 +1049,7 @@ export function MessageList({
         }, 3000)
       }
     }
-  }, [messages.length, scrollToBottom])
+  }, [messages, scrollToBottom, currentUserId])
 
   // Additional effect for initial load only
   React.useEffect(() => {
