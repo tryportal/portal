@@ -786,7 +786,7 @@ export function CompactMessageItem({
         ) : (
           <div className="w-9 flex-shrink-0 flex items-start justify-center pt-[2px]">
             <span 
-              className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default"
+              className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default select-none"
               title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
             >
               {message.timestamp}
@@ -805,7 +805,7 @@ export function CompactMessageItem({
                 {message.user.name}
               </button>
               <span 
-                className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default"
+                className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default select-none"
                 title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
               >
                 {message.timestamp}
