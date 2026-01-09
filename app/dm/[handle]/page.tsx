@@ -86,6 +86,7 @@ export default function DmSharePage({
     ) {
       handleStartConversation()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoaded, isSignedIn, targetUser, currentUser, isCreating, error])
 
   // Check if visiting own profile
