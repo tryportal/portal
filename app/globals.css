@@ -127,6 +127,33 @@
     @apply bg-background text-foreground;
   }
 
+  /* Scrollbar styling for dark mode */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  .dark * {
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+
   /* Global text wrapping utilities for preventing UI breaks */
   /* Removed unused .break-anywhere utility */
 
