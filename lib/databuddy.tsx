@@ -14,12 +14,6 @@ export function DatabuddyProvider({ children }: { children: React.ReactNode }) {
     <>
       <Databuddy
         clientId={DATABUDDY_CLIENT_ID}
-        // Use proxy endpoints to avoid adblockers
-        apiUrl="/db-ingest/api"
-        scriptUrl="/db-ingest/databuddy.js"
-        // Minimal configuration: only automatic page views
-        // No custom event tracking (PostHog handles that)
-        // No additional tracking features enabled
       />
       {children}
     </>

@@ -38,7 +38,7 @@ import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { EmptyChannelState } from "./empty-channel-state"
 import { Textarea } from "@/components/ui/textarea"
 import { useUserSettings } from "@/lib/user-settings"
-import { CompactMessageItem, BubbleMessageItem } from "./message-styles"
+import { CompactMessageItem, BubbleMessageItem, AttachmentUrlContext } from "./message-styles"
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -52,8 +52,19 @@ import { sanitizeSchema } from "@/lib/markdown-config"
 
 export type { LinkEmbedData as LinkEmbed }
 
-// Context for attachment URLs (batch loaded at MessageList level)
-const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
+// Context for message hover state to avoid re-rendering entire list
+const HoveredMessageContext = React.createContext<{
+  hoveredMessageId: string | null
+  setHoveredMessageId: (id: string | null) => void
+} | null>(null)
+
+export const useHoveredMessage = () => {
+  const context = React.useContext(HoveredMessageContext)
+  if (!context) {
+    throw new Error("useHoveredMessage must be used within MessageListProvider")
+  }
+  return context
+}
 
 export interface Attachment {
   storageId: string
@@ -876,30 +887,41 @@ export function MessageList({
   const isUserNearBottom = React.useRef(true)
   // Track if this is the initial load
   const isInitialLoad = React.useRef(true)
+  // Track the last message ID to detect new messages from current user
+  const lastMessageId = React.useRef<string | null>(null)
+  // Track the last message ID seen at bottom (for new message indicator)
+  const lastSeenMessageId = React.useRef<string | null>(null)
   // State for showing the scroll-to-bottom button
   const [showScrollButton, setShowScrollButton] = React.useState(false)
+  // State for tracking new message count while scrolled up
+  const [newMessageCount, setNewMessageCount] = React.useState(0)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
+  // Track which message is currently hovered (lifted state to prevent duplicate menus)
+  const [hoveredMessageId, setHoveredMessageId] = React.useState<string | null>(null)
 
   // Get user message style settings
   const { settings } = useUserSettings()
   const messageStyle = isDirectMessage 
-    ? settings.messageStyles.directMessages 
-    : settings.messageStyles.channels
+   ? settings.messageStyles.directMessages 
+   : settings.messageStyles.channels
 
   // Choose the appropriate message component based on style
   const MessageItemComponent = messageStyle === "bubble" ? BubbleMessageItem : CompactMessageItem
 
+  // Memoize messages array to prevent unnecessary re-renders
+  const memoizedMessages = React.useMemo(() => messages, [messages])
+
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
-    const ids: Id<"_storage">[] = []
-    messages.forEach((msg) => {
-      msg.attachments?.forEach((att) => {
-        ids.push(att.storageId as Id<"_storage">)
-      })
-    })
-    return ids
-  }, [messages])
+   const ids: Id<"_storage">[] = []
+   memoizedMessages.forEach((msg) => {
+     msg.attachments?.forEach((att) => {
+       ids.push(att.storageId as Id<"_storage">)
+     })
+   })
+   return ids
+  }, [memoizedMessages])
 
   // Batch load all attachment URLs in a single query
   const attachmentUrls = useQuery(
@@ -919,8 +941,16 @@ export function MessageList({
       if (!isInitialLoad.current) {
         setShowScrollButton(!nearBottom)
       }
+      // When user scrolls to bottom, mark all messages as seen
+      if (nearBottom && messages.length > 0) {
+        const latestId = messages[messages.length - 1].id
+        if (lastSeenMessageId.current !== latestId) {
+          lastSeenMessageId.current = latestId
+          setNewMessageCount(0)
+        }
+      }
     }
-  }, [])
+  }, [messages])
 
   // Callback to scroll to bottom
   const scrollToBottom = React.useCallback((smooth = false) => {
@@ -931,7 +961,17 @@ export function MessageList({
       })
       isUserNearBottom.current = true
       setShowScrollButton(false)
+      setNewMessageCount(0)
+      // Mark all messages as seen
+      if (messages.length > 0) {
+        lastSeenMessageId.current = messages[messages.length - 1].id
+      }
     }
+  }, [messages])
+
+  // Callback to handle hover state change
+  const handleMessageHover = React.useCallback((messageId: string | null) => {
+    setHoveredMessageId(messageId)
   }, [])
 
   // Callback to scroll to a specific message
@@ -1006,13 +1046,15 @@ export function MessageList({
     return () => resizeObserver.disconnect()
   }, [scrollToBottom])
 
-  // Scroll to bottom on initial load and when new messages arrive (if user is near bottom)
+  // Scroll to bottom on initial load and when new messages arrive (if user is near bottom or sent by current user)
   React.useLayoutEffect(() => {
-    if (messages.length > 0) {
-      const isNewMessage = messages.length > previousMessageCount.current
+    if (memoizedMessages.length > 0) {
+      const latestMessage = memoizedMessages[memoizedMessages.length - 1]
+      const isNewMessage = latestMessage.id !== lastMessageId.current
+      const isFromCurrentUser = latestMessage.user.id === currentUserId
 
-      // Always scroll on initial load, or when new messages arrive and user is near bottom
-      if (isInitialLoad.current || (isNewMessage && isUserNearBottom.current)) {
+      // Always scroll on initial load, when current user sends a message, or when new messages arrive and user is near bottom
+      if (isInitialLoad.current || (isNewMessage && (isFromCurrentUser || isUserNearBottom.current))) {
         // Use requestAnimationFrame to ensure DOM has updated before scrolling
         requestAnimationFrame(() => {
           scrollToBottom()
@@ -1027,9 +1069,18 @@ export function MessageList({
             })
           })
         }
+      } else if (isNewMessage && !isUserNearBottom.current && !isFromCurrentUser) {
+        // User is scrolled up and new message arrived from someone else - increment counter
+        setNewMessageCount(prev => prev + 1)
       }
 
-      previousMessageCount.current = messages.length
+      previousMessageCount.current = memoizedMessages.length
+      lastMessageId.current = latestMessage.id
+      
+      // Initialize lastSeenMessageId on first load
+      if (!lastSeenMessageId.current && isInitialLoad.current) {
+        lastSeenMessageId.current = latestMessage.id
+      }
 
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
@@ -1040,11 +1091,11 @@ export function MessageList({
         }, 3000)
       }
     }
-  }, [messages.length, scrollToBottom])
+  }, [memoizedMessages.length, memoizedMessages[memoizedMessages.length - 1]?.id, scrollToBottom, currentUserId])
 
   // Additional effect for initial load only
   React.useEffect(() => {
-    if (messages.length > 0 && isInitialLoad.current && scrollRef.current) {
+    if (memoizedMessages.length > 0 && isInitialLoad.current && scrollRef.current) {
       // Use timeouts to ensure DOM is fully ready on initial load
       const timeout1 = setTimeout(scrollToBottom, 50)
       const timeout2 = setTimeout(scrollToBottom, 200)
@@ -1056,7 +1107,7 @@ export function MessageList({
         clearTimeout(timeout3)
       }
     }
-  }, [messages.length, scrollToBottom])
+  }, [memoizedMessages.length, scrollToBottom])
 
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
@@ -1074,8 +1125,9 @@ export function MessageList({
   }
 
   return (
-    <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+    <HoveredMessageContext.Provider value={{ hoveredMessageId, setHoveredMessageId }}>
+      <AttachmentUrlContext.Provider value={attachmentUrls}>
+        <div className="relative flex-1 min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
@@ -1150,6 +1202,8 @@ export function MessageList({
                         isGrouped={isGrouped}
                         searchQuery={searchQuery}
                         isHighlighted={highlightedMessageId === message.id}
+                        isHovered={hoveredMessageId === message.id}
+                        onHover={handleMessageHover}
                       />
                     </div>
                   </React.Fragment>
@@ -1159,19 +1213,37 @@ export function MessageList({
           </div>
         </div>
 
-        {/* Scroll to bottom button */}
+        {/* Scroll to bottom button with new message indicator */}
         {showScrollButton && (
-          <Button
-            onClick={() => scrollToBottom(true)}
-            size="icon"
-            variant="secondary"
-            className="absolute bottom-4 right-4 z-20 rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
-            aria-label="Scroll to bottom"
-          >
-            <ArrowDownIcon className="size-4" />
-          </Button>
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col items-center gap-2">
+            {newMessageCount > 0 && (
+              <Button
+                onClick={() => scrollToBottom(true)}
+                variant="default"
+                size="sm"
+                className="rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200 px-3 gap-1.5"
+              >
+                <ArrowDownIcon className="size-3.5" />
+                <span className="text-xs font-medium">
+                  {newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'}
+                </span>
+              </Button>
+            )}
+            {newMessageCount === 0 && (
+              <Button
+                onClick={() => scrollToBottom(true)}
+                size="icon"
+                variant="secondary"
+                className="rounded-full shadow-lg border border-border hover:shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+                aria-label="Scroll to bottom"
+              >
+                <ArrowDownIcon className="size-4" />
+              </Button>
+            )}
+          </div>
         )}
-      </div>
-    </AttachmentUrlContext.Provider>
+        </div>
+      </AttachmentUrlContext.Provider>
+    </HoveredMessageContext.Provider>
   )
 }

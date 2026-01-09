@@ -96,6 +96,7 @@ interface SortableChannelProps {
   onDelete: () => void
   isMuted: boolean
   onMuteToggle: () => void
+  hasUnread: boolean
 }
 
 function SortableChannel({
@@ -108,6 +109,7 @@ function SortableChannel({
   onDelete,
   isMuted,
   onMuteToggle,
+  hasUnread,
 }: SortableChannelProps) {
   const {
     attributes,
@@ -138,7 +140,9 @@ function SortableChannel({
         className={`w-full justify-start gap-2 pr-8 ${
           isActive
             ? "bg-secondary text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : hasUnread && !isMuted
+              ? "text-foreground hover:bg-muted font-medium"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
         } ${isAdmin ? "pl-1" : ""} ${isMuted ? "opacity-60" : ""}`}
         onClick={onSelect}
       >
@@ -161,6 +165,9 @@ function SortableChannel({
         )}
         {isMuted && (
           <BellSlashIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
+        {hasUnread && !isActive && !isMuted && (
+          <span className="ml-auto w-2 h-2 rounded-full bg-foreground shrink-0" />
         )}
       </Button>
 
@@ -236,6 +243,7 @@ interface SortableCategoryProps {
   onDeleteCategory: (categoryId: Id<"channelCategories">) => void
   mutedChannelIds: Set<string>
   onMuteToggle: (channelId: Id<"channels">) => void
+  unreadChannelIds: Set<string>
 }
 
 function SortableCategory({
@@ -251,6 +259,7 @@ function SortableCategory({
   onDeleteCategory,
   mutedChannelIds,
   onMuteToggle,
+  unreadChannelIds,
 }: SortableCategoryProps) {
   const {
     attributes,
@@ -333,6 +342,7 @@ function SortableCategory({
                 onDelete={() => onDeleteChannel(channel._id)}
                 isMuted={mutedChannelIds.has(channel._id)}
                 onMuteToggle={() => onMuteToggle(channel._id)}
+                hasUnread={unreadChannelIds.has(channel._id)}
               />
             ))}
           </SortableContext>
@@ -385,11 +395,23 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
   )
 
+  // Query unread channels
+  const unreadChannels = useQuery(
+    api.channels.getUnreadChannels,
+    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+  )
+
   // Create a Set for efficient lookup
   // Create a Set for efficient lookup
   const mutedChannelIds = React.useMemo(
     () => new Set(mutedChannels || []),
     [mutedChannels]
+  )
+
+  // Create a Set for efficient lookup of unread channels
+  const unreadChannelIds = React.useMemo(
+    () => new Set(Object.keys(unreadChannels || {})),
+    [unreadChannels]
   )
 
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([])
@@ -742,6 +764,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     onDeleteCategory={handleDeleteCategory}
                     mutedChannelIds={mutedChannelIds}
                     onMuteToggle={handleMuteToggle}
+                    unreadChannelIds={unreadChannelIds}
                   />
                 ))}
               </SortableContext>

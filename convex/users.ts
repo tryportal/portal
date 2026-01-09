@@ -416,3 +416,145 @@ export const syncSingleUser = action({
     }
   },
 });
+
+// ============================================================================
+// Handle Functions (for DM sharing links)
+// ============================================================================
+
+// Reserved handles that cannot be claimed
+const RESERVED_HANDLES = [
+  "admin", "administrator", "mod", "moderator", "system", "bot",
+  "portal", "help", "support", "feedback", "api", "app",
+  "dm", "messages", "settings", "home", "login", "logout",
+  "signin", "signout", "signup", "register", "invite",
+  "user", "users", "account", "profile", "null", "undefined",
+  "true", "false", "test", "demo", "example", "www", "mail",
+];
+
+/**
+ * Get a user by their handle (public profile data only)
+ */
+export const getUserByHandle = query({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    const normalizedHandle = args.handle.toLowerCase();
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_handle", (q) => q.eq("handle", normalizedHandle))
+      .first();
+
+    if (!user) return null;
+
+    return {
+      clerkId: user.clerkId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      imageUrl: user.imageUrl,
+      handle: user.handle,
+    };
+  },
+});
+
+/**
+ * Check if a handle is available and valid
+ */
+export const checkHandleAvailability = query({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    const normalizedHandle = args.handle.toLowerCase();
+
+    // Validate format: 3-12 characters, alphanumeric and underscore only
+    const handleRegex = /^[a-z0-9_]{3,12}$/;
+    if (!handleRegex.test(normalizedHandle)) {
+      return { available: false, reason: "invalid_format" as const };
+    }
+
+    // Check reserved words
+    if (RESERVED_HANDLES.includes(normalizedHandle)) {
+      return { available: false, reason: "reserved" as const };
+    }
+
+    // Check if already taken
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_handle", (q) => q.eq("handle", normalizedHandle))
+      .first();
+
+    return existing
+      ? { available: false, reason: "taken" as const }
+      : { available: true, reason: null };
+  },
+});
+
+/**
+ * Get the current user's handle
+ */
+export const getCurrentUserHandle = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    return user?.handle ?? null;
+  },
+});
+
+/**
+ * Claim a handle for the current user
+ */
+export const claimHandle = mutation({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const normalizedHandle = args.handle.toLowerCase();
+
+    // Validate format
+    const handleRegex = /^[a-z0-9_]{3,12}$/;
+    if (!handleRegex.test(normalizedHandle)) {
+      throw new Error("Handle must be 3-12 characters, using only letters, numbers, and underscores");
+    }
+
+    // Check reserved
+    if (RESERVED_HANDLES.includes(normalizedHandle)) {
+      throw new Error("This handle is reserved");
+    }
+
+    // Check if taken by another user
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_handle", (q) => q.eq("handle", normalizedHandle))
+      .first();
+
+    if (existing && existing.clerkId !== identity.subject) {
+      throw new Error("This handle is already taken");
+    }
+
+    // Get current user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Update handle
+    await ctx.db.patch(user._id, {
+      handle: normalizedHandle,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, handle: normalizedHandle };
+  },
+});

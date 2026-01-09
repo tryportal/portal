@@ -13,9 +13,12 @@ export default defineSchema({
     updatedAt: v.number(),
     // User preferences
     primaryWorkspaceId: v.optional(v.id("organizations")), // User's preferred default workspace
+    // DM sharing - unique handle for shareable DM links (3-12 chars, alphanumeric + underscore, stored lowercase)
+    handle: v.optional(v.string()),
   })
     .index("by_clerk_id", ["clerkId"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .index("by_handle", ["handle"]),
 
   // Direct message conversations between two users
   conversations: defineTable({
@@ -207,4 +210,14 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_channel", ["channelId"])
     .index("by_user_and_channel", ["userId", "channelId"]),
+
+  // Tracks the last time a user read a channel (for unread indicators)
+  channelReadStatus: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID
+    lastReadAt: v.number(), // Timestamp of when user last read the channel
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_user", ["userId"])
+    .index("by_channel_and_user", ["channelId", "userId"]),
 });
