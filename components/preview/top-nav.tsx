@@ -17,6 +17,7 @@ import {
   DesktopIcon,
   MoonIcon,
   StarIcon,
+  BugIcon,
 } from "@phosphor-icons/react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
@@ -35,6 +36,23 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/lib/theme-provider";
 import { JoinWorkspaceDialog } from "@/components/join-workspace-dialog";
+import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverTitle,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TopNavProps {
   activeTab: string;
@@ -56,6 +74,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<string>("bug");
+  const [feedbackTitle, setFeedbackTitle] = useState("");
+  const [feedbackDescription, setFeedbackDescription] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   // Use shared workspace data from context
   const { organization: currentOrg, userOrganizations: userOrgs } =
@@ -97,6 +120,56 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
 
   const handleJoinOrganization = () => {
     setJoinDialogOpen(true);
+  };
+
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackTitle.trim() || !feedbackDescription.trim()) return;
+
+    setFeedbackSubmitting(true);
+    try {
+      const typeLabel = feedbackType === "bug" ? "Bug Report" : "Feature Idea";
+      const embed = {
+        title: `${typeLabel}: ${feedbackTitle}`,
+        description: feedbackDescription,
+        color: feedbackType === "bug" ? 0xff0000 : 0x00ff00,
+        fields: [
+          {
+            name: "Submitted by",
+            value: user?.fullName || user?.primaryEmailAddress?.emailAddress || "Unknown user",
+            inline: true,
+          },
+          {
+            name: "Workspace",
+            value: currentOrg?.name || "Unknown",
+            inline: true,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+
+      await fetch(
+        "https://discord.com/api/webhooks/1459109552908800051/qNQoGA4ejyvd_vzoisRE956AdQJ0DO9AW_JOU2iSFH_IkHoIot_mJoa3TFxSc3-c6y14",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: "<@1128770568032886874>",
+            embeds: [embed],
+          }),
+        }
+      );
+
+      // Reset form and close popover
+      setFeedbackTitle("");
+      setFeedbackDescription("");
+      setFeedbackType("bug");
+      setFeedbackOpen(false);
+      toast.success("Feedback submitted successfully!");
+    } catch (error) {
+      console.error("Failed to submit feedback:", error);
+    } finally {
+      setFeedbackSubmitting(false);
+    }
   };
 
   const handleTabChange = (tabId: string) => {
@@ -301,6 +374,56 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
 
       {/* Right: User Account */}
       <div className="flex justify-end items-center gap-2">
+        {/* Feedback Bug Icon */}
+        <Popover open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+          <PopoverTrigger className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
+            <BugIcon className="size-4 sm:size-5" />
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80">
+            <PopoverHeader>
+              <PopoverTitle>Send Feedback</PopoverTitle>
+            </PopoverHeader>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Type</label>
+                <Select value={feedbackType} onValueChange={(value) => value && setFeedbackType(value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bug">Bug Report</SelectItem>
+                    <SelectItem value="feature">Feature Idea</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Title</label>
+                <Input
+                  placeholder="Brief summary..."
+                  value={feedbackTitle}
+                  onChange={(e) => setFeedbackTitle(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Description</label>
+                <Textarea
+                  placeholder="Describe the issue or idea in detail..."
+                  value={feedbackDescription}
+                  onChange={(e) => setFeedbackDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <Button
+                onClick={handleFeedbackSubmit}
+                disabled={feedbackSubmitting || !feedbackTitle.trim() || !feedbackDescription.trim()}
+                className="w-full"
+              >
+                {feedbackSubmitting ? "Submitting..." : "Submit Feedback"}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
