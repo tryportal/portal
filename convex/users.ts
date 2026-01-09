@@ -465,8 +465,8 @@ export const checkHandleAvailability = query({
     const normalizedHandle = args.handle.toLowerCase();
 
     // Validate format: 3-12 characters, alphanumeric and underscore only
-    const handleRegex = /^[a-zA-Z0-9_]{3,12}$/;
-    if (!handleRegex.test(args.handle)) {
+    const handleRegex = /^[a-z0-9_]{3,12}$/;
+    if (!handleRegex.test(normalizedHandle)) {
       return { available: false, reason: "invalid_format" as const };
     }
 
@@ -519,8 +519,8 @@ export const claimHandle = mutation({
     const normalizedHandle = args.handle.toLowerCase();
 
     // Validate format
-    const handleRegex = /^[a-zA-Z0-9_]{3,12}$/;
-    if (!handleRegex.test(args.handle)) {
+    const handleRegex = /^[a-z0-9_]{3,12}$/;
+    if (!handleRegex.test(normalizedHandle)) {
       throw new Error("Handle must be 3-12 characters, using only letters, numbers, and underscores");
     }
 

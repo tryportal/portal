@@ -1,6 +1,7 @@
 "use client";
 
-import { ClerkProvider as BaseClerkProvider } from "@clerk/nextjs";
+import { useEffect } from "react";
+import { useClerk } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { useTheme } from "@/lib/theme-provider";
 
@@ -9,19 +10,20 @@ interface ClerkThemeProviderProps {
 }
 
 /**
- * Wrapper that provides Clerk components with proper theme support.
- * Uses Clerk's official dark theme from @clerk/themes package.
+ * Updates Clerk appearance based on current theme.
+ * Works with the ClerkProvider already at the root level in app/layout.tsx
  */
 export function ClerkThemeProvider({ children }: ClerkThemeProviderProps) {
   const { resolvedTheme } = useTheme();
+  const clerk = useClerk();
 
-  return (
-    <BaseClerkProvider
-      appearance={{
+  useEffect(() => {
+    if (clerk) {
+      clerk.__unstable__updateComponentAppearance?.({
         baseTheme: resolvedTheme === "dark" ? dark : undefined,
-      }}
-    >
-      {children}
-    </BaseClerkProvider>
-  );
+      });
+    }
+  }, [resolvedTheme, clerk]);
+
+  return <>{children}</>;
 }

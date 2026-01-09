@@ -906,15 +906,9 @@ export const markChannelAsRead = mutation({
       throw new Error("Not a member of this organization");
     }
 
-    // Get the latest message in the channel to use its timestamp
-    const latestMessage = await ctx.db
-      .query("messages")
-      .withIndex("by_channel_and_created", (q) => q.eq("channelId", args.channelId))
-      .order("desc")
-      .first();
-
-    // Use the latest message timestamp, or current time if no messages
-    const readTimestamp = latestMessage?.createdAt ?? Date.now();
+    // Use current time to mark all messages up to now as read
+    // This avoids race conditions where messages arrive between query and update
+    const readTimestamp = Date.now();
 
     // Check if there's already a read status entry
     const existingStatus = await ctx.db

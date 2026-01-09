@@ -52,6 +52,20 @@ import { sanitizeSchema } from "@/lib/markdown-config"
 
 export type { LinkEmbedData as LinkEmbed }
 
+// Context for message hover state to avoid re-rendering entire list
+const HoveredMessageContext = React.createContext<{
+  hoveredMessageId: string | null
+  setHoveredMessageId: (id: string | null) => void
+} | null>(null)
+
+export const useHoveredMessage = () => {
+  const context = React.useContext(HoveredMessageContext)
+  if (!context) {
+    throw new Error("useHoveredMessage must be used within MessageListProvider")
+  }
+  return context
+}
+
 export interface Attachment {
   storageId: string
   name: string
@@ -889,22 +903,25 @@ export function MessageList({
   // Get user message style settings
   const { settings } = useUserSettings()
   const messageStyle = isDirectMessage 
-    ? settings.messageStyles.directMessages 
-    : settings.messageStyles.channels
+   ? settings.messageStyles.directMessages 
+   : settings.messageStyles.channels
 
   // Choose the appropriate message component based on style
   const MessageItemComponent = messageStyle === "bubble" ? BubbleMessageItem : CompactMessageItem
 
+  // Memoize messages array to prevent unnecessary re-renders and dependency issues
+  const memoizedMessages = React.useMemo(() => messages, [messages.length, messages[messages.length - 1]?.id])
+
   // Collect all storage IDs from message attachments for batch loading
   const storageIds = React.useMemo(() => {
-    const ids: Id<"_storage">[] = []
-    messages.forEach((msg) => {
-      msg.attachments?.forEach((att) => {
-        ids.push(att.storageId as Id<"_storage">)
-      })
-    })
-    return ids
-  }, [messages])
+   const ids: Id<"_storage">[] = []
+   memoizedMessages.forEach((msg) => {
+     msg.attachments?.forEach((att) => {
+       ids.push(att.storageId as Id<"_storage">)
+     })
+   })
+   return ids
+  }, [memoizedMessages])
 
   // Batch load all attachment URLs in a single query
   const attachmentUrls = useQuery(
@@ -1031,8 +1048,8 @@ export function MessageList({
 
   // Scroll to bottom on initial load and when new messages arrive (if user is near bottom or sent by current user)
   React.useLayoutEffect(() => {
-    if (messages.length > 0) {
-      const latestMessage = messages[messages.length - 1]
+    if (memoizedMessages.length > 0) {
+      const latestMessage = memoizedMessages[memoizedMessages.length - 1]
       const isNewMessage = latestMessage.id !== lastMessageId.current
       const isFromCurrentUser = latestMessage.user.id === currentUserId
 
@@ -1057,7 +1074,7 @@ export function MessageList({
         setNewMessageCount(prev => prev + 1)
       }
 
-      previousMessageCount.current = messages.length
+      previousMessageCount.current = memoizedMessages.length
       lastMessageId.current = latestMessage.id
       
       // Initialize lastSeenMessageId on first load
@@ -1074,11 +1091,11 @@ export function MessageList({
         }, 3000)
       }
     }
-  }, [messages, scrollToBottom, currentUserId])
+  }, [memoizedMessages.length, memoizedMessages[memoizedMessages.length - 1]?.id, scrollToBottom, currentUserId])
 
   // Additional effect for initial load only
   React.useEffect(() => {
-    if (messages.length > 0 && isInitialLoad.current && scrollRef.current) {
+    if (memoizedMessages.length > 0 && isInitialLoad.current && scrollRef.current) {
       // Use timeouts to ensure DOM is fully ready on initial load
       const timeout1 = setTimeout(scrollToBottom, 50)
       const timeout2 = setTimeout(scrollToBottom, 200)
@@ -1090,7 +1107,7 @@ export function MessageList({
         clearTimeout(timeout3)
       }
     }
-  }, [messages.length, scrollToBottom])
+  }, [memoizedMessages.length, scrollToBottom])
 
   // Show empty state if no messages
   if (messages.length === 0 && channelName) {
@@ -1108,8 +1125,9 @@ export function MessageList({
   }
 
   return (
-    <AttachmentUrlContext.Provider value={attachmentUrls}>
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+    <HoveredMessageContext.Provider value={{ hoveredMessageId, setHoveredMessageId }}>
+      <AttachmentUrlContext.Provider value={attachmentUrls}>
+        <div className="relative flex-1 min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto overflow-x-hidden flex flex-col"
@@ -1224,7 +1242,8 @@ export function MessageList({
             )}
           </div>
         )}
-      </div>
-    </AttachmentUrlContext.Provider>
+        </div>
+      </AttachmentUrlContext.Provider>
+    </HoveredMessageContext.Provider>
   )
 }
