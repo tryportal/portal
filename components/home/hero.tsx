@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -29,20 +30,38 @@ import { useTheme } from "@/lib/theme-provider";
 const mockMessages = [
   {
     id: 1,
-    user: { name: "Sarah Chen", initials: "SC", color: "bg-blue-500" },
-    content: "Just pushed the new auth flow! Ready for review",
+    user: {
+      name: "saltjsx",
+      initials: "SC",
+      color: "bg-blue-500",
+      avatarUrl:
+        "https://n3we3vefdx.ufs.sh/f/eGnJHYz8xv2diyucfZpxbidAT07cmInyRusGPhqgv3Y6ofte",
+    },
+    content: "Portal has actually real time messages using Convex!",
     time: "10:24 AM",
   },
   {
     id: 2,
-    user: { name: "Alex Rivera", initials: "AR", color: "bg-emerald-500" },
-    content: "Nice work! I'll take a look after standup",
+    user: {
+      name: "gandan",
+      initials: "AR",
+      color: "bg-emerald-500",
+      avatarUrl:
+        "https://n3we3vefdx.ufs.sh/f/eGnJHYz8xv2dpxxRouvZI06KUwkdMvxhQY7AmD5Fcog1O4RC",
+    },
+    content: "cool. it has a really nice ui too!",
     time: "10:26 AM",
   },
   {
     id: 3,
-    user: { name: "Jordan Lee", initials: "JL", color: "bg-violet-500" },
-    content: "The performance improvements look great in staging",
+    user: {
+      name: "fence post",
+      initials: "JL",
+      color: "bg-violet-500",
+      avatarUrl:
+        "https://n3we3vefdx.ufs.sh/f/eGnJHYz8xv2d00LsWxKGlpX3vHIqaTnxzuFcBfiehJyDUw76",
+    },
+    content: "what is a convex?",
     time: "10:28 AM",
   },
 ];
@@ -52,6 +71,56 @@ const mockChannels = [
   { name: "engineering", icon: Hash, unread: true },
   { name: "design", icon: Hash, unread: false },
 ];
+
+// Message Item Component
+function MessageItem({
+  msg,
+  idx,
+}: {
+  msg: (typeof mockMessages)[number];
+  idx: number;
+}) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <motion.div
+      key={msg.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 + idx * 0.15, duration: 0.4 }}
+      className="flex gap-2"
+    >
+      <div
+        className={`w-6 h-6 rounded ${msg.user.color} flex items-center justify-center shrink-0 overflow-hidden relative`}
+      >
+        {msg.user.avatarUrl && !imageError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={msg.user.avatarUrl}
+            alt={msg.user.name}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <span className="text-[8px] font-medium text-white relative z-10">
+            {msg.user.initials}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[11px] font-semibold text-foreground">
+            {msg.user.name}
+          </span>
+          <span className="text-[9px] text-muted-foreground">{msg.time}</span>
+        </div>
+        <p className="text-[11px] text-foreground/80 leading-relaxed">
+          {msg.content}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 // Mock App UI Component
 function MockAppUI() {
@@ -176,34 +245,7 @@ function MockAppUI() {
           {/* Messages */}
           <div className="flex-1 overflow-hidden px-3 py-2 space-y-2">
             {mockMessages.map((msg, idx) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + idx * 0.15, duration: 0.4 }}
-                className="flex gap-2"
-              >
-                <div
-                  className={`w-6 h-6 rounded ${msg.user.color} flex items-center justify-center flex-shrink-0`}
-                >
-                  <span className="text-[8px] font-medium text-white">
-                    {msg.user.initials}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[11px] font-semibold text-foreground">
-                      {msg.user.name}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground">
-                      {msg.time}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-foreground/80 leading-relaxed">
-                    {msg.content}
-                  </p>
-                </div>
-              </motion.div>
+              <MessageItem key={msg.id} msg={msg} idx={idx} />
             ))}
           </div>
 

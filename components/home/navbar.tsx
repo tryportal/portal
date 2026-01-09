@@ -30,16 +30,34 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border"
     >
       <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
-        <Link href="/home" className="flex items-center gap-2">
-          <Image
-            src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
-            alt="Portal"
-            width={80}
-            height={24}
-            className="h-5 w-auto"
-            priority
-          />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/home" className="flex items-center gap-2">
+            <Image
+              src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
+              alt="Portal"
+              width={80}
+              height={24}
+              className="h-5 w-auto"
+              priority
+            />
+          </Link>
+          <Link
+            href="https://macis.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>a</span>
+            <Image
+              src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
+              alt="Macis"
+              width={40}
+              height={16}
+              className="h-4 w-auto"
+            />
+            <span>project</span>
+          </Link>
+        </div>
 
         {/* Desktop Navigation */}
         <div className="hidden sm:flex items-center gap-3">
