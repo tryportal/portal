@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
 import { UserSettingsProvider } from "@/lib/user-settings";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
+import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -46,6 +47,7 @@ export default function RootLayout({
         </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
+            <DynamicFavicon />
             <ClerkThemeProvider>
               <UserSettingsProvider>
                 <PostHogProvider>
