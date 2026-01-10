@@ -53,18 +53,8 @@ export default function SignInPage() {
       });
 
       if (result.status === "complete") {
-        if (result.createdSessionId) {
-          await setActive({ session: result.createdSessionId });
-          router.push("/setup");
-      if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.push("/setup");
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        router.push("/setup");
-      } else {
-        // Handle other statuses like needs_second_factor
-        setError("Additional verification required. Please complete all steps.");
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
