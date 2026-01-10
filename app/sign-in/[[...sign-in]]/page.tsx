@@ -53,8 +53,14 @@ export default function SignInPage() {
       });
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        router.push("/setup");
+        if (result.createdSessionId) {
+          await setActive({ session: result.createdSessionId });
+          router.push("/setup");
+        } else {
+          setError("Authentication failed. Please try again.");
+        }
+      } else {
+        setError("Additional verification required. Please complete all steps.");
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
