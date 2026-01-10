@@ -5,7 +5,8 @@ import { useTheme } from "@/lib/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GoogleLogo, SpinnerGap } from "@phosphor-icons/react";
+import { SpinnerGap } from "@phosphor-icons/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -64,116 +65,153 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
-      <div className="w-full max-w-[95%] sm:max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center size-12 sm:size-16 rounded-2xl bg-primary/10 mb-4">
-            <img
-              src={isDark ? "/portal-dark.svg" : "/portal.svg"}
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/50">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[40%] -right-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-primary/[0.03] to-transparent blur-3xl" />
+        <div className="absolute -bottom-[40%] -left-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-tr from-primary/[0.03] to-transparent blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-[400px] relative">
+        {/* Card container */}
+        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-8 shadow-xl shadow-black/[0.03] dark:shadow-black/[0.2]">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Image
+              src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
               alt="Portal"
-              className="size-8"
+              width={640}
+              height={96}
+              className="h-[50px] w-[190px] mx-auto mb-5"
             />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Welcome back
-          </h1>
-          <p className="text-muted-foreground text-sm mt-2">
-            Sign in to your account
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full h-10 gap-2"
-            onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading || !isLoaded}
-          >
-            {isGoogleLoading ? (
-              <SpinnerGap className="size-4 animate-spin" />
-            ) : (
-              <GoogleLogo weight="bold" className="size-4" />
-            )}
-            Continue with Google
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-background px-2 text-muted-foreground">
-                or continue with email
-              </span>
-            </div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-muted-foreground text-sm mt-2">
+              Sign in to continue to Portal
+            </p>
           </div>
 
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full h-10"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full h-10"
-                required
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs text-destructive">{error}</p>
-            )}
-
+          <div className="space-y-5">
+            {/* Google button */}
             <Button
-              type="submit"
+              variant="outline"
               size="lg"
-              className="w-full h-10"
-              disabled={isLoading || !isLoaded}
+              className="w-full h-11 gap-2.5 text-sm font-medium hover:bg-muted/50 transition-all duration-200"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading || !isLoaded}
             >
-              {isLoading ? (
+              {isGoogleLoading ? (
                 <SpinnerGap className="size-4 animate-spin" />
               ) : (
-                "Sign in"
+                <Image
+                  src={
+                    isDark ? "/google-white-icon.svg" : "/google-black-icon.svg"
+                  }
+                  alt="Google"
+                  width={16}
+                  height={16}
+                  className="size-4"
+                />
               )}
+              Continue with Google
             </Button>
-          </form>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/sign-up"
-              className="text-primary hover:underline font-medium"
-            >
-              Sign up
-            </Link>
-          </p>
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/60" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card px-3 text-muted-foreground">
+                  or continue with email
+                </span>
+              </div>
+            </div>
+
+            {/* Email form */}
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="email"
+                  className="text-xs font-medium text-foreground/70"
+                >
+                  Email address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full h-11 px-4 bg-background/50 border-border/60 focus-visible:border-primary/50 transition-colors"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="password"
+                  className="text-xs font-medium text-foreground/70"
+                >
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full h-11 px-4 bg-background/50 border-border/60 focus-visible:border-primary/50 transition-colors"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                  <svg
+                    className="size-4 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full h-11 text-sm font-medium transition-all duration-200"
+                disabled={isLoading || !isLoaded}
+              >
+                {isLoading ? (
+                  <SpinnerGap className="size-4 animate-spin" />
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
+
+        {/* Footer outside card */}
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/sign-up"
+            className="text-primary hover:underline font-medium transition-colors"
+          >
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );
