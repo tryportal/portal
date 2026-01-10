@@ -56,9 +56,12 @@ export default function SignInPage() {
         if (result.createdSessionId) {
           await setActive({ session: result.createdSessionId });
           router.push("/setup");
-        } else {
-          setError("Authentication failed. Please try again.");
-        }
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/setup");
+      } else {
+        // Handle other statuses like 2FA requirements
+        setError("Additional verification required. Please check your email or authenticator app.");
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
