@@ -172,11 +172,10 @@ export default function SignUpPage() {
 
           {/* Footer outside card */}
           <button
+            type="button"
             onClick={() => setPendingVerification(false)}
             className="mt-6 text-sm text-muted-foreground hover:text-primary w-full text-center transition-colors"
           >
-            Use a different email
-          </button>
         </div>
       </div>
     );
