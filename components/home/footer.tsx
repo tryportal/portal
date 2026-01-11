@@ -42,6 +42,14 @@ export function Footer() {
             >
               Privacy
             </Link>
+            <Link
+              href="https://status.tryportal.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              Status
+            </Link>
             <div className="flex items-center gap-3 ml-2">
               <Link
                 href="https://github.com/tryportal/portal"
