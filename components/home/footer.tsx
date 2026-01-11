@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import Image from "next/image"
-import { TwitterLogo } from "@phosphor-icons/react"
-import { GitHubLogo } from "./icons/github-logo"
-import { useTheme } from "@/lib/theme-provider"
+import Link from "next/link";
+import Image from "next/image";
+import { TwitterLogo } from "@phosphor-icons/react";
+import { GitHubLogo } from "./icons/github-logo";
+import { useTheme } from "@/lib/theme-provider";
 
 export function Footer() {
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
-  
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
     <footer className="py-6 px-4 border-t border-border">
       <div className="max-w-5xl mx-auto">
@@ -43,7 +43,7 @@ export function Footer() {
               Privacy
             </Link>
             <Link
-              href="https://status.tryportal.com"
+              href="https://status.tryportal.app"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"
@@ -72,5 +72,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
