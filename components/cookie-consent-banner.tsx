@@ -9,12 +9,17 @@ const COOKIE_CONSENT_KEY = "portal-cookie-consent"
 export function CookieConsentBanner() {
   const [showBanner, setShowBanner] = useState(false)
 
-  useEffect(() => {
+useEffect(() => {
+  try {
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY)
     if (consent === null) {
       setShowBanner(true)
     }
-  }, [])
+  } catch (error) {
+    // Failed to access localStorage, don't show banner
+    console.warn('localStorage not available:', error)
+  }
+}, [])
 
   const handleAccept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "accepted")
