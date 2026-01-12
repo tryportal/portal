@@ -95,7 +95,8 @@ export default function SharedChannelInvitePage({
   }, [authLoaded, isSignedIn, invitationData, success, isAccepting, error, handleAccept]);
 
   // Loading state
-  if (!authLoaded || (token && invitationData === undefined)) {
+
+  if (!authLoaded || !token || (token && invitationData === undefined)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
@@ -131,6 +132,7 @@ export default function SharedChannelInvitePage({
         </div>
       </div>
     );
+
   }
 
   const { invitation, channel, organization, inviter } = invitationData;
