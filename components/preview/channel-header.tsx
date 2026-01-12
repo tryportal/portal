@@ -31,6 +31,8 @@ interface ChannelHeaderProps {
   channelId?: Id<"channels">
   organizationId?: Id<"organizations">
   isAdmin?: boolean
+  isSharedChannel?: boolean
+  sharedChannelSourceOrg?: string
 }
 
 export function ChannelHeader({
@@ -43,11 +45,24 @@ export function ChannelHeader({
   channelId,
   organizationId,
   isAdmin = false,
+  isSharedChannel = false,
+  sharedChannelSourceOrg,
 }: ChannelHeaderProps) {
   const [editDialogOpen, setEditDialogOpen] = React.useState(false)
 
   return (
-    <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
+    <>
+      {isSharedChannel && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2">
+          <div className="size-4 rounded-full bg-amber-500 flex items-center justify-center">
+            <span className="text-xs text-white font-bold">!</span>
+          </div>
+          <span className="text-xs text-amber-900">
+            You're viewing a shared channel {sharedChannelSourceOrg && `from ${sharedChannelSourceOrg}`}
+          </span>
+        </div>
+      )}
+      <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
       {/* Left: Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
         <Icon className="size-5 text-foreground flex-shrink-0" weight="fill" />
@@ -116,7 +131,8 @@ export function ChannelHeader({
           channelId={channelId}
           organizationId={organizationId}
         />
-      )}
-    </header>
-  )
+       )}
+     </header>
+   </>
+   )
 }

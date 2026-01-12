@@ -31,6 +31,7 @@ interface WorkspaceDataContextType {
   organization: Organization | null | undefined;
   membership: Membership | null | undefined;
   userOrganizations: UserOrganization[] | undefined;
+  hasSharedChannelAccess: boolean | undefined;
   isLoading: boolean;
   isError: boolean;
   slug: string;
@@ -73,12 +74,19 @@ export function WorkspaceProvider({ children, slug }: WorkspaceProviderProps) {
     organization?._id ? { organizationId: organization._id } : "skip"
   );
 
+  // Check if user has access to any shared channels in this workspace
+  const hasSharedChannelAccess = useQuery(
+    api.sharedChannels.hasSharedChannelAccessInWorkspace,
+    organization?._id ? { organizationId: organization._id } : "skip"
+  );
+
   const userOrganizations = useQuery(api.organizations.getUserOrganizations);
 
   // Derived loading state
   const isLoading = !authLoaded || 
     organization === undefined || 
     (organization !== null && membership === undefined) ||
+    (organization !== null && hasSharedChannelAccess === undefined) ||
     userOrganizations === undefined;
 
   const isError = organization === null;
@@ -87,6 +95,7 @@ export function WorkspaceProvider({ children, slug }: WorkspaceProviderProps) {
     organization,
     membership,
     userOrganizations,
+    hasSharedChannelAccess,
     isLoading,
     isError,
     slug,

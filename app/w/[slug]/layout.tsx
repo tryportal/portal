@@ -43,7 +43,7 @@ function WorkspaceLayoutContent({
     setActiveTab
   } = useWorkspace();
 
-  const { membership, isLoading, isError, slug, organization } = useWorkspaceData();
+  const { membership, isLoading, isError, slug, organization, hasSharedChannelAccess } = useWorkspaceData();
 
   // Sidebar toggle hotkey
   const handleSidebarToggle = React.useCallback(() => {
@@ -101,10 +101,13 @@ function WorkspaceLayoutContent({
     return <LoadingSpinner fullScreen />;
   }
 
-  // User doesn't have access to this workspace
-  if (!membership) {
+  // User doesn't have access to this workspace (neither a member nor shared channel access)
+  if (!membership && !hasSharedChannelAccess) {
     return <NoAccess slug={slug} organizationExists={true} organization={organization} />;
   }
+
+  // Determine if user is an external member (only has shared channel access)
+  const isExternalMember = !membership && hasSharedChannelAccess;
 
   const handleTabChange = (tab: string) => {
     analytics.tabChanged({ tab });

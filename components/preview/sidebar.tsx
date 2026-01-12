@@ -22,6 +22,7 @@ import {
   DotsSixVerticalIcon,
   WarningCircleIcon,
   LockIcon,
+  ShareNetworkIcon,
 } from "@phosphor-icons/react"
 import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
@@ -51,6 +52,8 @@ import {
 import { CreateCategoryDialog } from "@/components/create-category-dialog"
 import { CreateChannelDialog } from "@/components/create-channel-dialog"
 import { EditChannelDialog } from "@/components/edit-channel-dialog"
+import { ShareChannelDialog } from "@/components/share-channel-dialog"
+import { SharedChannelsSection } from "@/components/preview/shared-channels-section"
 import { getIconComponent } from "@/components/icon-picker"
 import {
   DndContext,
@@ -87,6 +90,7 @@ interface SortableChannelProps {
     name: string
     icon: string
     isPrivate?: boolean
+    isShared?: boolean
   }
   isActive: boolean
   onSelect: () => void
@@ -94,6 +98,7 @@ interface SortableChannelProps {
   isAdmin: boolean
   onEdit: () => void
   onDelete: () => void
+  onShare: () => void
   isMuted: boolean
   onMuteToggle: () => void
   hasUnread: boolean
@@ -107,6 +112,7 @@ function SortableChannel({
   isAdmin,
   onEdit,
   onDelete,
+  onShare,
   isMuted,
   onMuteToggle,
   hasUnread,
@@ -163,6 +169,9 @@ function SortableChannel({
         {channel.isPrivate && (
           <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
         )}
+        {channel.isShared && (
+          <ShareNetworkIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
         {isMuted && (
           <BellSlashIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
         )}
@@ -204,6 +213,10 @@ function SortableChannel({
           </DropdownMenuItem>
           {isAdmin && (
             <>
+              <DropdownMenuItem onClick={onShare}>
+                <ShareNetworkIcon className="size-4" />
+                Share externally
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={onEdit}>
                 <PencilIcon className="size-4" />
                 Edit channel
@@ -240,6 +253,7 @@ interface SortableCategoryProps {
   isAdmin: boolean
   onEditChannel: (channelId: Id<"channels">) => void
   onDeleteChannel: (channelId: Id<"channels">) => void
+  onShareChannel: (channelId: Id<"channels">, channelName: string) => void
   onDeleteCategory: (categoryId: Id<"channelCategories">) => void
   mutedChannelIds: Set<string>
   onMuteToggle: (channelId: Id<"channels">) => void
@@ -256,6 +270,7 @@ function SortableCategory({
   isAdmin,
   onEditChannel,
   onDeleteChannel,
+  onShareChannel,
   onDeleteCategory,
   mutedChannelIds,
   onMuteToggle,
@@ -340,6 +355,7 @@ function SortableCategory({
                 isAdmin={isAdmin}
                 onEdit={() => onEditChannel(channel._id)}
                 onDelete={() => onDeleteChannel(channel._id)}
+                onShare={() => onShareChannel(channel._id, channel.name)}
                 isMuted={mutedChannelIds.has(channel._id)}
                 onMuteToggle={() => onMuteToggle(channel._id)}
                 hasUnread={unreadChannelIds.has(channel._id)}
@@ -361,7 +377,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const isDark = resolvedTheme === "dark"
 
   // Use shared workspace data from context
-  const { organization: currentOrg, membership } = useWorkspaceData()
+  const { organization: currentOrg, membership, hasSharedChannelAccess } = useWorkspaceData()
+
+  // Check if user is an external member (only has shared channel access, not a workspace member)
+  const isExternalMember = !membership && hasSharedChannelAccess
 
   // Dialog states
   const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false)
@@ -369,14 +388,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [editChannelId, setEditChannelId] = React.useState<Id<"channels"> | null>(null)
   const [deleteCategoryDialogOpen, setDeleteCategoryDialogOpen] = React.useState(false)
   const [categoryToDelete, setCategoryToDelete] = React.useState<Id<"channelCategories"> | null>(null)
+  const [shareChannelId, setShareChannelId] = React.useState<Id<"channels"> | null>(null)
+  const [shareChannelName, setShareChannelName] = React.useState<string>("")
 
   // Drag and drop state
   const [activeId, setActiveId] = React.useState<string | null>(null)
 
-  // Get categories and channels from Convex (this is still needed per-sidebar)
+  // Get categories and channels from Convex (only for workspace members)
   const categoriesData = useQuery(
     api.channels.getCategoriesAndChannels,
-    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+    currentOrg?._id && !isExternalMember ? { organizationId: currentOrg._id } : "skip"
   )
 
   // Mutations for reordering and deleting
@@ -389,16 +410,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const muteChannel = useMutation(api.channels.muteChannel)
   const unmuteChannel = useMutation(api.channels.unmuteChannel)
 
-  // Query muted channels
+  // Query muted channels (only for workspace members)
   const mutedChannels = useQuery(
     api.channels.getMutedChannels,
-    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+    currentOrg?._id && !isExternalMember ? { organizationId: currentOrg._id } : "skip"
   )
 
-  // Query unread channels
+  // Query unread channels (only for workspace members)
   const unreadChannels = useQuery(
     api.channels.getUnreadChannels,
-    currentOrg?._id ? { organizationId: currentOrg._id } : "skip"
+    currentOrg?._id && !isExternalMember ? { organizationId: currentOrg._id } : "skip"
   )
 
   // Create a Set for efficient lookup
@@ -570,6 +591,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     setEditChannelId(channelId)
   }
 
+  const handleShareChannel = (channelId: Id<"channels">, channelName: string) => {
+    setShareChannelId(channelId)
+    setShareChannelName(channelName)
+  }
+
   const handleDeleteChannel = async (channelId: Id<"channels">) => {
     try {
       await deleteChannel({ channelId })
@@ -663,7 +689,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {/* Sidebar Tabs */}
+          {/* Sidebar Tabs - only show for workspace members */}
+          {!isExternalMember && (
           <div className="mb-4 space-y-0.5">
             {/* Overview button */}
             <Link
@@ -731,84 +758,91 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               </Link>
             )}
           </div>
-
-          {/* Categories and Channels with DnD */}
-          {categoriesData === undefined ? (
-            <div className="flex items-center justify-center py-8">
-              <LoadingSpinner size="sm" />
-            </div>
-          ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="space-y-2">
-              <SortableContext
-                items={categoriesData?.map((c) => c._id) || []}
-                strategy={verticalListSortingStrategy}
-              >
-                {categoriesData?.map((category) => (
-                  <SortableCategory
-                    key={category._id}
-                    category={category}
-                    isExpanded={expandedCategories.includes(category._id)}
-                    onToggle={() => toggleCategory(category._id)}
-                    activeChannelId={activeChannelFromUrl}
-                    onChannelSelect={handleChannelSelect}
-                    onChannelPrefetch={handleChannelPrefetch}
-                    isAdmin={isAdmin}
-                    onEditChannel={handleEditChannel}
-                    onDeleteChannel={handleDeleteChannel}
-                    onDeleteCategory={handleDeleteCategory}
-                    mutedChannelIds={mutedChannelIds}
-                    onMuteToggle={handleMuteToggle}
-                    unreadChannelIds={unreadChannelIds}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-            <DragOverlay>
-              {activeId ? (() => {
-                // Check if dragging a category
-                const activeCategory = categoriesData?.find((c) => c._id === activeId)
-                if (activeCategory) {
-                  return (
-                    <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <FolderIcon className="size-4 text-primary" weight="fill" />
-                        <span className="truncate min-w-0">{activeCategory.name}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {activeCategory.channels.length}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                }
-
-                // Check if dragging a channel
-                for (const category of categoriesData || []) {
-                  const activeChannel = category.channels.find((c) => c._id === activeId)
-                  if (activeChannel) {
-                    const IconComponent = getIconComponent(activeChannel.icon)
-                    
-                    return (
-                      <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
-                        <div className="flex items-center gap-2 text-sm">
-                          <IconComponent className="size-4 text-muted-foreground" weight="bold" />
-                          <span className="truncate min-w-0">{activeChannel.name}</span>
-                        </div>
-                      </div>
-                    )
-                  }
-                }
-
-                return null
-              })() : null}
-            </DragOverlay>
-          </DndContext>
           )}
+
+          {/* Categories and Channels with DnD - only show for workspace members */}
+          {!isExternalMember && (
+            categoriesData === undefined ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner size="sm" />
+              </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="space-y-2">
+                  <SortableContext
+                    items={categoriesData?.map((c) => c._id) || []}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {categoriesData?.map((category) => (
+                      <SortableCategory
+                        key={category._id}
+                        category={category}
+                        isExpanded={expandedCategories.includes(category._id)}
+                        onToggle={() => toggleCategory(category._id)}
+                        activeChannelId={activeChannelFromUrl}
+                        onChannelSelect={handleChannelSelect}
+                        onChannelPrefetch={handleChannelPrefetch}
+                        isAdmin={isAdmin}
+                        onEditChannel={handleEditChannel}
+                        onDeleteChannel={handleDeleteChannel}
+                        onShareChannel={handleShareChannel}
+                        onDeleteCategory={handleDeleteCategory}
+                        mutedChannelIds={mutedChannelIds}
+                        onMuteToggle={handleMuteToggle}
+                        unreadChannelIds={unreadChannelIds}
+                      />
+                    ))}
+                  </SortableContext>
+                </div>
+                <DragOverlay>
+                  {activeId ? (() => {
+                    // Check if dragging a category
+                    const activeCategory = categoriesData?.find((c) => c._id === activeId)
+                    if (activeCategory) {
+                      return (
+                        <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[200px] opacity-95">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <FolderIcon className="size-4 text-primary" weight="fill" />
+                            <span className="truncate min-w-0">{activeCategory.name}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {activeCategory.channels.length}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    // Check if dragging a channel
+                    for (const category of categoriesData || []) {
+                      const activeChannel = category.channels.find((c) => c._id === activeId)
+                      if (activeChannel) {
+                        const IconComponent = getIconComponent(activeChannel.icon)
+                        
+                        return (
+                          <div className="rounded-md bg-card border-2 border-primary/50 shadow-xl px-3 py-2 min-w-[180px] opacity-95">
+                            <div className="flex items-center gap-2 text-sm">
+                              <IconComponent className="size-4 text-muted-foreground" weight="bold" />
+                              <span className="truncate min-w-0">{activeChannel.name}</span>
+                            </div>
+                          </div>
+                        )
+                      }
+                    }
+
+                    return null
+                  })() : null}
+                </DragOverlay>
+              </DndContext>
+            )
+          )}
+
+          {/* Shared Channels Section */}
+          <SharedChannelsSection />
         </div>
       </ScrollArea>
 
@@ -894,6 +928,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             }}
             channelId={editChannelId}
             organizationId={currentOrg._id}
+          />
+          <ShareChannelDialog
+            open={shareChannelId !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShareChannelId(null)
+                setShareChannelName("")
+              }
+            }}
+            channelId={shareChannelId!}
+            channelName={shareChannelName}
           />
           <AlertDialog 
             open={deleteCategoryDialogOpen} 
