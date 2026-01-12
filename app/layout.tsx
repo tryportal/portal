@@ -89,7 +89,7 @@ export const metadata: Metadata = {
     title: "Portal - Team Chat, Reimagined",
     description:
       "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
-    images: ["/og-image.png"],
+    images: ["/opengraph-image"],
     creator: "@tryportal",
   },
   alternates: {
