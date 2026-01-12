@@ -210,97 +210,30 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           height={21}
           className="h-5 sm:h-[21px] w-auto hidden sm:block"
         />
-        {/* Mobile: Workspace Switcher Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="sm:hidden flex items-center gap-1.5 px-1.5 py-1 rounded-md hover:bg-muted transition-colors">
-            {currentOrg?.logoUrl ? (
+        {/* Mobile: Show org name instead of logo */}
+        <div className="sm:hidden flex items-center gap-1.5">
+          {currentOrg?.logoUrl ? (
+            <Image
+              src={currentOrg.logoUrl}
+              alt={currentOrg.name || "Organization"}
+              width={20}
+              height={20}
+              className="rounded"
+            />
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
               <Image
-                src={currentOrg.logoUrl}
-                alt={currentOrg.name || "Organization"}
-                width={20}
-                height={20}
-                className="rounded"
+                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                alt="Workspace"
+                width={12}
+                height={12}
               />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
-                <Image
-                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                  alt="Workspace"
-                  width={12}
-                  height={12}
-                />
-              </div>
-            )}
-            <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
-              {currentOrg?.name || "Portal"}
-            </span>
-            <CaretDownIcon className="size-3 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[200px]">
-            {userOrgs && userOrgs.length > 0 ? (
-              userOrgs.map((org) => {
-                const isActive = currentOrg?._id === org._id;
-                const isPrimary = primaryWorkspace?._id === org._id;
-                return (
-                  <DropdownMenuItem
-                    key={org._id}
-                    onClick={() => handleOrganizationSwitch(org.slug)}
-                    className="gap-2 px-2 py-1.5 cursor-pointer"
-                  >
-                    {org.logoUrl ? (
-                      <Image
-                        src={org.logoUrl}
-                        alt={org.name || "Organization"}
-                        width={16}
-                        height={16}
-                        className="rounded"
-                      />
-                    ) : (
-                      <div className="flex h-4 w-4 items-center justify-center rounded bg-foreground">
-                        <Image
-                          src={isDark ? "/portal-dark.svg" : "/portal.svg"}
-                          alt="Workspace"
-                          width={10}
-                          height={10}
-                        />
-                      </div>
-                    )}
-                    <span className="text-sm flex-1 truncate min-w-0">
-                      {org.name || "Organization"}
-                    </span>
-                    {isPrimary && (
-                      <StarIcon className="size-3.5 text-amber-500" weight="fill" />
-                    )}
-                    {isActive && (
-                      <CheckIcon className="size-3.5 text-foreground" />
-                    )}
-                  </DropdownMenuItem>
-                );
-              })
-            ) : (
-              <DropdownMenuItem disabled className="px-2 py-1.5">
-                <span className="text-sm text-muted-foreground">
-                  No organizations
-                </span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleCreateOrganization}
-              className="gap-2 px-2 py-1.5 cursor-pointer"
-            >
-              <PlusIcon className="size-3.5 text-foreground" />
-              <span className="text-sm">Create Workspace</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleJoinOrganization}
-              className="gap-2 px-2 py-1.5 cursor-pointer"
-            >
-              <UsersIcon className="size-3.5 text-foreground" />
-              <span className="text-sm">Join Workspace</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </div>
+          )}
+          <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
+            {currentOrg?.name || "Portal"}
+          </span>
+        </div>
       </div>
 
       {/* Center: Workspace + Tabs (hidden on mobile, shown in bottom nav) */}
