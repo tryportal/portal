@@ -54,6 +54,8 @@ interface ChatInterfaceProps {
   searchQuery?: string
   onSearchChange?: (query: string) => void
   isDirectMessage?: boolean
+  isSharedChannel?: boolean
+  sharedChannelSourceOrg?: string
 }
 
 export function ChatInterface({
@@ -88,6 +90,8 @@ export function ChatInterface({
   searchQuery = "",
   onSearchChange,
   isDirectMessage = false,
+  isSharedChannel = false,
+  sharedChannelSourceOrg,
 }: ChatInterfaceProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
   const [pinnedDialogOpen, setPinnedDialogOpen] = React.useState(false)
@@ -156,17 +160,19 @@ export function ChatInterface({
   return (
     <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
       {/* Channel Header */}
-      <ChannelHeader 
-        channelName={channelName} 
-        channelIcon={channelIcon}
-        pinnedCount={pinnedMessages.length}
-        onViewPinnedMessages={() => setPinnedDialogOpen(true)}
-        searchQuery={searchQuery}
-        onSearchChange={onSearchChange}
-        channelId={channelId}
-        organizationId={organizationId}
-        isAdmin={isAdmin}
-      />
+       <ChannelHeader 
+         channelName={channelName} 
+         channelIcon={channelIcon}
+         pinnedCount={pinnedMessages.length}
+         onViewPinnedMessages={() => setPinnedDialogOpen(true)}
+         searchQuery={searchQuery}
+         onSearchChange={onSearchChange}
+         channelId={channelId}
+         organizationId={organizationId}
+         isAdmin={isAdmin}
+         isSharedChannel={isSharedChannel}
+         sharedChannelSourceOrg={sharedChannelSourceOrg}
+       />
 
       {/* Message List */}
       <MessageList 

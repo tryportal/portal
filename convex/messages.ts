@@ -29,8 +29,9 @@ async function checkChannelAccess(
 ): Promise<{
   userId: string;
   channel: Doc<"channels">;
-  membership: Doc<"organizationMembers">;
+  membership: Doc<"organizationMembers"> | null;
   isAdmin: boolean;
+  isExternalMember: boolean;
 }> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -43,6 +44,7 @@ async function checkChannelAccess(
     throw new Error("Channel not found");
   }
 
+  // Check organization membership first
   const membership = await ctx.db
     .query("organizationMembers")
     .withIndex("by_organization_and_user", (q: { eq: Function }) =>
@@ -50,27 +52,39 @@ async function checkChannelAccess(
     )
     .first();
 
-  if (!membership) {
-    throw new Error("Not a member of this organization");
-  }
+  if (membership) {
+    const isAdmin = membership.role === "admin";
 
-  const isAdmin = membership.role === "admin";
+    // Check private channel access for org members
+    if (channel.isPrivate && !isAdmin) {
+      const channelMember = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_channel_and_user", (q: { eq: Function }) =>
+          q.eq("channelId", channelId).eq("userId", userId)
+        )
+        .first();
 
-  // Check private channel access
-  if (channel.isPrivate && !isAdmin) {
-    const channelMember = await ctx.db
-      .query("channelMembers")
-      .withIndex("by_channel_and_user", (q: { eq: Function }) =>
-        q.eq("channelId", channelId).eq("userId", userId)
-      )
-      .first();
-
-    if (!channelMember) {
-      throw new Error("You don't have access to this private channel");
+      if (!channelMember) {
+        throw new Error("You don't have access to this private channel");
+      }
     }
+
+    return { userId, channel, membership, isAdmin, isExternalMember: false };
   }
 
-  return { userId, channel, membership, isAdmin };
+  // Check if user is a shared channel member (external access)
+  const sharedMember = await ctx.db
+    .query("sharedChannelMembers")
+    .withIndex("by_channel_and_user", (q: { eq: Function }) =>
+      q.eq("channelId", channelId).eq("userId", userId)
+    )
+    .first();
+
+  if (sharedMember) {
+    return { userId, channel, membership: null, isAdmin: false, isExternalMember: true };
+  }
+
+  throw new Error("Not a member of this organization or channel");
 }
 
 // ============================================================================
@@ -90,10 +104,11 @@ export const getMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { messages: [], nextCursor: null, hasMore: false };
 
-    // Get channel and verify membership
+    // Get channel and verify access
     const channel = await ctx.db.get(args.channelId);
     if (!channel) return { messages: [], nextCursor: null, hasMore: false };
 
+    // Check organization membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -101,7 +116,19 @@ export const getMessages = query({
       )
       .first();
 
-    if (!membership) return { messages: [], nextCursor: null, hasMore: false };
+    // If not an org member, check for shared channel access
+    if (!membership) {
+      const sharedMember = await ctx.db
+        .query("sharedChannelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", identity.subject)
+        )
+        .first();
+      
+      if (!sharedMember) {
+        return { messages: [], nextCursor: null, hasMore: false };
+      }
+    }
 
     const limit = args.limit ?? 50; // Default to 50 messages
 
@@ -159,6 +186,7 @@ export const getMessage = query({
       const channel = await ctx.db.get(message.channelId);
       if (!channel) return null;
 
+      // Check organization membership
       const membership = await ctx.db
         .query("organizationMembers")
         .withIndex("by_organization_and_user", (q) =>
@@ -166,7 +194,17 @@ export const getMessage = query({
         )
         .first();
 
-      if (!membership) return null;
+      // If not an org member, check for shared channel access
+      if (!membership) {
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", message.channelId!).eq("userId", identity.subject)
+          )
+          .first();
+        
+        if (!sharedMember) return null;
+      }
     } else if (message.conversationId) {
       // DM message - verify participant access
       const conversation = await ctx.db.get(message.conversationId);
@@ -464,7 +502,7 @@ export const editMessage = mutation({
     // Verify access based on message type
     let isAdmin = false;
     if (message.channelId) {
-      // Channel message - check membership
+      // Channel message - check membership (including shared channel members)
       const channel = await ctx.db.get(message.channelId);
       if (!channel) {
         throw new Error("Channel not found");
@@ -477,10 +515,23 @@ export const editMessage = mutation({
         )
         .first();
 
-      if (!membership) {
-        throw new Error("Not a member of this organization");
+      if (membership) {
+        isAdmin = membership.role === "admin";
+      } else {
+        // Check if user is a shared channel member
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", message.channelId!).eq("userId", userId)
+          )
+          .first();
+
+        if (!sharedMember) {
+          throw new Error("Not authorized to access this channel");
+        }
+        // Shared members are never admins
+        isAdmin = false;
       }
-      isAdmin = membership.role === "admin";
     } else if (message.conversationId) {
       // DM message - verify participant access
       const conversation = await ctx.db.get(message.conversationId);
@@ -538,7 +589,7 @@ export const deleteMessage = mutation({
 
     // Verify access based on message type
     if (message.channelId) {
-      // Channel message - check membership
+      // Channel message - check membership (including shared channel members)
       const channel = await ctx.db.get(message.channelId);
       if (!channel) {
         throw new Error("Channel not found");
@@ -552,7 +603,17 @@ export const deleteMessage = mutation({
         .first();
 
       if (!membership) {
-        throw new Error("Not a member of this organization");
+        // Check if user is a shared channel member
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", message.channelId!).eq("userId", userId)
+          )
+          .first();
+
+        if (!sharedMember) {
+          throw new Error("Not authorized to access this channel");
+        }
       }
     } else if (message.conversationId) {
       // DM message - verify participant access
@@ -865,22 +926,8 @@ export const setTyping = mutation({
 
     const userId = identity.subject;
 
-    // Verify channel access
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) {
-      throw new Error("Not a member of this organization");
-    }
+    // Verify channel access using the shared helper (handles both org members and shared channel members)
+    await checkChannelAccess(ctx, args.channelId);
 
     // Upsert typing indicator
     const existingIndicator = await ctx.db
@@ -1240,7 +1287,7 @@ export const toggleReaction = mutation({
 
     // Verify access based on message type
     if (message.channelId) {
-      // Channel message
+      // Channel message - check membership (including shared channel members)
       const channel = await ctx.db.get(message.channelId);
       if (!channel) {
         throw new Error("Channel not found");
@@ -1254,7 +1301,17 @@ export const toggleReaction = mutation({
         .first();
 
       if (!membership) {
-        throw new Error("Not a member of this organization");
+        // Check if user is a shared channel member
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", message.channelId!).eq("userId", userId)
+          )
+          .first();
+
+        if (!sharedMember) {
+          throw new Error("Not authorized to access this channel");
+        }
       }
     } else if (message.conversationId) {
       // DM message
@@ -1363,7 +1420,7 @@ export const saveMessage = mutation({
 
     // Verify access based on message type
     if (message.channelId) {
-      // Channel message
+      // Channel message - check membership (including shared channel members)
       const channel = await ctx.db.get(message.channelId);
       if (!channel) {
         throw new Error("Channel not found");
@@ -1377,7 +1434,17 @@ export const saveMessage = mutation({
         .first();
 
       if (!membership) {
-        throw new Error("Not a member of this organization");
+        // Check if user is a shared channel member
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", message.channelId!).eq("userId", userId)
+          )
+          .first();
+
+        if (!sharedMember) {
+          throw new Error("Not authorized to access this channel");
+        }
       }
     } else if (message.conversationId) {
       // DM message

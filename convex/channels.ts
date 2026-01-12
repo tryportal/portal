@@ -91,6 +91,22 @@ export const getCategoriesAndChannels = query({
 
     const memberChannelIds = new Set(channelMemberships.map((m) => m.channelId));
 
+    // Get all shared channel members to determine which channels are shared externally
+    const sharedMembers = await ctx.db
+      .query("sharedChannelMembers")
+      .collect();
+    
+    const sharedChannelIds = new Set(sharedMembers.map((m) => m.channelId));
+
+    // Get all pending share links
+    const shareLinks = await ctx.db
+      .query("sharedChannelInvitations")
+      .filter((q) => q.eq(q.field("isLinkInvite"), true))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+    
+    const sharedChannelIdsFromLinks = new Set(shareLinks.map((s) => s.channelId));
+
     // Filter channels based on privacy and membership
     const accessibleChannels = channels.filter((channel) => {
       // Public channels are accessible to all org members
@@ -105,7 +121,11 @@ export const getCategoriesAndChannels = query({
     const result = categories.map((category) => {
       const categoryChannels = accessibleChannels
         .filter((c) => c.categoryId === category._id)
-        .sort((a, b) => a.order - b.order);
+        .sort((a, b) => a.order - b.order)
+        .map((c) => ({
+          ...c,
+          isShared: sharedChannelIds.has(c._id) || sharedChannelIdsFromLinks.has(c._id),
+        }));
       return {
         ...category,
         channels: categoryChannels,
@@ -159,7 +179,7 @@ export const getChannel = query({
     const channel = await ctx.db.get(args.channelId);
     if (!channel) return null;
 
-    // Check membership
+    // Check organization membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
@@ -167,21 +187,34 @@ export const getChannel = query({
       )
       .first();
 
-    if (!membership) return null;
+    if (membership) {
+      // User is an org member - check private channel access
+      if (channel.isPrivate && membership.role !== "admin") {
+        const channelMember = await ctx.db
+          .query("channelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", args.channelId).eq("userId", userId)
+          )
+          .first();
 
-    // Check private channel access
-    if (channel.isPrivate && membership.role !== "admin") {
-      const channelMember = await ctx.db
-        .query("channelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", args.channelId).eq("userId", userId)
-        )
-        .first();
-
-      if (!channelMember) return null;
+        if (!channelMember) return null;
+      }
+      return channel;
     }
 
-    return channel;
+    // Check if user is a shared channel member (external access)
+    const sharedMember = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_channel_and_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", userId)
+      )
+      .first();
+
+    if (sharedMember) {
+      return channel;
+    }
+
+    return null;
   },
 });
 
@@ -206,9 +239,19 @@ export const getChannelMembers = query({
       )
       .first();
 
-    if (!membership) return [];
+    // If not an org member, check if shared channel member
+    if (!membership) {
+      const sharedMember = await ctx.db
+        .query("sharedChannelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", userId)
+        )
+        .first();
+      
+      if (!sharedMember) return [];
+    }
 
-    // Get channel members
+    // Get channel members (internal private channel members)
     const members = await ctx.db
       .query("channelMembers")
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
@@ -241,16 +284,6 @@ export const getChannelByRoute = query({
 
     if (!org) return null;
 
-    // Check membership
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", org._id).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) return null;
-
     // Find category by name (case-insensitive)
     const categories = await ctx.db
       .query("channelCategories")
@@ -275,24 +308,55 @@ export const getChannelByRoute = query({
 
     if (!channel) return null;
 
-    // Check private channel access
-    if (channel.isPrivate && membership.role !== "admin") {
-      const channelMember = await ctx.db
-        .query("channelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", channel._id).eq("userId", userId)
-        )
-        .first();
+    // Check organization membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", org._id).eq("userId", userId)
+      )
+      .first();
 
-      if (!channelMember) return null;
+    if (membership) {
+      // User is an org member - check private channel access
+      if (channel.isPrivate && membership.role !== "admin") {
+        const channelMember = await ctx.db
+          .query("channelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", channel._id).eq("userId", userId)
+          )
+          .first();
+
+        if (!channelMember) return null;
+      }
+
+      return {
+        channel,
+        category,
+        organization: org,
+        membership,
+        isExternalMember: false,
+      };
     }
 
-    return {
-      channel,
-      category,
-      organization: org,
-      membership,
-    };
+    // Check if user is a shared channel member (external access)
+    const sharedMember = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_channel_and_user", (q) =>
+        q.eq("channelId", channel._id).eq("userId", userId)
+      )
+      .first();
+
+    if (sharedMember) {
+      return {
+        channel,
+        category,
+        organization: org,
+        membership: null,
+        isExternalMember: true,
+      };
+    }
+
+    return null;
   },
 });
 

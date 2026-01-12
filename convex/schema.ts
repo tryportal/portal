@@ -220,4 +220,38 @@ export default defineSchema({
     .index("by_channel", ["channelId"])
     .index("by_user", ["userId"])
     .index("by_channel_and_user", ["channelId", "userId"]),
+
+  // ============================================================================
+  // Shared Channels - Cross-workspace channel sharing
+  // ============================================================================
+
+  // Invitations for external users to access a channel from another workspace
+  sharedChannelInvitations: defineTable({
+    channelId: v.id("channels"),
+    email: v.optional(v.string()), // Optional for link-based invites
+    invitedBy: v.string(), // Clerk user ID of who created the invite
+    token: v.string(), // Unique invite token
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("revoked")),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()), // Optional - no expiration by default
+    isLinkInvite: v.optional(v.boolean()), // True for shareable link invites
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_channel_and_status", ["channelId", "status"]),
+
+  // External members who have access to a shared channel (from other workspaces)
+  // This is separate from channelMembers which tracks internal workspace members for private channels
+  sharedChannelMembers: defineTable({
+    channelId: v.id("channels"),
+    userId: v.string(), // Clerk user ID of the external user
+    sourceOrganizationId: v.optional(v.id("organizations")), // User's home workspace (if any)
+    addedAt: v.number(),
+    addedBy: v.string(), // Clerk user ID of who invited them
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_user", ["userId"])
+    .index("by_channel_and_user", ["channelId", "userId"]),
 });
