@@ -77,8 +77,7 @@ export const metadata: Metadata = {
     description:
       "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
     images: [
-      {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "Portal - Open Source Team Chat",
