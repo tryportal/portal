@@ -178,7 +178,7 @@ export default function ChannelPage({
         });
       };
     }
-  }, [channelId, filteredMessages?.length, markChannelAsRead]);
+  }, [channelId, markChannelAsRead]);
 
   // Real-time subscription for typing users (replaces polling)
   const typingUsersQuery = useQuery(
