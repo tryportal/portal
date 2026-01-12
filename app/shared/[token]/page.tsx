@@ -3,7 +3,7 @@
 import { useAuth, SignIn } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CheckCircle, XCircle, HashStraight, Buildings } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export default function SharedChannelInvitePage({
   );
 
   // Handle accepting the invitation when signed in
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     if (!token) return;
 
     setIsAccepting(true);
@@ -77,7 +77,7 @@ export default function SharedChannelInvitePage({
     } finally {
       setIsAccepting(false);
     }
-  };
+  }, [token, acceptInvitation, router]);
 
   // Auto-accept when user signs in and invitation is valid
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function SharedChannelInvitePage({
     ) {
       handleAccept();
     }
-  }, [authLoaded, isSignedIn, invitationData, success, isAccepting, error]);
+  }, [authLoaded, isSignedIn, invitationData, success, isAccepting, error, handleAccept]);
 
   // Loading state
   if (!authLoaded || (token && invitationData === undefined)) {
