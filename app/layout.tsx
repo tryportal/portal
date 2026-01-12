@@ -27,12 +27,76 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://tryportal.app"),
+  title: {
+    default: "Portal - Team Chat, Reimagined",
+    template: "%s | Portal",
+  },
+  description:
+    "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
+  keywords: [
+    "team chat",
+    "slack alternative",
+    "open source chat",
+    "team messaging",
+    "real-time messaging",
+    "privacy-first chat",
+    "free team chat",
+    "workspace collaboration",
+    "channel-based messaging",
+    "self-hosted chat",
+    "secure team communication",
+    "discord alternative",
+    "microsoft teams alternative",
+  ],
+  authors: [{ name: "Portal Team", url: "https://tryportal.app" }],
+  creator: "Portal",
+  publisher: "Portal",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: "/portal.svg",
+    apple: "/portal.svg",
   },
-  title: "Portal",
-  description: "Team chat, reimagined.",
   manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://tryportal.app",
+    siteName: "Portal",
+    title: "Portal - Team Chat, Reimagined",
+    description:
+      "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Portal - Open Source Team Chat",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Portal - Team Chat, Reimagined",
+    description:
+      "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
+    images: ["/og-image.png"],
+    creator: "@tryportal",
+  },
+  alternates: {
+    canonical: "https://tryportal.app",
+  },
+  category: "technology",
 };
 
 export default function RootLayout({
