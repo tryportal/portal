@@ -94,7 +94,7 @@ export const metadata: Metadata = {
     creator: "@tryportal",
   },
   alternates: {
-    canonical: "https://tryportal.app",
+    canonical: "https://tryportal.app/home",
   },
   category: "technology",
 };
