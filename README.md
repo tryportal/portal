@@ -60,10 +60,6 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 - **Styling**: Tailwind CSS
 - **Analytics**: PostHog (optional), Databuddy (optional)
 
-## Analytics Proxy & Security
-
-Portal includes built-in analytics proxy endpoints to prevent ad-blockers from interfering with optional analytics services (PostHog and Databuddy). These proxies are protected by the proxy handler (`proxy.ts`) that implements:
-
 ### Rate Limiting
 
 - **Default limit**: 100 requests per minute per IP address
