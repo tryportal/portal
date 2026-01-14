@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/portal.svg",
+    icon: "/favicon.ico",
     apple: "/portal.svg",
   },
   manifest: "/manifest.json",
