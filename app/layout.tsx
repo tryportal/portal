@@ -10,7 +10,6 @@ import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
 import { UserSettingsProvider } from "@/lib/user-settings";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
-import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -64,8 +63,12 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/portal.svg",
-    apple: "/portal.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: "/favicon.svg",
   },
   manifest: "/manifest.json",
   openGraph: {
@@ -112,7 +115,6 @@ export default function RootLayout({
         </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-            <DynamicFavicon />
             <ClerkThemeProvider>
               <UserSettingsProvider>
                 <PostHogProvider>
