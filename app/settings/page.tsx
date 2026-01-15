@@ -246,13 +246,13 @@ export default function UserSettingsPage() {
                       key={section.id}
                       onClick={() => handleSectionChange(section.id)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-secondary text-foreground"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <Icon className="size-5" weight={isActive ? "fill" : "regular"} />
+                      <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
                       {section.label}
                     </button>
                   );
@@ -265,9 +265,9 @@ export default function UserSettingsPage() {
           <div className="border-t border-border p-2">
             <button
               onClick={() => signOut()}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              <SignOutIcon className="size-5" />
+              <SignOutIcon className="size-4" />
               Sign out
             </button>
           </div>
@@ -326,7 +326,7 @@ export default function UserSettingsPage() {
 
           {/* Mobile Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="py-6 px-4">
+            <div className="py-4 px-3">
               {renderContent()}
             </div>
           </div>
@@ -349,7 +349,7 @@ export default function UserSettingsPage() {
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-2xl py-8 px-6">
+            <div className="mx-auto max-w-2xl py-6 px-4">
               {renderContent()}
             </div>
           </div>
@@ -363,35 +363,35 @@ export default function UserSettingsPage() {
       <>
         {/* Account Section */}
         {activeSection === "account" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Profile Card */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center gap-4">
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
                   {user?.imageUrl ? (
                     <Image
                       src={user.imageUrl}
                       alt={user.fullName || "User"}
-                      width={64}
-                      height={64}
-                      className="rounded-full size-14 sm:size-16"
+                      width={48}
+                      height={48}
+                      className="rounded-full size-12 sm:size-12"
                     />
                   ) : (
-                    <div className="flex size-14 sm:size-16 items-center justify-center rounded-full bg-muted">
-                      <UserIcon className="size-6 sm:size-7 text-muted-foreground" />
+                    <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                      <UserIcon className="size-5 text-muted-foreground" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm sm:text-base font-medium text-foreground truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {user?.fullName || user?.firstName || "User"}
                     </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {user?.primaryEmailAddress?.emailAddress}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="border-t border-border bg-muted/30 px-4 sm:px-6 py-3">
+              <div className="border-t border-border bg-muted/30 px-3 sm:px-4 py-2.5">
                 <button
                   onClick={() => openUserProfile()}
                   className="flex w-full items-center justify-between text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -403,11 +403,11 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Primary Workspace */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <HouseIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <HouseIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Default Workspace</h3>
@@ -424,19 +424,19 @@ export default function UserSettingsPage() {
                       <button
                         onClick={() => handleSetPrimaryWorkspace(null)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                          "w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all",
                           !primaryWorkspace
                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                             : "border-border bg-background hover:bg-muted/50"
                         )}
                       >
                         <div className={cn(
-                          "flex size-10 items-center justify-center rounded-lg",
+                          "flex size-8 items-center justify-center rounded-md",
                           !primaryWorkspace ? "bg-primary/10" : "bg-muted"
                         )}>
                           <HouseIcon
                             className={cn(
-                              "size-5",
+                              "size-4",
                               !primaryWorkspace ? "text-primary" : "text-muted-foreground"
                             )}
                             weight={!primaryWorkspace ? "fill" : "regular"}
@@ -465,7 +465,7 @@ export default function UserSettingsPage() {
                             key={org._id}
                             onClick={() => handleSetPrimaryWorkspace(org._id)}
                             className={cn(
-                              "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                              "w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all",
                               isPrimary
                                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                                 : "border-border bg-background hover:bg-muted/50"
@@ -475,17 +475,17 @@ export default function UserSettingsPage() {
                               <Image
                                 src={org.logoUrl}
                                 alt={org.name || "Organization"}
-                                width={40}
-                                height={40}
-                                className="rounded-lg"
+                                width={32}
+                                height={32}
+                                className="rounded-md"
                               />
                             ) : (
-                              <div className="flex size-10 items-center justify-center rounded-lg bg-foreground">
+                              <div className="flex size-8 items-center justify-center rounded-md bg-foreground">
                                 <Image
                                   src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                                   alt="Workspace"
-                                  width={20}
-                                  height={20}
+                                  width={16}
+                                  height={16}
                                 />
                               </div>
                             )}
@@ -507,7 +507,7 @@ export default function UserSettingsPage() {
                       })}
                     </>
                   ) : (
-                    <div className="rounded-xl border border-border bg-background p-6 text-center">
+                    <div className="rounded-lg border border-border bg-background p-4 text-center">
                       <p className="text-sm text-muted-foreground">
                         No workspaces available
                       </p>
@@ -521,13 +521,13 @@ export default function UserSettingsPage() {
 
         {/* Appearance Section */}
         {activeSection === "appearance" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Theme Selection */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <PaletteIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <PaletteIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Theme</h3>
@@ -537,7 +537,7 @@ export default function UserSettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { value: "light", label: "Light", icon: SunIcon },
                     { value: "dark", label: "Dark", icon: MoonIcon },
@@ -553,26 +553,26 @@ export default function UserSettingsPage() {
                           analytics.themeChanged({ theme: option.value as "light" | "dark" | "system" });
                         }}
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border p-3 sm:p-4 transition-all",
+                          "flex flex-col items-center gap-1.5 rounded-lg border p-2.5 sm:p-3 transition-all",
                           isSelected
                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                             : "border-border bg-background hover:bg-muted/50"
                         )}
                       >
                         <div className={cn(
-                          "flex size-8 sm:size-10 items-center justify-center rounded-lg",
+                          "flex size-7 sm:size-8 items-center justify-center rounded-md",
                           isSelected ? "bg-primary/10" : "bg-muted"
                         )}>
                           <Icon
                             className={cn(
-                              "size-4 sm:size-5",
+                              "size-3.5 sm:size-4",
                               isSelected ? "text-primary" : "text-muted-foreground"
                             )}
                             weight={isSelected ? "fill" : "regular"}
                           />
                         </div>
                         <span className={cn(
-                          "text-xs sm:text-sm font-medium",
+                          "text-xs font-medium",
                           isSelected ? "text-foreground" : "text-muted-foreground"
                         )}>
                           {option.label}
@@ -590,11 +590,11 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Channel Messages Style */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <ChatCircleIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <ChatCircleIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Channel Messages</h3>
@@ -604,7 +604,7 @@ export default function UserSettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {(["compact", "bubble"] as const).map((style) => {
                     const isSelected = settings.messageStyles.channels === style;
                     return (
@@ -617,13 +617,13 @@ export default function UserSettingsPage() {
                           });
                         }}
                         className={cn(
-                          "flex flex-col rounded-xl border p-3 transition-all text-left",
+                          "flex flex-col rounded-lg border p-2.5 transition-all text-left",
                           isSelected
                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                             : "border-border bg-background hover:bg-muted/50"
                         )}
                       >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-2">
                           <span className={cn(
                             "text-sm font-medium capitalize",
                             isSelected ? "text-foreground" : "text-muted-foreground"
@@ -637,7 +637,7 @@ export default function UserSettingsPage() {
                           )}
                         </div>
                         {/* Mini Preview */}
-                        <div className="rounded-lg border border-border bg-muted/30 p-2 space-y-1.5">
+                        <div className="rounded-md border border-border bg-muted/30 p-1.5 space-y-1">
                           {style === "compact" ? (
                             <>
                               <CompactPreviewMessage name="Sarah" content="Hey team!" isOwn={false} />
@@ -658,11 +658,11 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Direct Messages Style */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <UserIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <UserIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Direct Messages</h3>
@@ -672,7 +672,7 @@ export default function UserSettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {(["compact", "bubble"] as const).map((style) => {
                     const isSelected = settings.messageStyles.directMessages === style;
                     return (
@@ -685,13 +685,13 @@ export default function UserSettingsPage() {
                           });
                         }}
                         className={cn(
-                          "flex flex-col rounded-xl border p-3 transition-all text-left",
+                          "flex flex-col rounded-lg border p-2.5 transition-all text-left",
                           isSelected
                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                             : "border-border bg-background hover:bg-muted/50"
                         )}
                       >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-2">
                           <span className={cn(
                             "text-sm font-medium capitalize",
                             isSelected ? "text-foreground" : "text-muted-foreground"
@@ -705,7 +705,7 @@ export default function UserSettingsPage() {
                           )}
                         </div>
                         {/* Mini Preview */}
-                        <div className="rounded-lg border border-border bg-muted/30 p-2 space-y-1.5">
+                        <div className="rounded-md border border-border bg-muted/30 p-1.5 space-y-1">
                           {style === "compact" ? (
                             <>
                               <CompactPreviewMessage name="Alex" content="Hey!" isOwn={false} />
@@ -729,13 +729,13 @@ export default function UserSettingsPage() {
 
         {/* Notifications Section */}
         {activeSection === "notifications" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Browser Notifications */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <BellIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <BellIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Browser Notifications</h3>
@@ -782,7 +782,7 @@ export default function UserSettingsPage() {
                         }}
                         disabled={isDisabledByBrowser}
                         className={cn(
-                          "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                          "w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all text-left",
                           isSelected
                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                             : "border-border bg-background hover:bg-muted/50",
@@ -790,12 +790,12 @@ export default function UserSettingsPage() {
                         )}
                       >
                         <div className={cn(
-                          "flex size-10 items-center justify-center rounded-lg",
+                          "flex size-8 items-center justify-center rounded-md",
                           isSelected ? "bg-primary/10" : "bg-muted"
                         )}>
                           <BellIcon
                             className={cn(
-                              "size-5",
+                              "size-4",
                               isSelected ? "text-primary" : "text-muted-foreground"
                             )}
                             weight={isSelected ? "fill" : "regular"}
@@ -823,7 +823,7 @@ export default function UserSettingsPage() {
 
                 {/* Info box */}
                 {notificationPermission === "denied" && (
-                  <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-xs text-muted-foreground">
                       <strong className="font-medium text-foreground">Note:</strong> Browser notifications are currently blocked. To enable them, update your browser&apos;s notification settings for this site.
                     </p>
@@ -831,7 +831,7 @@ export default function UserSettingsPage() {
                 )}
 
                 {!notificationsSupported && (
-                  <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-xs text-muted-foreground">
                       <strong className="font-medium text-foreground">Note:</strong> Your browser doesn&apos;t support notifications.
                     </p>
@@ -844,16 +844,16 @@ export default function UserSettingsPage() {
 
         {/* Shortcuts Section */}
         {activeSection === "shortcuts" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Sidebar Toggle Shortcut */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <SidebarIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <SidebarIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div>
                         <h3 className="text-sm font-medium text-foreground">
                           Toggle Sidebar
@@ -862,15 +862,15 @@ export default function UserSettingsPage() {
                           Show or hide the navigation sidebar
                         </p>
                       </div>
-                      <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
+                      <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
                         {formatHotkey(settings.sidebarHotkey)}
                       </kbd>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-border">
+                    <div className="mt-3 pt-3 border-t border-border">
                       {isRecording ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 flex items-center justify-center h-10 rounded-lg border-2 border-dashed border-primary bg-primary/5 text-sm text-primary">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 flex items-center justify-center h-9 rounded-lg border-2 border-dashed border-primary bg-primary/5 text-sm text-primary">
                             <span className="animate-pulse">Press a key combination...</span>
                           </div>
                           <Button
@@ -892,7 +892,7 @@ export default function UserSettingsPage() {
                                 modifier: e.target.value as typeof selectedModifier,
                               });
                             }}
-                            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="h-8 rounded-md border border-border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {MODIFIER_OPTIONS.map((opt) => (
                               <option key={opt.value} value={opt.value}>
@@ -910,7 +910,7 @@ export default function UserSettingsPage() {
                                 modifier: selectedModifier,
                               });
                             }}
-                            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="h-8 rounded-md border border-border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {KEY_OPTIONS.map((opt) => (
                               <option key={opt.value} value={opt.value}>
@@ -936,7 +936,7 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Shortcut hints */}
-            <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
                 <strong className="font-medium text-foreground">Tip:</strong> Click "Record" and press your preferred key combination to quickly set a shortcut. Press Escape to cancel.
               </p>
