@@ -35,7 +35,7 @@ export function useClientUpdate() {
       }
     };
 
-    await initialize();
+    initialize();
 
     // Poll for updates
     const interval = setInterval(async () => {
