@@ -1,11 +1,26 @@
 "use client";
 
-import { Databuddy } from "@databuddy/sdk";
+import { Databuddy, clear } from "@databuddy/sdk";
+import { useAuth } from "@clerk/nextjs";
+import { useEffect, useRef } from "react";
 
 const DATABUDDY_CLIENT_ID = process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID;
 
+function DatabuddySessionSync() {
+  const { isSignedIn } = useAuth();
+  const wasSignedIn = useRef(false);
+
+  useEffect(() => {
+    if (wasSignedIn.current && !isSignedIn) {
+      clear();
+    }
+    wasSignedIn.current = !!isSignedIn;
+  }, [isSignedIn]);
+
+  return null;
+}
+
 export function DatabuddyProvider({ children }: { children: React.ReactNode }) {
-  // Only render Databuddy if client ID is configured
   if (!DATABUDDY_CLIENT_ID) {
     return <>{children}</>;
   }
@@ -14,7 +29,15 @@ export function DatabuddyProvider({ children }: { children: React.ReactNode }) {
     <>
       <Databuddy
         clientId={DATABUDDY_CLIENT_ID}
+        trackHashChanges
+        trackAttributes
+        trackOutgoingLinks
+        trackInteractions
+        trackScrollDepth
+        trackWebVitals
+        trackErrors
       />
+      <DatabuddySessionSync />
       {children}
     </>
   );

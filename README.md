@@ -38,7 +38,6 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
    
    Optional environment variables:
    - `NEXT_PUBLIC_DATABUDDY_CLIENT_ID` - Your Databuddy client ID (for analytics)
-   - `NEXT_PUBLIC_POSTHOG_KEY` - Your PostHog key (for event tracking)
 
 4. Start Convex (in a separate terminal):
    ```bash
@@ -58,11 +57,11 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 - **Backend**: Convex
 - **Auth**: Clerk
 - **Styling**: Tailwind CSS
-- **Analytics**: PostHog (optional), Databuddy (optional)
+- **Analytics**: Databuddy (optional, privacy-first)
 
 ## Analytics Proxy & Security
 
-Portal includes built-in analytics proxy endpoints to prevent ad-blockers from interfering with optional analytics services (PostHog and Databuddy). These proxies are protected by the proxy handler (`proxy.ts`) that implements:
+Portal includes built-in analytics proxy endpoints to prevent ad-blockers from interfering with Databuddy analytics. These proxies are protected by the proxy handler (`proxy.ts`) that implements:
 
 ### Rate Limiting
 
@@ -83,11 +82,6 @@ Portal includes built-in analytics proxy endpoints to prevent ad-blockers from i
 ### Path Validation
 
 The middleware implements an allowlist for known analytics endpoints:
-
-**PostHog endpoints** (`/ingest/*`):
-- `/ingest/static/*` - Static assets
-- `/ingest/decide`, `/ingest/e`, `/ingest/batch`, `/ingest/capture`, `/ingest/engage`, `/ingest/track` - Event endpoints
-- `/ingest/i/v0/e` - V0 event endpoint
 
 **Databuddy endpoints** (`/db-ingest/*`):
 - `/db-ingest/api/*` - API endpoints
