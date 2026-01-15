@@ -237,7 +237,7 @@ export function WorkspaceSettingsPage({
                       key={section.id}
                       onClick={() => setActiveSection(section.id)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         isActive
                           ? isDanger
                             ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
@@ -247,7 +247,7 @@ export function WorkspaceSettingsPage({
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <Icon className="size-5" weight={isActive ? "fill" : "regular"} />
+                      <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
                       {section.label}
                     </button>
                   )
@@ -345,7 +345,7 @@ export function WorkspaceSettingsPage({
 
           {/* Mobile Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="py-6 px-4">
+            <div className="py-4 px-3">
               {renderContent()}
             </div>
           </div>
@@ -374,7 +374,7 @@ export function WorkspaceSettingsPage({
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-2xl py-8 px-6">
+            <div className="mx-auto max-w-2xl py-6 px-4">
               {renderContent()}
             </div>
           </div>
@@ -388,8 +388,8 @@ export function WorkspaceSettingsPage({
       <>
         {/* Error Message */}
         {error && (
-          <div className="mb-6 rounded-xl bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-start gap-3">
-            <WarningCircleIcon className="size-5 shrink-0 mt-0.5" weight="fill" />
+          <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-start gap-2.5">
+            <WarningCircleIcon className="size-4 shrink-0 mt-0.5" weight="fill" />
             <div>
               <p className="font-medium">Error</p>
               <p className="mt-0.5 opacity-90">{error}</p>
@@ -399,19 +399,19 @@ export function WorkspaceSettingsPage({
 
         {/* General Section */}
         {activeSection === "general" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Logo */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <ImagesIcon className="size-5 text-muted-foreground" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <ImagesIcon className="size-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">
                       Workspace Logo
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">
                       Upload an image to represent your workspace
                     </p>
                     <LogoUpload
@@ -426,13 +426,13 @@ export function WorkspaceSettingsPage({
             </div>
 
             {/* Name & Description */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <TextTIcon className="size-5 text-muted-foreground" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <TextTIcon className="size-4 text-muted-foreground" />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-5">
+                  <div className="flex-1 min-w-0 space-y-4">
                     <div>
                       <h3 className="text-sm font-medium text-foreground">
                         Workspace Details
@@ -442,7 +442,7 @@ export function WorkspaceSettingsPage({
                       </p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
                         <label htmlFor="name" className="block text-xs font-medium text-muted-foreground mb-1.5">
                           Name
@@ -476,17 +476,17 @@ export function WorkspaceSettingsPage({
             </div>
 
             {/* URL */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <LinkIcon className="size-5 text-muted-foreground" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <LinkIcon className="size-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">
                       Workspace URL
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">
                       The web address for your workspace
                     </p>
 
@@ -519,13 +519,13 @@ export function WorkspaceSettingsPage({
 
         {/* Access Section */}
         {activeSection === "access" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Visibility Toggle */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <ShieldIcon className="size-5 text-muted-foreground" weight="fill" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <ShieldIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">Workspace Visibility</h3>
@@ -540,19 +540,19 @@ export function WorkspaceSettingsPage({
                   <button
                     onClick={() => setIsPublic(true)}
                     className={cn(
-                      "w-full flex items-start gap-4 p-4 rounded-xl border transition-all text-left",
+                      "w-full flex items-start gap-3 p-3 rounded-lg border transition-all text-left",
                       isPublic
                         ? "border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500/20"
                         : "border-border bg-background hover:bg-muted/50"
                     )}
                   >
                     <div className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-lg",
+                      "flex size-8 shrink-0 items-center justify-center rounded-md",
                       isPublic
                         ? "bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400"
                         : "bg-muted text-muted-foreground"
                     )}>
-                      <GlobeIcon className="size-5" weight={isPublic ? "fill" : "regular"} />
+                      <GlobeIcon className="size-4" weight={isPublic ? "fill" : "regular"} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-3">
@@ -578,19 +578,19 @@ export function WorkspaceSettingsPage({
                   <button
                     onClick={() => setIsPublic(false)}
                     className={cn(
-                      "w-full flex items-start gap-4 p-4 rounded-xl border transition-all text-left",
+                      "w-full flex items-start gap-3 p-3 rounded-lg border transition-all text-left",
                       !isPublic
                         ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                         : "border-border bg-background hover:bg-muted/50"
                     )}
                   >
                     <div className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-lg",
+                      "flex size-8 shrink-0 items-center justify-center rounded-md",
                       !isPublic
                         ? "bg-primary/10 text-primary"
                         : "bg-muted text-muted-foreground"
                     )}>
-                      <LockIcon className="size-5" weight={!isPublic ? "fill" : "regular"} />
+                      <LockIcon className="size-4" weight={!isPublic ? "fill" : "regular"} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-3">
@@ -614,7 +614,7 @@ export function WorkspaceSettingsPage({
                 </div>
 
                 {/* Info box */}
-                <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+                <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">
                     <strong className="font-medium text-foreground">Note:</strong> Changing visibility affects how new members can join. Existing members will not be affected.
                   </p>
@@ -626,19 +626,19 @@ export function WorkspaceSettingsPage({
 
         {/* Danger Zone Section */}
         {activeSection === "danger" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Delete Workspace */}
-            <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10 overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                    <TrashIcon className="size-5" weight="fill" />
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10 overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                    <TrashIcon className="size-4" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-foreground">
                       Delete Workspace
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">
                       Permanently delete this workspace and all of its data. This action cannot be undone.
                     </p>
 
