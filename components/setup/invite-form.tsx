@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   X,
@@ -186,148 +187,226 @@ export function InviteForm({
   return (
     <div className="space-y-6">
       {/* Existing members */}
-      {existingMembers.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            Team members
-          </Label>
-          <div className="space-y-1">
-            {existingMembers.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg"
-              >
-                <Avatar className="size-7">
-                  <AvatarImage src={member.publicUserData?.imageUrl ?? undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                    {getMemberInitials(member)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium truncate block">
-                    {getMemberDisplayName(member)}
+      <AnimatePresence>
+        {existingMembers.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-3"
+          >
+            <Label className="text-xs font-medium text-muted-foreground">
+              Team members
+            </Label>
+            <div className="space-y-2">
+              {existingMembers.map((member, index) => (
+                <motion.div
+                  key={member.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-3 px-3 py-2.5 bg-muted/50 rounded-lg border border-border/50"
+                >
+                  <Avatar className="size-8">
+                    <AvatarImage src={member.publicUserData?.imageUrl ?? undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                      {getMemberInitials(member)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium truncate block">
+                      {getMemberDisplayName(member)}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase px-2 py-0.5 rounded-full bg-muted">
+                    {member.role.replace("org:", "")}
                   </span>
-                </div>
-                <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                  {member.role.replace("org:", "")}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Invite link */}
       {onCreateInviteLink && (
-        <div className="space-y-2">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-3"
+        >
           <Label className="text-xs font-medium text-muted-foreground">
             Invite link
           </Label>
 
-          {inviteLink ? (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    value={getInviteUrl()}
-                    readOnly
-                    className="pl-9 h-9 font-mono text-xs"
-                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                  />
+          <AnimatePresence mode="wait">
+            {inviteLink ? (
+              <motion.div
+                key="link-exists"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="space-y-2"
+              >
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      value={getInviteUrl()}
+                      readOnly
+                      className="pl-9 h-10 font-mono text-xs bg-muted/30"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
+                  </div>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      className="size-10 shrink-0"
+                    >
+                      <AnimatePresence mode="wait">
+                        {copied ? (
+                          <motion.div
+                            key="check"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                          >
+                            <Check className="size-4 text-green-600" weight="bold" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="copy"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                          >
+                            <Copy className="size-4" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Button>
+                  </motion.div>
                 </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>Expires in {formatExpiryDate(inviteLink.expiresAt)}</span>
+                  <button
+                    type="button"
+                    onClick={handleRevokeLink}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                  >
+                    <ArrowsClockwise className="size-3" />
+                    Reset
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="generate-link"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon"
-                  onClick={handleCopyLink}
-                  className="size-9 shrink-0"
+                  onClick={handleGenerateLink}
+                  disabled={isGeneratingLink}
+                  className="w-full h-10 gap-2"
                 >
-                  {copied ? (
-                    <Check className="size-4 text-green-600" weight="bold" />
+                  {isGeneratingLink ? (
+                    <Spinner className="size-4 animate-spin" />
                   ) : (
-                    <Copy className="size-4" />
+                    <LinkIcon className="size-4" />
                   )}
+                  Generate invite link
                 </Button>
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>Expires in {formatExpiryDate(inviteLink.expiresAt)}</span>
-                <button
-                  type="button"
-                  onClick={handleRevokeLink}
-                  className="flex items-center gap-1 hover:text-foreground transition-colors"
-                >
-                  <ArrowsClockwise className="size-3" />
-                  Reset
-                </button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateLink}
-              disabled={isGeneratingLink}
-              className="w-full h-9 gap-2"
-            >
-              {isGeneratingLink ? (
-                <Spinner className="size-4 animate-spin" />
-              ) : (
-                <LinkIcon className="size-4" />
-              )}
-              Generate invite link
-            </Button>
-          )}
-        </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       )}
 
       {/* Email invitations */}
-      <div className="space-y-2">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="space-y-3"
+      >
         <Label className="text-xs font-medium text-muted-foreground">
           Invite by email
         </Label>
 
         <div className="space-y-2">
-          {emails.map((email, index) => (
-            <div key={index} className="flex gap-2">
-              <div className="relative flex-1">
-                <EnvelopeSimple className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={email}
-                  onChange={(e) => updateEmail(index, e.target.value)}
-                  className="pl-9 h-9"
-                  disabled={isInviting}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && email.trim()) {
-                      e.preventDefault();
-                      if (index === emails.length - 1) {
-                        addEmailField();
+          <AnimatePresence>
+            {emails.map((email, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex gap-2"
+              >
+                <div className="relative flex-1">
+                  <EnvelopeSimple className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="colleague@company.com"
+                    value={email}
+                    onChange={(e) => updateEmail(index, e.target.value)}
+                    className="pl-9 h-10"
+                    disabled={isInviting}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && email.trim()) {
+                        e.preventDefault();
+                        if (index === emails.length - 1) {
+                          addEmailField();
+                        }
                       }
-                    }
-                  }}
-                />
-              </div>
-              {emails.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeEmailField(index)}
-                  disabled={isInviting}
-                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                >
-                  <X className="size-4" />
-                </Button>
-              )}
-            </div>
-          ))}
+                    }}
+                  />
+                </div>
+                {emails.length > 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeEmailField(index)}
+                      disabled={isInviting}
+                      className="size-10 shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              className="text-xs text-destructive"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
 
         <div className="flex gap-2 pt-1">
           <Button
@@ -336,80 +415,113 @@ export function InviteForm({
             size="sm"
             onClick={addEmailField}
             disabled={isInviting}
-            className="gap-1 h-8 text-xs"
+            className="gap-1.5 h-9 text-xs"
           >
-            <Plus className="size-3" />
-            Add
+            <Plus className="size-3.5" />
+            Add another
           </Button>
           <div className="flex-1" />
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleInviteAll}
-            disabled={isInviting || emails.every((e) => !e.trim())}
-            className="gap-1 h-8"
-          >
-            {isInviting ? (
-              <Spinner className="size-3 animate-spin" />
-            ) : (
-              <PaperPlaneTilt className="size-3" weight="fill" />
-            )}
-            Send
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleInviteAll}
+              disabled={isInviting || emails.every((e) => !e.trim())}
+              className="gap-1.5 h-9 min-w-[100px]"
+            >
+              {isInviting ? (
+                <Spinner className="size-3.5 animate-spin" />
+              ) : (
+                <PaperPlaneTilt className="size-3.5" weight="fill" />
+              )}
+              Send invites
+            </Button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Pending invitations */}
-      {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
-        <div className="space-y-2 pt-2 border-t border-border">
-          <Label className="text-xs font-medium text-muted-foreground">
-            Pending
-          </Label>
-          <div className="space-y-1">
-            {invitedEmails.map((email, index) => (
-              <div
-                key={`sent-${index}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20"
-              >
-                <CheckCircle
-                  className="size-4 text-green-600"
-                  weight="fill"
-                />
-                <span className="text-sm text-green-800 dark:text-green-200 flex-1">
-                  {email}
-                </span>
-                <span className="text-[10px] font-medium text-green-600 uppercase">
-                  Sent
-                </span>
-              </div>
-            ))}
+      <AnimatePresence>
+        {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-3 pt-4 border-t border-border"
+          >
+            <Label className="text-xs font-medium text-muted-foreground">
+              Pending invitations
+            </Label>
+            <div className="space-y-2">
+              <AnimatePresence>
+                {invitedEmails.map((email, index) => (
+                  <motion.div
+                    key={`sent-${index}`}
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.1 }}
+                    >
+                      <CheckCircle
+                        className="size-5 text-green-600 dark:text-green-500"
+                        weight="fill"
+                      />
+                    </motion.div>
+                    <span className="text-sm text-green-800 dark:text-green-200 flex-1">
+                      {email}
+                    </span>
+                    <span className="text-[10px] font-medium text-green-600 dark:text-green-400 uppercase">
+                      Sent
+                    </span>
+                  </motion.div>
+                ))}
 
-            {pendingInvitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg group",
-                  "hover:bg-muted/50 transition-colors"
-                )}
-              >
-                <div className="size-4 rounded-full border-2 border-muted-foreground/30" />
-                <span className="text-sm text-muted-foreground flex-1">
-                  {invitation.emailAddress}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => handleRevoke(invitation.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                >
-                  <X className="size-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                {pendingInvitations.map((invitation, index) => (
+                  <motion.div
+                    key={invitation.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ delay: (invitedEmails.length + index) * 0.05 }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg group",
+                      "bg-muted/30 hover:bg-muted/50 transition-colors border border-border/50"
+                    )}
+                  >
+                    <div className="size-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center">
+                      <div className="size-1.5 rounded-full bg-muted-foreground/30" />
+                    </div>
+                    <span className="text-sm text-muted-foreground flex-1">
+                      {invitation.emailAddress}
+                    </span>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      whileHover={{ opacity: 1 }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleRevoke(invitation.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
