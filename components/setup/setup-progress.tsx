@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { Check } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 interface SetupProgressProps {
   currentStep: number;
@@ -10,53 +10,74 @@ interface SetupProgressProps {
 
 export function SetupProgress({ currentStep, steps }: SetupProgressProps) {
   return (
-    <div className="flex items-center gap-2">
-      {steps.map((step, index) => {
-        const isActive = index === currentStep;
-        const isCompleted = index < currentStep;
+    <div className="flex items-center justify-center w-full">
+      <div className="flex items-center gap-0">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isCompleted = index < currentStep;
+          const isLast = index === steps.length - 1;
 
-        return (
-          <div key={step.id} className="flex items-center gap-2">
-            {/* Step indicator */}
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "size-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all duration-300",
-                  isActive && "bg-primary text-primary-foreground",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  !isActive && !isCompleted && "bg-primary/10 text-primary/40"
-                )}
-              >
-                {isCompleted ? (
-                  <Check weight="bold" className="size-3" />
-                ) : (
-                  index + 1
-                )}
+          return (
+            <div key={step.id} className="flex items-center">
+              {/* Step indicator */}
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className={cn(
+                    "relative size-9 rounded-full flex items-center justify-center transition-all duration-200",
+                    isActive || isCompleted
+                      ? "bg-primary"
+                      : "bg-muted",
+                    isActive && "ring-2 ring-primary/20 ring-offset-2 ring-offset-background"
+                  )}
+                >
+                  {/* Check icon for completed */}
+                  {isCompleted ? (
+                    <Check
+                      weight="bold"
+                      className="size-4 text-primary-foreground"
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        "text-xs font-semibold",
+                        isActive
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {index + 1}
+                    </span>
+                  )}
+                </div>
+
+                {/* Step label */}
+                <span
+                  className={cn(
+                    "text-xs hidden sm:block whitespace-nowrap transition-colors duration-200",
+                    isActive
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={cn(
-                  "text-xs font-medium transition-colors hidden sm:block",
-                  isActive && "text-primary",
-                  isCompleted && "text-primary/60",
-                  !isActive && !isCompleted && "text-primary/40"
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
 
-            {/* Connector line */}
-            {index < steps.length - 1 && (
-              <div
-                className={cn(
-                  "w-8 h-px transition-colors",
-                  index < currentStep ? "bg-primary/30" : "bg-primary/10"
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
+              {/* Connector line */}
+              {!isLast && (
+                <div className="relative w-12 sm:w-20 h-0.5 mx-2 sm:mx-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-300",
+                      isCompleted ? "w-full" : "w-0"
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

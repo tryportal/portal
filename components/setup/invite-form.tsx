@@ -187,19 +187,19 @@ export function InviteForm({
     <div className="space-y-6">
       {/* Existing members */}
       {existingMembers.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label className="text-xs font-medium text-muted-foreground">
             Team members
           </Label>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {existingMembers.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2.5 bg-muted/50 rounded-lg border border-border/50"
               >
-                <Avatar className="size-7">
+                <Avatar className="size-8">
                   <AvatarImage src={member.publicUserData?.imageUrl ?? undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
                     {getMemberInitials(member)}
                   </AvatarFallback>
                 </Avatar>
@@ -208,7 +208,7 @@ export function InviteForm({
                     {getMemberDisplayName(member)}
                   </span>
                 </div>
-                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase px-2 py-0.5 rounded-full bg-muted">
                   {member.role.replace("org:", "")}
                 </span>
               </div>
@@ -219,7 +219,7 @@ export function InviteForm({
 
       {/* Invite link */}
       {onCreateInviteLink && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label className="text-xs font-medium text-muted-foreground">
             Invite link
           </Label>
@@ -233,7 +233,7 @@ export function InviteForm({
                     type="text"
                     value={getInviteUrl()}
                     readOnly
-                    className="pl-9 h-9 font-mono text-xs"
+                    className="pl-9 h-10 font-mono text-xs bg-muted/30"
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                 </div>
@@ -242,7 +242,7 @@ export function InviteForm({
                   variant="outline"
                   size="icon"
                   onClick={handleCopyLink}
-                  className="size-9 shrink-0"
+                  className="size-10 shrink-0"
                 >
                   {copied ? (
                     <Check className="size-4 text-green-600" weight="bold" />
@@ -251,7 +251,7 @@ export function InviteForm({
                   )}
                 </Button>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Expires in {formatExpiryDate(inviteLink.expiresAt)}</span>
                 <button
                   type="button"
@@ -267,10 +267,9 @@ export function InviteForm({
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={handleGenerateLink}
               disabled={isGeneratingLink}
-              className="w-full h-9 gap-2"
+              className="w-full h-10 gap-2"
             >
               {isGeneratingLink ? (
                 <Spinner className="size-4 animate-spin" />
@@ -284,7 +283,7 @@ export function InviteForm({
       )}
 
       {/* Email invitations */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Label className="text-xs font-medium text-muted-foreground">
           Invite by email
         </Label>
@@ -299,7 +298,7 @@ export function InviteForm({
                   placeholder="colleague@company.com"
                   value={email}
                   onChange={(e) => updateEmail(index, e.target.value)}
-                  className="pl-9 h-9"
+                  className="pl-9 h-10"
                   disabled={isInviting}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && email.trim()) {
@@ -318,7 +317,7 @@ export function InviteForm({
                   size="icon"
                   onClick={() => removeEmailField(index)}
                   disabled={isInviting}
-                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  className="size-10 shrink-0 text-muted-foreground hover:text-destructive"
                 >
                   <X className="size-4" />
                 </Button>
@@ -327,7 +326,11 @@ export function InviteForm({
           ))}
         </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && (
+          <p className="text-xs text-destructive">
+            {error}
+          </p>
+        )}
 
         <div className="flex gap-2 pt-1">
           <Button
@@ -336,10 +339,10 @@ export function InviteForm({
             size="sm"
             onClick={addEmailField}
             disabled={isInviting}
-            className="gap-1 h-8 text-xs"
+            className="gap-1.5 h-9 text-xs"
           >
-            <Plus className="size-3" />
-            Add
+            <Plus className="size-3.5" />
+            Add another
           </Button>
           <div className="flex-1" />
           <Button
@@ -347,38 +350,38 @@ export function InviteForm({
             size="sm"
             onClick={handleInviteAll}
             disabled={isInviting || emails.every((e) => !e.trim())}
-            className="gap-1 h-8"
+            className="gap-1.5 h-9 min-w-[100px]"
           >
             {isInviting ? (
-              <Spinner className="size-3 animate-spin" />
+              <Spinner className="size-3.5 animate-spin" />
             ) : (
-              <PaperPlaneTilt className="size-3" weight="fill" />
+              <PaperPlaneTilt className="size-3.5" weight="fill" />
             )}
-            Send
+            Send invites
           </Button>
         </div>
       </div>
 
       {/* Pending invitations */}
       {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
-        <div className="space-y-2 pt-2 border-t border-border">
+        <div className="space-y-3 pt-4 border-t border-border">
           <Label className="text-xs font-medium text-muted-foreground">
-            Pending
+            Pending invitations
           </Label>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {invitedEmails.map((email, index) => (
               <div
                 key={`sent-${index}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50"
               >
                 <CheckCircle
-                  className="size-4 text-green-600"
+                  className="size-5 text-green-600 dark:text-green-500"
                   weight="fill"
                 />
                 <span className="text-sm text-green-800 dark:text-green-200 flex-1">
                   {email}
                 </span>
-                <span className="text-[10px] font-medium text-green-600 uppercase">
+                <span className="text-[10px] font-medium text-green-600 dark:text-green-400 uppercase">
                   Sent
                 </span>
               </div>
@@ -388,11 +391,13 @@ export function InviteForm({
               <div
                 key={invitation.id}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg group",
-                  "hover:bg-muted/50 transition-colors"
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg group",
+                  "bg-muted/30 hover:bg-muted/50 transition-colors border border-border/50"
                 )}
               >
-                <div className="size-4 rounded-full border-2 border-muted-foreground/30" />
+                <div className="size-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center">
+                  <div className="size-1.5 rounded-full bg-muted-foreground/30" />
+                </div>
                 <span className="text-sm text-muted-foreground flex-1">
                   {invitation.emailAddress}
                 </span>
@@ -403,7 +408,7 @@ export function InviteForm({
                   onClick={() => handleRevoke(invitation.id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                 >
-                  <X className="size-3" />
+                  <X className="size-3.5" />
                 </Button>
               </div>
             ))}

@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
-import { ArrowLeft, UsersIcon, Spinner } from "@phosphor-icons/react";
+import { ArrowLeft, UsersThree, Spinner, Buildings } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useTheme } from "@/lib/theme-provider";
 import { analytics } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 
 export default function PublicWorkspacesPage() {
   const router = useRouter();
@@ -36,88 +37,135 @@ export default function PublicWorkspacesPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        {/* Header */}
-        <div className="space-y-1">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </button>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Public Workspaces
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Join an existing public workspace to get started.
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 px-4 sm:px-6 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm z-50">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-4" weight="bold" />
+          Back
+        </button>
 
-        {/* Workspaces List */}
-        {publicOrgs === undefined && (
-          <div className="flex items-center justify-center py-8">
-            <Spinner className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1 rounded-full bg-muted/50">
+          Join Workspace
+        </span>
+      </header>
 
-        {publicOrgs && publicOrgs.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">
-              No public workspaces available to join.
+      {/* Main content */}
+      <main className="flex-1 flex items-start justify-center px-4 pt-24 pb-8">
+        <div className="w-full max-w-lg space-y-8">
+          {/* Page Header */}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              Public Workspaces
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Join an existing public workspace and start collaborating with the team.
             </p>
           </div>
-        )}
 
-        {publicOrgs && publicOrgs.length > 0 && (
-          <div className="space-y-2">
-            {publicOrgs.map((org) => (
+          {/* Loading State */}
+          {publicOrgs === undefined && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Spinner className="size-6 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading workspaces...</p>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {publicOrgs && publicOrgs.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="size-16 rounded-2xl bg-muted flex items-center justify-center">
+                <Buildings className="size-8 text-muted-foreground" weight="duotone" />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  No public workspaces available
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Check back later or create your own workspace
+                </p>
+              </div>
               <button
-                key={org._id}
-                onClick={() => handleJoinOrg(org._id)}
-                disabled={joiningOrgId !== null}
-                className="w-full p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => router.back()}
+                className="mt-2 text-sm font-medium text-primary hover:underline"
               >
-                <div className="flex items-center gap-3">
-                  {org.logoUrl ? (
-                    <Image
-                      src={org.logoUrl}
-                      alt={org.name}
-                      width={40}
-                      height={40}
-                      className="rounded"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded bg-foreground">
-                      <Image
-                        src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                        alt="Workspace"
-                        width={20}
-                        height={20}
-                      />
-                    </div>
+                Create a workspace instead
+              </button>
+            </div>
+          )}
+
+          {/* Workspaces List */}
+          {publicOrgs && publicOrgs.length > 0 && (
+            <div className="space-y-3">
+              {publicOrgs.map((org) => (
+                <button
+                  key={org._id}
+                  onClick={() => handleJoinOrg(org._id)}
+                  disabled={joiningOrgId !== null}
+                  className={cn(
+                    "group relative w-full p-5 rounded-xl border border-border bg-card text-left",
+                    "transition-all duration-150 hover:shadow-sm hover:border-primary/20",
+                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                   )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">
-                      {org.name}
-                    </h3>
-                    {org.description && (
-                      <p className="text-sm text-muted-foreground truncate mt-0.5">
-                        {org.description}
-                      </p>
+                >
+                  <div className="relative flex items-center gap-4">
+                    {/* Logo */}
+                    <div className="shrink-0">
+                      {org.logoUrl ? (
+                        <Image
+                          src={org.logoUrl}
+                          alt={org.name}
+                          width={48}
+                          height={48}
+                          className="rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+                          <Image
+                            src={isDark ? "/portal.svg" : "/portal-dark.svg"}
+                            alt="Workspace"
+                            width={24}
+                            height={24}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate text-base">
+                        {org.name}
+                      </h3>
+                      {org.description && (
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">
+                          {org.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Join indicator */}
+                    {joiningOrgId === org._id ? (
+                      <Spinner className="size-5 animate-spin text-primary" />
+                    ) : (
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                        <UsersThree className="size-4" weight="bold" />
+                      </div>
                     )}
                   </div>
-                  {joiningOrgId === org._id ? (
-                    <Spinner className="size-5 animate-spin text-muted-foreground" />
-                  ) : (
-                    <UsersIcon className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Subtle background pattern */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
       </div>
     </div>
   );
