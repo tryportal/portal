@@ -209,7 +209,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [step, isSaving, name, slug]); // Dependencies for validation check
+  }, [step, isSaving, name, slug, handleContinue, handleBack]);
 
   const handleCreateNew = () => {
     setDirection(1);
