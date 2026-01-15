@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { api } from "@/convex/_generated/api";
@@ -129,42 +130,59 @@ function SetupContent() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 px-3 sm:px-4 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm z-50">
-        <div className="flex items-center gap-2">
-          <div className="size-7 rounded-lg bg-primary flex items-center justify-center">
+      <motion.header
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed top-0 left-0 right-0 h-14 px-4 sm:px-6 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm z-50"
+      >
+        <div className="flex items-center gap-2.5">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="size-8 rounded-lg bg-primary flex items-center justify-center"
+          >
             <img
               src={isDark ? "/portal.svg" : "/portal-dark.svg"}
               alt="Portal"
               className="size-4"
             />
-          </div>
-          <span className="font-semibold text-xs sm:text-sm">Portal</span>
+          </motion.div>
+          <span className="font-semibold text-sm">Portal</span>
         </div>
 
         <div className="flex items-center gap-3">
           {canExit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.replace(`/w/${defaultRedirectSlug}`)}
-              className="gap-1.5 text-muted-foreground"
-            >
-              <X className="size-4" weight="bold" />
-              Exit
-            </Button>
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.replace(`/w/${defaultRedirectSlug}`)}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" weight="bold" />
+                Exit
+              </Button>
+            </motion.div>
           )}
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1 rounded-full bg-muted/50">
             Setup
           </span>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main content */}
-      <main className="flex-1 flex items-center justify-center px-4 pt-14">
+      <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
         <UserDataCacheProvider>
           <SetupWizard organizationId={setupOrgId ?? undefined} />
         </UserDataCacheProvider>
       </main>
+
+      {/* Subtle background pattern */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
+      </div>
     </div>
   );
 }
