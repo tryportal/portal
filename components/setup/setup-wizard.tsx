@@ -183,34 +183,6 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     }
   }, [existingOrg, hasInitialized, step, setStep]);
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle keyboard shortcuts on steps > 0 (not choice step)
-      if (step === 0) return;
-      
-      // Check if step is valid (inline validation)
-      const stepIsValid = step === 1 
-        ? name.trim().length >= 2 && slug.trim().length >= 2 
-        : true;
-      
-      // Ctrl/Cmd + Enter to continue
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSaving && stepIsValid) {
-        e.preventDefault();
-        handleContinue();
-      }
-      
-      // Escape to go back (only if not saving)
-      if (e.key === "Escape" && !isSaving && step > 0) {
-        e.preventDefault();
-        handleBack();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [step, isSaving, name, slug, handleContinue, handleBack]);
-
   const handleCreateNew = () => {
     setDirection(1);
     setStep(1);
@@ -308,6 +280,34 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       }, 800);
     }
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keyboard shortcuts on steps > 0 (not choice step)
+      if (step === 0) return;
+      
+      // Check if step is valid (inline validation)
+      const stepIsValid = step === 1 
+        ? name.trim().length >= 2 && slug.trim().length >= 2 
+        : true;
+      
+      // Ctrl/Cmd + Enter to continue
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSaving && stepIsValid) {
+        e.preventDefault();
+        handleContinue();
+      }
+      
+      // Escape to go back (only if not saving)
+      if (e.key === "Escape" && !isSaving && step > 0) {
+        e.preventDefault();
+        handleBack();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [step, isSaving, name, slug, handleContinue, handleBack]);
 
   const handleLogoUploaded = (storageId: Id<"_storage">) => {
     setLogoId(storageId);
