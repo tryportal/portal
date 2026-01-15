@@ -63,3 +63,4 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 ## License
 
 MIT
+
