@@ -10,6 +10,7 @@ import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
 import { UserSettingsProvider } from "@/lib/user-settings";
 import { RootNotificationProvider } from "@/components/notifications/notification-provider";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+import { ClientUpdateProvider } from "@/components/client-update-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -121,9 +122,11 @@ export default function RootLayout({
                   <DatabuddyProvider>
                     <ConvexClientProvider>
                       <RootNotificationProvider>
-                        {children}
-                        <CookieConsentBanner />
-                        <Toaster position="bottom-right" richColors />
+                        <ClientUpdateProvider>
+                          {children}
+                          <CookieConsentBanner />
+                          <Toaster position="bottom-right" richColors />
+                        </ClientUpdateProvider>
                       </RootNotificationProvider>
                     </ConvexClientProvider>
                   </DatabuddyProvider>
