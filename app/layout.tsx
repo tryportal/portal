@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { ConvexClientProvider } from "@/lib/convex-provider";
-import { PostHogProvider } from "@/lib/posthog";
 import { DatabuddyProvider } from "@/lib/databuddy";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
@@ -118,19 +117,17 @@ export default function RootLayout({
           <ThemeProvider defaultTheme="system" storageKey="portal-theme">
             <ClerkThemeProvider>
               <UserSettingsProvider>
-                <PostHogProvider>
-                  <DatabuddyProvider>
-                    <ConvexClientProvider>
-                      <RootNotificationProvider>
-                        <ClientUpdateProvider>
-                          {children}
-                          <CookieConsentBanner />
-                          <Toaster position="bottom-right" richColors />
-                        </ClientUpdateProvider>
-                      </RootNotificationProvider>
-                    </ConvexClientProvider>
-                  </DatabuddyProvider>
-                </PostHogProvider>
+                <DatabuddyProvider>
+                  <ConvexClientProvider>
+                    <RootNotificationProvider>
+                      <ClientUpdateProvider>
+                        {children}
+                        <CookieConsentBanner />
+                        <Toaster position="bottom-right" richColors />
+                      </ClientUpdateProvider>
+                    </RootNotificationProvider>
+                  </ConvexClientProvider>
+                </DatabuddyProvider>
               </UserSettingsProvider>
             </ClerkThemeProvider>
           </ThemeProvider>

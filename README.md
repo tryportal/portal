@@ -38,7 +38,6 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
    
    Optional environment variables:
    - `NEXT_PUBLIC_DATABUDDY_CLIENT_ID` - Your Databuddy client ID (for analytics)
-   - `NEXT_PUBLIC_POSTHOG_KEY` - Your PostHog key (for event tracking)
 
 4. Start Convex (in a separate terminal):
    ```bash
@@ -58,7 +57,7 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 - **Backend**: Convex
 - **Auth**: Clerk
 - **Styling**: Tailwind CSS
-- **Analytics**: PostHog (optional), Databuddy (optional)
+- **Analytics**: Databuddy (optional, privacy-first)
 
 ## License
 

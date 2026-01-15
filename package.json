@@ -26,7 +26,6 @@
     "framer-motion": "^12.23.26",
     "next": "16.1.1",
     "nuqs": "^2.8.5",
-    "posthog-js": "^1.310.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

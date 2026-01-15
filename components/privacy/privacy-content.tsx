@@ -81,7 +81,7 @@ When you invite others to your workspace:
 
 ### 7. Usage and Analytics Data
 
-We collect usage information through analytics services (PostHog and Databuddy, when enabled):
+We collect usage information through Databuddy analytics (when enabled):
 
 - **Page views** and navigation patterns
 - **Feature usage** (workspace creation, channel views, message actions)
@@ -131,14 +131,10 @@ We use the following third-party services that may collect or process your data:
    - Data: All application data
    - Privacy Policy: [Convex Privacy Policy](https://www.convex.dev/privacy)
 
-3. **PostHog** (Analytics - Optional)
-   - Purpose: Usage analytics and product insights
-   - Data: User interactions, page views, device information
-   - Privacy Policy: [PostHog Privacy Policy](https://posthog.com/privacy)
-
-4. **Databuddy** (Analytics - Optional)
-   - Purpose: Product analytics
-   - Data: Usage data and user interactions
+3. **Databuddy** (Analytics - Optional)
+   - Purpose: Privacy-first product analytics
+   - Data: Anonymous usage data, page views, interactions, performance metrics
+   - Note: No cookies, no PII collection, GDPR compliant by design
    - Privacy Policy: [Databuddy Privacy Policy](https://databuddy.cc/privacy)
 
 ## Data Sharing and Disclosure
@@ -146,7 +142,7 @@ We use the following third-party services that may collect or process your data:
 We do not sell your personal information. We may share your information only in the following circumstances:
 
 1. **Within Your Workspace**: Your messages, profile information, and activity are visible to other members of your workspace(s)
-2. **Service Providers**: With third-party service providers (Clerk, Convex, PostHog, Databuddy) who assist in operating the Service
+2. **Service Providers**: With third-party service providers (Clerk, Convex, Databuddy) who assist in operating the Service
 3. **Legal Requirements**: When required by law, court order, or government regulation
 4. **Business Transfers**: In connection with a merger, acquisition, or sale of assets (with notice to users)
 5. **Consent**: With your explicit consent
