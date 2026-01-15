@@ -2,10 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   generateBuildId: async () => {
-    return process.env.VERCEL_GIT_COMMIT_SHA || `build-${Date.now()}`;
+    return process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_BUILD_ID || "development";
   },
   env: {
     NEXT_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || `build-${Date.now()}`,
+  },
   },
   images: {
     remotePatterns: [
