@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,28 +150,20 @@ export function IdentityStep({
         </div>
 
         {/* Preview Section */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="hidden lg:flex flex-col items-center justify-start pt-2"
-        >
+        <div className="hidden lg:flex flex-col items-center justify-start pt-2">
           <WorkspacePreview name={name} logoUrl={logoUrl} />
-        </motion.div>
+        </div>
       </div>
 
       {/* Mobile Preview - shown below form on smaller screens */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      <div
         className={cn(
           "flex lg:hidden justify-center pt-4",
           !name && !logoUrl && "hidden"
         )}
       >
         <WorkspacePreview name={name} logoUrl={logoUrl} />
-      </motion.div>
+      </div>
     </div>
   );
 }

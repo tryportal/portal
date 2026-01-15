@@ -11,26 +11,22 @@ interface StepContainerProps {
 
 const variants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 100 : -100,
+    x: direction > 0 ? 20 : -20,
     opacity: 0,
-    scale: 0.98,
   }),
   center: {
     x: 0,
     opacity: 1,
-    scale: 1,
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? -100 : 100,
+    x: direction > 0 ? -20 : 20,
     opacity: 0,
-    scale: 0.98,
   }),
 };
 
 const transition = {
-  x: { type: "spring" as const, stiffness: 300, damping: 30 },
-  opacity: { duration: 0.3 },
-  scale: { duration: 0.3 },
+  duration: 0.2,
+  ease: "easeOut" as const,
 };
 
 export function StepContainer({ children, step, direction }: StepContainerProps) {
@@ -61,9 +57,9 @@ interface StepContentProps {
 export function StepContent({ children, className = "" }: StepContentProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
       className={className}
     >
       {children}
@@ -79,19 +75,14 @@ interface StepHeadingProps {
 
 export function StepHeading({ title, description }: StepHeadingProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-      className="space-y-2"
-    >
+    <div className="space-y-2">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         {title}
       </h1>
       <p className="text-sm text-muted-foreground leading-relaxed">
         {description}
       </p>
-    </motion.div>
+    </div>
   );
 }
 
@@ -101,12 +92,12 @@ interface StepFieldProps {
   delay?: number;
 }
 
-export function StepField({ children, delay = 0.1 }: StepFieldProps) {
+export function StepField({ children, delay = 0 }: StepFieldProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15, delay }}
     >
       {children}
     </motion.div>

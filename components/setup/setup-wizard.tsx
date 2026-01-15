@@ -183,6 +183,34 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
     }
   }, [existingOrg, hasInitialized, step, setStep]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keyboard shortcuts on steps > 0 (not choice step)
+      if (step === 0) return;
+      
+      // Check if step is valid (inline validation)
+      const stepIsValid = step === 1 
+        ? name.trim().length >= 2 && slug.trim().length >= 2 
+        : true;
+      
+      // Ctrl/Cmd + Enter to continue
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSaving && stepIsValid) {
+        e.preventDefault();
+        handleContinue();
+      }
+      
+      // Escape to go back (only if not saving)
+      if (e.key === "Escape" && !isSaving && step > 0) {
+        e.preventDefault();
+        handleBack();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [step, isSaving, name, slug]); // Dependencies for validation check
+
   const handleCreateNew = () => {
     setDirection(1);
     setStep(1);
@@ -365,7 +393,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
   // Animation variants for step transitions
   const stepVariants = {
     enter: (dir: number) => ({
-      x: dir > 0 ? 60 : -60,
+      x: dir > 0 ? 20 : -20,
       opacity: 0,
     }),
     center: {
@@ -373,7 +401,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       opacity: 1,
     },
     exit: (dir: number) => ({
-      x: dir > 0 ? -60 : 60,
+      x: dir > 0 ? -20 : 20,
       opacity: 0,
     }),
   };
@@ -382,40 +410,19 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
   if (isFinishing) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="w-full max-w-md mx-auto flex flex-col items-center justify-center py-20"
       >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
-          className="size-20 rounded-full bg-primary flex items-center justify-center mb-6"
-        >
-          <motion.div
-            initial={{ scale: 0, rotate: -45 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 400, damping: 15 }}
-          >
-            <Check className="size-10 text-primary-foreground" weight="bold" />
-          </motion.div>
-        </motion.div>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="text-xl font-semibold text-foreground"
-        >
+        <div className="size-20 rounded-full bg-primary flex items-center justify-center mb-6">
+          <Check className="size-10 text-primary-foreground" weight="bold" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground">
           You're all set!
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="text-sm text-muted-foreground mt-2"
-        >
+        </h2>
+        <p className="text-sm text-muted-foreground mt-2">
           Redirecting to your workspace...
-        </motion.p>
+        </p>
       </motion.div>
     );
   }
@@ -426,10 +433,10 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       <AnimatePresence mode="wait">
         {showProgress && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="mb-10"
           >
             <SetupProgress currentStep={step - 1} steps={PROGRESS_STEPS} />
@@ -448,7 +455,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.2 }}
             >
               <ChoiceStep
                 onCreateNew={handleCreateNew}
@@ -465,7 +472,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.2 }}
             >
               <IdentityStep
                 name={name}
@@ -489,7 +496,7 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.2 }}
             >
               <InviteStep
                 onInvite={handleInvite}
@@ -509,9 +516,9 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive"
           >
             {error}
@@ -523,70 +530,59 @@ export function SetupWizard({ organizationId: initialOrgId }: SetupWizardProps) 
       <AnimatePresence>
         {step > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ delay: 0.1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="mt-10 flex items-center justify-between pt-6 border-t border-border"
           >
             {/* Left side - Back button or Skip */}
             <div className="flex items-center gap-2">
               {step > 0 && (
-                <motion.div whileTap={{ scale: 0.97 }}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleBack}
-                    disabled={isSaving}
-                    className="gap-1.5 text-muted-foreground"
-                  >
-                    <ArrowLeft className="size-4" weight="bold" />
-                    Back
-                  </Button>
-                </motion.div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleBack}
+                  disabled={isSaving}
+                  className="gap-1.5 text-muted-foreground"
+                >
+                  <ArrowLeft className="size-4" weight="bold" />
+                  Back
+                </Button>
               )}
             </div>
 
             {/* Right side - Skip and Continue */}
             <div className="flex items-center gap-3">
               {isLastStep && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={isSaving}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <button
-                    type="button"
-                    onClick={handleSkip}
-                    disabled={isSaving}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Skip for now
-                  </button>
-                </motion.div>
+                  Skip for now
+                </button>
               )}
 
-              <motion.div whileTap={{ scale: 0.97 }}>
-                <Button
-                  type="button"
-                  onClick={handleContinue}
-                  disabled={isSaving || !isStepValid()}
-                  className="gap-2 min-w-[130px] h-10"
-                >
-                  {isSaving ? (
-                    <Spinner className="size-4 animate-spin" />
-                  ) : (
-                    <>
-                      {isLastStep ? "Finish Setup" : "Continue"}
-                      {isLastStep ? (
-                        <Confetti className="size-4" weight="fill" />
-                      ) : (
-                        <ArrowRight className="size-4" weight="bold" />
-                      )}
-                    </>
-                  )}
-                </Button>
-              </motion.div>
+              <Button
+                type="button"
+                onClick={handleContinue}
+                disabled={isSaving || !isStepValid()}
+                className="gap-2 min-w-[130px] h-10"
+              >
+                {isSaving ? (
+                  <Spinner className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    {isLastStep ? "Finish Setup" : "Continue"}
+                    {isLastStep ? (
+                      <Confetti className="size-4" weight="fill" />
+                    ) : (
+                      <ArrowRight className="size-4" weight="bold" />
+                    )}
+                  </>
+                )}
+              </Button>
             </div>
           </motion.div>
         )}
