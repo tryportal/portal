@@ -26,6 +26,14 @@ const textSizeClasses = {
   xl: "text-2xl",
 };
 
+const imageSizes = {
+  xs: 16,
+  sm: 20,
+  md: 24,
+  lg: 32,
+  xl: 64,
+};
+
 function getInitials(name: string): string {
   return name
     .trim()
@@ -45,14 +53,15 @@ export function WorkspaceIcon({
   const initials = getInitials(name || "W");
   const sizeClass = sizeClasses[size];
   const textSizeClass = textSizeClasses[size];
+  const imageSize = imageSizes[size];
 
   if (logoUrl) {
     return (
       <Image
         src={logoUrl}
         alt={name || "Workspace"}
-        width={32}
-        height={32}
+        width={imageSize}
+        height={imageSize}
         className={cn(sizeClass, "rounded object-cover shrink-0", className)}
       />
     );
@@ -66,7 +75,9 @@ export function WorkspaceIcon({
         className
       )}
     >
-      <span className={cn(textSizeClass, "font-semibold text-primary-foreground")}>
+      <span
+        className={cn(textSizeClass, "font-semibold text-primary-foreground")}
+      >
         {initials}
       </span>
     </div>
