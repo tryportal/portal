@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { WorkspaceProvider, useWorkspace, useWorkspaceData } from "@/components/workspace-context";
+import {
+  WorkspaceProvider,
+  useWorkspace,
+  useWorkspaceData,
+} from "@/components/workspace-context";
 import { UserDataCacheProvider } from "@/components/user-data-cache";
 import { MessagesDataCacheProvider } from "@/components/messages-data-cache";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
@@ -16,9 +20,12 @@ import { analytics } from "@/lib/analytics";
 import { useSidebarHotkey } from "@/lib/use-sidebar-hotkey";
 
 // Helper to get the current tab from a pathname
-function getTabFromPathname(pathname: string | null, slug: string): "home" | "messages" | "inbox" {
+function getTabFromPathname(
+  pathname: string | null,
+  slug: string
+): "home" | "messages" | "inbox" {
   if (!pathname || !slug) return "home";
-  
+
   if (pathname.includes(`/w/${slug}/messages`)) {
     return "messages";
   } else if (pathname.includes(`/w/${slug}/inbox`)) {
@@ -27,23 +34,22 @@ function getTabFromPathname(pathname: string | null, slug: string): "home" | "me
   return "home";
 }
 
-function WorkspaceLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    activeTab,
-    setActiveTab
-  } = useWorkspace();
 
-  const { membership, isLoading, isError, slug, organization, hasSharedChannelAccess } = useWorkspaceData();
+  const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab } =
+    useWorkspace();
+
+  const {
+    membership,
+    isLoading,
+    isError,
+    slug,
+    organization,
+    hasSharedChannelAccess,
+  } = useWorkspaceData();
 
   // Sidebar toggle hotkey
   const handleSidebarToggle = React.useCallback(() => {
@@ -57,7 +63,7 @@ function WorkspaceLayoutContent({
 
   // Track the tab derived from the actual current pathname
   const currentPathTab = getTabFromPathname(pathname, slug);
-  
+
   // Track if we're transitioning between major tabs (home/messages/inbox)
   // This happens when activeTab (user's desired tab) differs from currentPathTab (actual route)
   const isTransitioning = activeTab !== currentPathTab;
@@ -76,7 +82,7 @@ function WorkspaceLayoutContent({
     if (!pathname || !slug) return;
     const tabFromPath = getTabFromPathname(pathname, slug);
     // Only update if different to avoid redundant state updates
-    setActiveTab(prev => prev !== tabFromPath ? tabFromPath : prev);
+    setActiveTab((prev) => (prev !== tabFromPath ? tabFromPath : prev));
   }, [pathname, slug, setActiveTab]);
 
   // Redirect to sign-in if not authenticated
@@ -103,7 +109,13 @@ function WorkspaceLayoutContent({
 
   // User doesn't have access to this workspace (neither a member nor shared channel access)
   if (!membership && !hasSharedChannelAccess) {
-    return <NoAccess slug={slug} organizationExists={true} organization={organization} />;
+    return (
+      <NoAccess
+        slug={slug}
+        organizationExists={true}
+        organization={organization}
+      />
+    );
   }
 
   // Determine if user is an external member (only has shared channel access)
@@ -125,24 +137,26 @@ function WorkspaceLayoutContent({
         {/* Top Navigation */}
         <TopNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-        {/* Main Content Area - add bottom padding on mobile for bottom nav */}
-        <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
-          {/* Sidebar - hidden on messages tab */}
-          {showSidebar && (
-            <Sidebar
-              isOpen={sidebarOpen}
-              onToggle={() => setSidebarOpen((prev) => !prev)}
-            />
-          )}
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden px-2 sm:px-3">
+          <div className="flex flex-1 overflow-hidden rounded-t-lg border border-border bg-background pb-14 sm:pb-0">
+            {/* Sidebar - hidden on messages tab */}
+            {showSidebar && (
+              <Sidebar
+                isOpen={sidebarOpen}
+                onToggle={() => setSidebarOpen((prev) => !prev)}
+              />
+            )}
 
-          {/* Page Content - show loading state during tab transitions */}
-          {isTransitioning ? (
-            <div className="flex-1 overflow-hidden">
-              <LoadingSpinner fullScreen />
-            </div>
-          ) : (
-            children
-          )}
+            {/* Page Content - show loading state during tab transitions */}
+            {isTransitioning ? (
+              <div className="flex-1 overflow-hidden">
+                <LoadingSpinner fullScreen />
+              </div>
+            ) : (
+              children
+            )}
+          </div>
         </div>
       </div>
     </MessagesDataCacheProvider>

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { UsersIcon, Spinner } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useTheme } from "@/lib/theme-provider";
+import { WorkspaceIcon } from "@/components/ui/workspace-icon";
 import { analytics } from "@/lib/analytics";
 import {
   Dialog,
@@ -24,8 +23,6 @@ interface JoinWorkspaceDialogProps {
 
 export function JoinWorkspaceDialog({ open, onOpenChange }: JoinWorkspaceDialogProps) {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
   const [joiningOrgId, setJoiningOrgId] = useState<Id<"organizations"> | null>(null);
 
   const publicOrgs = useQuery(api.organizations.getPublicOrganizations);
@@ -67,24 +64,11 @@ export function JoinWorkspaceDialog({ open, onOpenChange }: JoinWorkspaceDialogP
                   className="w-full p-3 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="flex items-center gap-3">
-                    {org.logoUrl ? (
-                      <Image
-                        src={org.logoUrl}
-                        alt={org.name}
-                        width={32}
-                        height={32}
-                        className="rounded"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-foreground">
-                        <Image
-                          src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                          alt="Workspace"
-                          width={16}
-                          height={16}
-                        />
-                      </div>
-                    )}
+                    <WorkspaceIcon
+                      name={org.name}
+                      logoUrl={org.logoUrl}
+                      size="lg"
+                    />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-foreground text-sm truncate">
                         {org.name}
