@@ -30,6 +30,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useWorkspaceData } from "@/components/workspace-context"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,16 +142,17 @@ function SortableChannel({
       className="group relative"
       onMouseEnter={onPrefetch}
     >
-      <Button
-        variant={isActive ? "secondary" : "ghost"}
-        size="lg"
-        className={`w-full justify-start gap-2.5 pr-8 text-sm ${
+      <button
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
           isActive
             ? "bg-secondary text-foreground"
             : hasUnread && !isMuted
               ? "text-foreground hover:bg-muted font-medium"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        } ${isAdmin ? "pl-1" : ""} ${isMuted ? "opacity-60" : ""}`}
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          isAdmin && "pl-1",
+          isMuted && "opacity-60"
+        )}
         onClick={onSelect}
       >
         {isAdmin && (
@@ -179,7 +181,7 @@ function SortableChannel({
         {hasUnread && !isActive && !isMuted && (
           <span className="ml-auto w-2 h-2 rounded-full bg-foreground shrink-0" />
         )}
-      </Button>
+      </button>
 
       {/* More button on hover */}
       <DropdownMenu>
@@ -655,22 +657,22 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     <>
       {/* Header with toggle */}
       <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {currentOrg?.logoUrl ? (
             <Image
               src={currentOrg.logoUrl}
               alt={currentOrg.name || "Organization"}
-              width={20}
-              height={20}
+              width={24}
+              height={24}
               className="rounded shrink-0"
             />
           ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground shrink-0">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground shrink-0">
               <Image
                 src={isDark ? "/portal.svg" : "/portal-dark.svg"}
                 alt="Workspace"
-                width={12}
-                height={12}
+                width={14}
+                height={14}
               />
             </div>
           )}
@@ -696,69 +698,54 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {/* Overview button */}
             <Link
               href={currentSlug ? `/w/${currentSlug}` : "#"}
-              className="block"
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isOverviewActive
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
               onMouseEnter={handleOverviewPrefetch}
             >
-              <Button
-                variant={isOverviewActive ? "secondary" : "ghost"}
-                size="lg"
-                className={`w-full justify-start gap-2.5 text-sm ${
-                  isOverviewActive
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <ChartBarIcon
-                  className="size-4"
-                  weight={isOverviewActive ? "fill" : "regular"}
-                />
-                Overview
-              </Button>
+              <ChartBarIcon
+                className="size-4"
+                weight={isOverviewActive ? "fill" : "regular"}
+              />
+              Overview
             </Link>
             {/* People button */}
             <Link
               href={currentSlug ? `/w/${currentSlug}/people` : "#"}
-              className="block"
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isPeoplePage
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
               onMouseEnter={handlePeoplePrefetch}
             >
-              <Button
-                variant={isPeoplePage ? "secondary" : "ghost"}
-                size="lg"
-                className={`w-full justify-start gap-2.5 text-sm ${
-                  isPeoplePage
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <UsersIcon
-                  className="size-4"
-                  weight={isPeoplePage ? "fill" : "regular"}
-                />
-                People
-              </Button>
+              <UsersIcon
+                className="size-4"
+                weight={isPeoplePage ? "fill" : "regular"}
+              />
+              People
             </Link>
             {/* Settings button for admins */}
             {isAdmin && (
               <Link
                 href={currentSlug ? `/w/${currentSlug}/settings` : "#"}
-                className="block"
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isSettingsPage
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
                 onMouseEnter={handleSettingsPrefetch}
               >
-                <Button
-                  variant={isSettingsPage ? "secondary" : "ghost"}
-                  size="lg"
-                  className={`w-full justify-start gap-2.5 text-sm ${
-                    isSettingsPage
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <GearIcon
-                    className="size-4"
-                    weight={isSettingsPage ? "fill" : "regular"}
-                  />
-                  Settings
-                </Button>
+                <GearIcon
+                  className="size-4"
+                  weight={isSettingsPage ? "fill" : "regular"}
+                />
+                Settings
               </Link>
             )}
           </div>
@@ -852,13 +839,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
       {/* Bottom: Create button */}
       {isAdmin && (
-        <div className="border-t border-border p-2">
+        <div className="border-t border-border p-3">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+                <button
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 />
               }
             >
