@@ -143,7 +143,8 @@ function SortableChannel({
     >
       <Button
         variant={isActive ? "secondary" : "ghost"}
-        className={`w-full justify-start gap-2 pr-8 ${
+        size="lg"
+        className={`w-full justify-start gap-2.5 pr-8 text-sm ${
           isActive
             ? "bg-secondary text-foreground"
             : hasUnread && !isMuted
@@ -306,12 +307,12 @@ function SortableCategory({
         )}
         <button
           onClick={onToggle}
-          className="flex flex-1 items-center gap-1 rounded px-1 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="flex flex-1 items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           {isExpanded ? (
-            <CaretDownIcon className="size-3" />
+            <CaretDownIcon className="size-3.5" />
           ) : (
-            <CaretRightIcon className="size-3" />
+            <CaretRightIcon className="size-3.5" />
           )}
           <span className="uppercase tracking-wider truncate">{category.name}</span>
         </button>
@@ -700,7 +701,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             >
               <Button
                 variant={isOverviewActive ? "secondary" : "ghost"}
-                className={`w-full justify-start gap-2 ${
+                size="lg"
+                className={`w-full justify-start gap-2.5 text-sm ${
                   isOverviewActive
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -721,7 +723,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             >
               <Button
                 variant={isPeoplePage ? "secondary" : "ghost"}
-                className={`w-full justify-start gap-2 ${
+                size="lg"
+                className={`w-full justify-start gap-2.5 text-sm ${
                   isPeoplePage
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -743,7 +746,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               >
                 <Button
                   variant={isSettingsPage ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-2 ${
+                  size="lg"
+                  className={`w-full justify-start gap-2.5 text-sm ${
                     isSettingsPage
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
