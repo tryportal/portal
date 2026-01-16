@@ -9,7 +9,6 @@ import {
   BookmarkSimple,
   Users,
   CaretDown,
-  Image as ImageIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
@@ -77,15 +76,10 @@ export function WorkspacePreview({
                     alt={displayName}
                     className="w-full h-full object-cover"
                   />
-                ) : initials ? (
+                ) : (
                   <span className="text-[10px] font-semibold text-primary-foreground">
                     {initials}
                   </span>
-                ) : (
-                  <ImageIcon
-                    className="size-3 text-primary-foreground/60"
-                    weight="duotone"
-                  />
                 )}
               </motion.div>
             </AnimatePresence>

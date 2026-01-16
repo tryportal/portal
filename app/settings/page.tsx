@@ -15,6 +15,7 @@ import { usePageTitle } from "@/lib/use-page-title";
 import { analytics } from "@/lib/analytics";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { cn } from "@/lib/utils";
+import { WorkspaceIcon } from "@/components/ui/workspace-icon";
 import {
   UserIcon,
   KeyboardIcon,
@@ -471,24 +472,11 @@ export default function UserSettingsPage() {
                                 : "border-border bg-background hover:bg-muted/50"
                             )}
                           >
-                            {org.logoUrl ? (
-                              <Image
-                                src={org.logoUrl}
-                                alt={org.name || "Organization"}
-                                width={32}
-                                height={32}
-                                className="rounded-md"
-                              />
-                            ) : (
-                              <div className="flex size-8 items-center justify-center rounded-md bg-foreground">
-                                <Image
-                                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                                  alt="Workspace"
-                                  width={16}
-                                  height={16}
-                                />
-                              </div>
-                            )}
+                            <WorkspaceIcon
+                              name={org.name || "Workspace"}
+                              logoUrl={org.logoUrl}
+                              size="lg"
+                            />
                             <div className="flex-1 text-left min-w-0">
                               <p className="text-sm font-medium text-foreground truncate">
                                 {org.name || "Organization"}

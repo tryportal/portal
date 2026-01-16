@@ -24,6 +24,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useWorkspaceData, useWorkspace } from "@/components/workspace-context";
+import { WorkspaceIcon } from "@/components/ui/workspace-icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -211,24 +212,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         />
         {/* Mobile: Show org name instead of logo */}
         <div className="sm:hidden flex items-center gap-1.5">
-          {currentOrg?.logoUrl ? (
-            <Image
-              src={currentOrg.logoUrl}
-              alt={currentOrg.name || "Organization"}
-              width={20}
-              height={20}
-              className="rounded"
-            />
-          ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
-              <Image
-                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                alt="Workspace"
-                width={12}
-                height={12}
-              />
-            </div>
-          )}
+          <WorkspaceIcon
+            name={currentOrg?.name || "Workspace"}
+            logoUrl={currentOrg?.logoUrl}
+            size="sm"
+          />
           <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
             {currentOrg?.name || "Portal"}
           </span>
@@ -240,24 +228,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         {/* Organization Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="gap-2 px-2 text-foreground hover:bg-muted h-8 inline-flex items-center justify-center whitespace-nowrap transition-all rounded-md border border-transparent bg-clip-padding focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px] outline-none">
-            {currentOrg?.logoUrl ? (
-              <Image
-                src={currentOrg.logoUrl}
-                alt={currentOrg.name || "Organization"}
-                width={20}
-                height={20}
-                className="rounded"
-              />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground">
-                <Image
-                  src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                  alt="Workspace"
-                  width={12}
-                  height={12}
-                />
-              </div>
-            )}
+            <WorkspaceIcon
+              name={currentOrg?.name || "Workspace"}
+              logoUrl={currentOrg?.logoUrl}
+              size="sm"
+            />
             <span className="text-sm font-medium truncate max-w-[150px]">
               {currentOrg?.name || "Organization"}
             </span>
@@ -274,24 +249,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                     onClick={() => handleOrganizationSwitch(org.slug)}
                     className="gap-2 px-2 py-1.5 cursor-pointer"
                   >
-                    {org.logoUrl ? (
-                      <Image
-                        src={org.logoUrl}
-                        alt={org.name || "Organization"}
-                        width={16}
-                        height={16}
-                        className="rounded"
-                      />
-                    ) : (
-                      <div className="flex h-4 w-4 items-center justify-center rounded bg-foreground">
-                        <Image
-                          src={isDark ? "/portal-dark.svg" : "/portal.svg"}
-                          alt="Workspace"
-                          width={10}
-                          height={10}
-                        />
-                      </div>
-                    )}
+                    <WorkspaceIcon
+                      name={org.name || "Workspace"}
+                      logoUrl={org.logoUrl}
+                      size="xs"
+                    />
                     <span className="text-sm flex-1 truncate min-w-0">
                       {org.name || "Organization"}
                     </span>

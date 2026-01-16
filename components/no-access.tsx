@@ -4,7 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LockKey, ArrowRight, UsersThree } from "@phosphor-icons/react/dist/ssr";
+import { WorkspaceIcon } from "@/components/ui/workspace-icon";
+import { LockKey, ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -64,17 +65,12 @@ export function NoAccess({ slug, organizationExists, organization }: NoAccessPro
           {isPublicWorkspace ? (
             <>
               {/* Public workspace - show join UI */}
-              {organization?.logoUrl ? (
-                <img
-                  src={organization.logoUrl}
-                  alt={organization.name}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
-                  <UsersThree className="w-8 h-8 text-muted-foreground" />
-                </div>
-              )}
+              <WorkspaceIcon
+                name={organization?.name || "Workspace"}
+                logoUrl={organization?.logoUrl}
+                size="xl"
+                className="rounded-lg"
+              />
               
               <div className="space-y-2">
                 <h1 className="text-2xl font-semibold text-foreground break-words">

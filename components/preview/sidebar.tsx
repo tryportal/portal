@@ -29,6 +29,7 @@ import { useParams, useRouter, usePathname } from "next/navigation"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useWorkspaceData } from "@/components/workspace-context"
+import { WorkspaceIcon } from "@/components/ui/workspace-icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -658,24 +659,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {/* Header with toggle */}
       <div className="flex h-12 items-center justify-between border-b border-border bg-background px-4 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {currentOrg?.logoUrl ? (
-            <Image
-              src={currentOrg.logoUrl}
-              alt={currentOrg.name || "Organization"}
-              width={24}
-              height={24}
-              className="rounded shrink-0"
-            />
-          ) : (
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground shrink-0">
-              <Image
-                src={isDark ? "/portal.svg" : "/portal-dark.svg"}
-                alt="Workspace"
-                width={14}
-                height={14}
-              />
-            </div>
-          )}
+          <WorkspaceIcon
+            name={currentOrg?.name || "Workspace"}
+            logoUrl={currentOrg?.logoUrl}
+            size="md"
+          />
           <span className="text-sm font-medium text-foreground truncate min-w-0">
             {currentOrg?.name || "Organization"}
           </span>
