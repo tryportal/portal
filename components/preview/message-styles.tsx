@@ -550,6 +550,7 @@ function HoverActions({
   handleEditClick,
   handleCopy,
   setIsMenuOpen,
+  onHover,
   position = "right",
 }: {
   message: Message
@@ -566,6 +567,7 @@ function HoverActions({
   handleEditClick: () => void
   handleCopy: () => void
   setIsMenuOpen: (open: boolean) => void
+  onHover?: (messageId: string | null) => void
   position?: "left" | "right"
 }) {
   const handleSaveToggle = () => {
@@ -577,7 +579,11 @@ function HoverActions({
   }
 
   return (
-    <div className={`absolute -top-3 ${position === "left" ? "left-4" : "right-4"} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10`}>
+    <div 
+      className={`absolute -top-3 ${position === "left" ? "left-4" : "right-4"} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10`}
+      // Explicitly trigger hover when cursor enters the toolbar to cancel any pending hide
+      onMouseEnter={() => onHover?.(message.id)}
+    >
       <Button
         variant="ghost"
         size="icon-xs"
@@ -860,6 +866,7 @@ export function CompactMessageItem({
           handleEditClick={handleEditClick}
           handleCopy={handleCopy}
           setIsMenuOpen={setIsMenuOpen}
+          onHover={onHover}
           position="right"
         />
       )}
@@ -1070,6 +1077,7 @@ export function BubbleMessageItem({
           handleEditClick={handleEditClick}
           handleCopy={handleCopy}
           setIsMenuOpen={setIsMenuOpen}
+          onHover={onHover}
           position={isOwn ? "left" : "right"}
         />
       )}
