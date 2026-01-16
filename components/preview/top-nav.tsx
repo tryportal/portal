@@ -24,7 +24,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useWorkspaceData, useWorkspace } from "@/components/workspace-context";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -189,7 +188,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-3 sm:px-4 sm:grid sm:grid-cols-3">
+    <header className="flex h-14 items-center justify-between bg-background px-3 sm:px-4 sm:grid sm:grid-cols-3">
       {/* Left: Mobile menu button + Portal Logo */}
       <div className="flex items-center gap-2">
         {/* Mobile sidebar toggle - only show when sidebar would be visible (not on messages) */}
@@ -329,8 +328,6 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Separator orientation="vertical" className="mr-2 bg-border" />
 
         {/* Tab Navigation */}
         <nav className="flex items-center gap-1">
