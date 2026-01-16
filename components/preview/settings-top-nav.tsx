@@ -126,7 +126,10 @@ export function SettingsTopNav() {
         fields: [
           {
             name: "Submitted by",
-            value: user?.fullName || user?.primaryEmailAddress?.emailAddress || "Unknown user",
+            value:
+              user?.fullName ||
+              user?.primaryEmailAddress?.emailAddress ||
+              "Unknown user",
             inline: true,
           },
           {
@@ -138,7 +141,7 @@ export function SettingsTopNav() {
         timestamp: new Date().toISOString(),
       };
 
-      await fetch(
+      const response = await fetch(
         "https://discord.com/api/webhooks/1459109552908800051/qNQoGA4ejyvd_vzoisRE956AdQJ0DO9AW_JOU2iSFH_IkHoIot_mJoa3TFxSc3-c6y14",
         {
           method: "POST",
@@ -149,6 +152,11 @@ export function SettingsTopNav() {
           }),
         }
       );
+
+      // Check HTTP response status
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       // Reset form and close popover only on success
       setFeedbackTitle("");
@@ -240,7 +248,10 @@ export function SettingsTopNav() {
                       {org.name || "Organization"}
                     </span>
                     {isPrimary && (
-                      <StarIcon className="size-3.5 text-amber-500" weight="fill" />
+                      <StarIcon
+                        className="size-3.5 text-amber-500"
+                        weight="fill"
+                      />
                     )}
                     {isActive && (
                       <CheckIcon className="size-3.5 text-foreground" />
@@ -303,10 +314,7 @@ export function SettingsTopNav() {
                 }}
                 className={`gap-1.5 relative text-muted-foreground hover:text-foreground`}
               >
-                <Icon
-                  weight="regular"
-                  className="size-4"
-                />
+                <Icon weight="regular" className="size-4" />
                 {tab.label}
                 {(showMessagesBadge || showInboxBadge) && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
@@ -332,8 +340,13 @@ export function SettingsTopNav() {
             </PopoverHeader>
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Type</label>
-                <Select value={feedbackType} onValueChange={(value) => value && setFeedbackType(value)}>
+                <label className="text-xs font-medium text-foreground">
+                  Type
+                </label>
+                <Select
+                  value={feedbackType}
+                  onValueChange={(value) => value && setFeedbackType(value)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -344,7 +357,9 @@ export function SettingsTopNav() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Title</label>
+                <label className="text-xs font-medium text-foreground">
+                  Title
+                </label>
                 <Input
                   placeholder="Brief summary..."
                   value={feedbackTitle}
@@ -352,7 +367,9 @@ export function SettingsTopNav() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Description</label>
+                <label className="text-xs font-medium text-foreground">
+                  Description
+                </label>
                 <Textarea
                   placeholder="Describe the issue or idea in detail..."
                   value={feedbackDescription}
@@ -362,7 +379,11 @@ export function SettingsTopNav() {
               </div>
               <Button
                 onClick={handleFeedbackSubmit}
-                disabled={feedbackSubmitting || !feedbackTitle.trim() || !feedbackDescription.trim()}
+                disabled={
+                  feedbackSubmitting ||
+                  !feedbackTitle.trim() ||
+                  !feedbackDescription.trim()
+                }
                 className="w-full"
               >
                 {feedbackSubmitting ? "Submitting..." : "Submit Feedback"}
@@ -374,8 +395,15 @@ export function SettingsTopNav() {
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
-              {user?.imageUrl && <AvatarImage src={user.imageUrl} alt={user.fullName || "User"} />}
-              <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+              {user?.imageUrl && (
+                <AvatarImage
+                  src={user.imageUrl}
+                  alt={user.fullName || "User"}
+                />
+              )}
+              <AvatarFallback className="text-xs">
+                {userInitials}
+              </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[180px]">
@@ -403,7 +431,9 @@ export function SettingsTopNav() {
                   <button
                     onClick={() => setTheme("light")}
                     className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                      theme === "light" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      theme === "light"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="Light"
                   >
@@ -412,7 +442,9 @@ export function SettingsTopNav() {
                   <button
                     onClick={() => setTheme("system")}
                     className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                      theme === "system" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      theme === "system"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="System"
                   >
@@ -421,7 +453,9 @@ export function SettingsTopNav() {
                   <button
                     onClick={() => setTheme("dark")}
                     className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                      theme === "dark" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      theme === "dark"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="Dark"
                   >
@@ -480,19 +514,14 @@ export function SettingsTopNav() {
                 className="relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-colors text-muted-foreground"
               >
                 <div className="relative">
-                  <Icon
-                    weight="regular"
-                    className="size-5"
-                  />
+                  <Icon weight="regular" className="size-5" />
                   {(showMessagesBadge || showInboxBadge) && (
                     <span className="absolute -top-1 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-semibold text-white">
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-medium">
-                  {tab.label}
-                </span>
+                <span className="text-[10px] font-medium">{tab.label}</span>
               </button>
             );
           })}
@@ -500,7 +529,10 @@ export function SettingsTopNav() {
       </nav>
 
       {/* Join Workspace Dialog */}
-      <JoinWorkspaceDialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen} />
+      <JoinWorkspaceDialog
+        open={joinDialogOpen}
+        onOpenChange={setJoinDialogOpen}
+      />
     </header>
   );
 }
