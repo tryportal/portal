@@ -216,93 +216,28 @@ export default function UserSettingsPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="hidden sm:flex w-64 shrink-0 flex-col border-r border-border bg-background">
-          {/* Sidebar Header */}
-          <div className="flex h-12 items-center gap-2 border-b border-border px-4">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleBack}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeftIcon className="size-4" weight="bold" />
-            </Button>
-            <GearIcon className="size-5 text-foreground" weight="fill" />
-            <h1 className="text-base font-semibold text-foreground">Settings</h1>
-          </div>
+    <>
+      {/* Sidebar */}
+      <aside className="hidden sm:flex w-64 shrink-0 flex-col border-r border-border bg-background">
+        {/* Sidebar Header */}
+        <div className="flex h-12 items-center gap-2 border-b border-border px-4">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleBack}
+            className="text-foreground hover:bg-muted hover:text-foreground transition-colors"
+            title="Go back"
+          >
+            <ArrowLeftIcon className="size-4" weight="bold" />
+          </Button>
+          <GearIcon className="size-5 text-foreground" weight="fill" />
+          <h1 className="text-base font-semibold text-foreground">Settings</h1>
+        </div>
 
-          {/* Navigation */}
-          <ScrollArea className="flex-1">
-            <nav className="p-2">
-              <div className="space-y-1">
-                {sections.map((section) => {
-                  const Icon = section.icon;
-                  const isActive = activeSection === section.id;
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => handleSectionChange(section.id)}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-secondary text-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
-                      {section.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </nav>
-          </ScrollArea>
-
-          {/* Sign Out */}
-          <div className="border-t border-border p-2">
-            <button
-              onClick={() => signOut()}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <SignOutIcon className="size-4" />
-              Sign out
-            </button>
-          </div>
-        </aside>
-
-        {/* Mobile Header */}
-        <div className="sm:hidden flex flex-col w-full">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleBack}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeftIcon className="size-4" weight="bold" />
-            </Button>
-            <GearIcon className="size-4 text-foreground" weight="fill" />
-            <h1 className="text-sm font-semibold text-foreground">Settings</h1>
-            <div className="ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signOut()}
-                className="text-muted-foreground hover:text-foreground text-xs"
-              >
-                <SignOutIcon className="size-3.5 mr-1.5" />
-                Sign out
-              </Button>
-            </div>
-          </header>
-
-          {/* Mobile Section Tabs */}
-          <div className="border-b border-border bg-background overflow-x-auto">
-            <div className="flex gap-1 p-2">
+        {/* Navigation */}
+        <ScrollArea className="flex-1">
+          <nav className="p-2">
+            <div className="space-y-1">
               {sections.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.id;
@@ -311,7 +246,7 @@ export default function UserSettingsPage() {
                     key={section.id}
                     onClick={() => handleSectionChange(section.id)}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -323,40 +258,104 @@ export default function UserSettingsPage() {
                 );
               })}
             </div>
-          </div>
+          </nav>
+        </ScrollArea>
 
-          {/* Mobile Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="py-4 px-3">
-              {renderContent()}
-            </div>
+        {/* Sign Out */}
+        <div className="border-t border-border p-2">
+          <button
+            onClick={() => signOut()}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <SignOutIcon className="size-4" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <div className="sm:hidden flex flex-col w-full">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleBack}
+            className="text-foreground hover:bg-muted hover:text-foreground transition-colors"
+            title="Go back"
+          >
+            <ArrowLeftIcon className="size-4" weight="bold" />
+          </Button>
+          <GearIcon className="size-4 text-foreground" weight="fill" />
+          <h1 className="text-sm font-semibold text-foreground">Settings</h1>
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut()}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              <SignOutIcon className="size-3.5 mr-1.5" />
+              Sign out
+            </Button>
+          </div>
+        </header>
+
+        {/* Mobile Section Tabs */}
+        <div className="border-b border-border bg-background overflow-x-auto">
+          <div className="flex gap-1 p-2">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const isActive = activeSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => handleSectionChange(section.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-4" weight={isActive ? "fill" : "regular"} />
+                  {section.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Desktop Content */}
-        <main className="hidden sm:flex flex-1 flex-col overflow-hidden">
-          {/* Content Header */}
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-6">
-            {sections.find(s => s.id === activeSection)?.icon && (
-              React.createElement(sections.find(s => s.id === activeSection)!.icon, {
-                className: "size-5 text-foreground",
-                weight: "fill"
-              })
-            )}
-            <h2 className="text-base font-semibold text-foreground">
-              {sections.find(s => s.id === activeSection)?.label}
-            </h2>
-          </header>
-
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-2xl py-6 px-4">
-              {renderContent()}
-            </div>
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-y-auto pb-14">
+          <div className="py-4 px-3">
+            {renderContent()}
           </div>
-        </main>
+        </div>
       </div>
-    </div>
+
+      {/* Desktop Content */}
+      <main className="hidden sm:flex flex-1 flex-col overflow-hidden">
+        {/* Content Header */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-6">
+          {sections.find(s => s.id === activeSection)?.icon && (
+            React.createElement(sections.find(s => s.id === activeSection)!.icon, {
+              className: "size-5 text-foreground",
+              weight: "fill"
+            })
+          )}
+          <h2 className="text-base font-semibold text-foreground">
+            {sections.find(s => s.id === activeSection)?.label}
+          </h2>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-2xl py-6 px-4">
+            {renderContent()}
+          </div>
+        </div>
+      </main>
+    </>
   );
 
   function renderContent() {
