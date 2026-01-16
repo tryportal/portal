@@ -899,6 +899,8 @@ export function MessageList({
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
   // Track which message is currently hovered (lifted state to prevent duplicate menus)
   const [hoveredMessageId, setHoveredMessageId] = React.useState<string | null>(null)
+  // Ref for debouncing hover state changes to prevent flickering
+  const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Get user message style settings
   const { settings } = useUserSettings()
@@ -969,9 +971,35 @@ export function MessageList({
     }
   }, [messages])
 
-  // Callback to handle hover state change
+  // Callback to handle hover state change with debouncing to prevent flickering
+  // when cursor moves between message content and hover actions toolbar
   const handleMessageHover = React.useCallback((messageId: string | null) => {
-    setHoveredMessageId(messageId)
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+
+    if (messageId !== null) {
+      // Immediately show hover actions when entering a message
+      setHoveredMessageId(messageId)
+    } else {
+      // Delay hiding hover actions to prevent flickering when moving to toolbar
+      // This gives time for the cursor to enter the toolbar before we hide it
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredMessageId(null)
+        hoverTimeoutRef.current = null
+      }, 100)
+    }
+  }, [])
+
+  // Cleanup hover timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
   }, [])
 
   // Callback to scroll to a specific message
