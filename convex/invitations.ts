@@ -1,9 +1,10 @@
+import { Resend } from "resend";
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
 /**
- * Send invitation email using inbound.new
+ * Send invitation email using Resend
  */
 export const sendInvitationEmail = action({
   args: {
@@ -29,27 +30,24 @@ export const sendInvitationEmail = action({
       throw new Error("Organization not found");
     }
 
-    const apiKey = process.env.INBOUND_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      console.warn("INBOUND_API_KEY not set, skipping email send");
+      console.warn("RESEND_API_KEY not set, skipping email send");
+      console.log("[CONVEX EMAIL] Email send skipped - RESEND_API_KEY is not configured. Invitation created but email not sent.");
       return result;
     }
 
+    const resendDomain = process.env.RESEND_DOMAIN || "mail.tryportal.app";
     const inviteUrl = `${args.baseUrl || "http://localhost:3000"}/invite/${result.token}`;
 
-    // Send email using inbound.new API
+    // Send email using Resend SDK
     try {
-      const response = await fetch("https://inbound.new/api/v2/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          from: `Portal <noreply@${process.env.INBOUND_DOMAIN || "tryportal.app"}>`,
-          to: [args.email],
-          subject: `You've been invited to join ${org.name} on Portal`,
-          html: `
+      const resend = new Resend(apiKey);
+      const { data, error } = await resend.emails.send({
+        from: `Portal <noreply@${resendDomain}>`,
+        to: [args.email],
+        subject: `You've been invited to join ${org.name} on Portal`,
+        html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -88,36 +86,26 @@ export const sendInvitationEmail = action({
   </div>
 </body>
 </html>
-          `.trim(),
-          text: `You've been invited to join ${org.name} on Portal as ${args.role === "admin" ? "an admin" : "a member"}. Accept your invitation: ${inviteUrl} - This invitation expires in 7 days.`,
-          tags: [
-            { name: "type", value: "invitation" },
-            { name: "organization", value: org.slug },
-          ],
-        }),
+        `.trim(),
+        text: `You've been invited to join ${org.name} on Portal as ${args.role === "admin" ? "an admin" : "a member"}. Accept your invitation: ${inviteUrl} - This invitation expires in 7 days.`,
+        tags: [
+          { name: "type", value: "invitation" },
+          { name: "organization", value: org.name },
+        ],
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `Failed to send invitation email: ${response.status} ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch {
-          // If errorText is not JSON, use it as-is
-          if (errorText) {
-            errorMessage = errorText;
-          }
-        }
-        console.error("Failed to send invitation email:", errorMessage);
-        // Don't throw - invitation was created, just email failed
+      if (error) {
+        console.error("[CONVEX EMAIL] Resend error:", {
+          name: error.name,
+          message: error.message,
+          from: `noreply@${resendDomain}`,
+          to: args.email,
+        });
       } else {
-        const result = await response.json();
-        console.log("Invitation email sent successfully:", result.id || result.message_id);
+        console.log("[CONVEX EMAIL] Email sent successfully:", data?.id);
       }
     } catch (error) {
-      console.error("Error sending invitation email:", error);
-      // Don't throw - invitation was created, just email failed
+      console.error("[CONVEX EMAIL] Exception during email send:", error);
     }
 
     return result;
@@ -125,7 +113,7 @@ export const sendInvitationEmail = action({
 });
 
 /**
- * Send shared channel invitation email using inbound.new
+ * Send shared channel invitation email using Resend
  */
 export const sendSharedChannelInvitationEmail = action({
   args: {
@@ -140,27 +128,24 @@ export const sendSharedChannelInvitationEmail = action({
       email: args.email,
     });
 
-    const apiKey = process.env.INBOUND_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      console.warn("INBOUND_API_KEY not set, skipping email send");
+      console.warn("RESEND_API_KEY not set, skipping email send");
+      console.log("[CONVEX EMAIL] Email send skipped - RESEND_API_KEY is not configured. Invitation created but email not sent.");
       return { invitationId: "", token: result.token };
     }
 
+    const resendDomain = process.env.RESEND_DOMAIN || "mail.tryportal.app";
     const inviteUrl = `${args.baseUrl || "http://localhost:3000"}/shared/${result.token}`;
 
-    // Send email using inbound.new API
+    // Send email using Resend SDK
     try {
-      const response = await fetch("https://inbound.new/api/v2/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          from: `Portal <noreply@${process.env.INBOUND_DOMAIN || "tryportal.app"}>`,
-          to: [args.email],
-          subject: `You've been invited to #${result.channelName} in ${result.organizationName}`,
-          html: `
+      const resend = new Resend(apiKey);
+      const { data, error } = await resend.emails.send({
+        from: `Portal <noreply@${resendDomain}>`,
+        to: [args.email],
+        subject: `You've been invited to #${result.channelName} in ${result.organizationName}`,
+        html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -199,40 +184,29 @@ export const sendSharedChannelInvitationEmail = action({
   </div>
 </body>
 </html>
-          `.trim(),
-          text: `You've been invited to join #${result.channelName} in ${result.organizationName} on Portal. Join the channel: ${inviteUrl}`,
-          tags: [
-            { name: "type", value: "shared-channel-invitation" },
-            { name: "channel", value: result.channelName },
-            { name: "organization", value: result.organizationName },
-          ],
-        }),
+        `.trim(),
+        text: `You've been invited to join #${result.channelName} in ${result.organizationName} on Portal. Join the channel: ${inviteUrl}`,
+        tags: [
+          { name: "type", value: "shared-channel-invitation" },
+          { name: "channel", value: result.channelName },
+          { name: "organization", value: result.organizationName },
+        ],
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `Failed to send invitation email: ${response.status} ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch {
-          // If errorText is not JSON, use it as-is
-          if (errorText) {
-            errorMessage = errorText;
-          }
-        }
-        console.error("Failed to send shared channel invitation email:", errorMessage);
-        // Don't throw - invitation was created, just email failed
+      if (error) {
+        console.error("[CONVEX EMAIL] Resend error:", {
+          name: error.name,
+          message: error.message,
+          from: `noreply@${resendDomain}`,
+          to: args.email,
+        });
       } else {
-        const emailResult = await response.json();
-        console.log("Shared channel invitation email sent successfully:", emailResult.id || emailResult.message_id);
+        console.log("[CONVEX EMAIL] Shared channel invitation email sent successfully:", data?.id);
       }
     } catch (error) {
-      console.error("Error sending shared channel invitation email:", error);
-      // Don't throw - invitation was created, just email failed
+      console.error("[CONVEX EMAIL] Exception during shared channel email send:", error);
     }
 
     return { invitationId: "", token: result.token };
   },
 });
-

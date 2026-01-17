@@ -87,6 +87,17 @@ export default function InvitePage({
     }
   }, [authLoaded, isSignedIn, invitationData, success, isAccepting, error]);
 
+  // Auto-redirect when invitation is already accepted
+  useEffect(() => {
+    const slug = invitationData?.organization?.slug;
+    if (invitationData?.invitation?.status === "accepted" && slug) {
+      const timer = setTimeout(() => {
+        router.replace(`/w/${slug}`);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [invitationData, router]);
+
   // Loading state
   if (!authLoaded || (token && invitationData === undefined)) {
     return (
@@ -128,28 +139,55 @@ export default function InvitePage({
 
   const { invitation, organization } = invitationData;
 
-  // Already accepted or revoked
+  // Already accepted - redirect to workspace
+  if (invitation.status === "accepted") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="size-12 sm:size-16 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="size-5 sm:size-8 text-green-500" weight="fill" />
+            </div>
+            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
+              You&apos;re already a member of {organization.name}
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Taking you to your workspace...
+            </p>
+            <LoadingSpinner size="sm" className="mt-2" />
+            <Button
+              variant="link"
+              onClick={() => router.push(`/w/${organization.slug}`)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Click here if you&apos;re not redirected
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Revoked invitation
   if (invitation.status !== "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
-              <EnvelopeSimple className="size-5 sm:size-8 text-amber-500" weight="fill" />
+              <XCircle className="size-5 sm:size-8 text-amber-500" weight="fill" />
             </div>
             <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
-              Invitation {invitation.status === "accepted" ? "Already Accepted" : "No Longer Valid"}
+              Invitation No Longer Valid
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              {invitation.status === "accepted"
-                ? "This invitation has already been accepted. You can access the organization from your dashboard."
-                : "This invitation has been revoked. Please request a new invitation from your team admin."}
+              This invitation has been revoked. Please request a new invitation from your team admin.
             </p>
             <Button
-              onClick={() => router.push(`/w/${organization.slug}`)}
+              onClick={() => router.push("/")}
               className="mt-4 bg-foreground text-background hover:bg-foreground/90"
             >
-              Go to {organization.name}
+              Go to Homepage
             </Button>
           </div>
         </div>
