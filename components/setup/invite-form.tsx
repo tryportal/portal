@@ -7,7 +7,6 @@ import {
   PaperPlaneTilt,
   Spinner,
   EnvelopeSimple,
-  CheckCircle,
   Link as LinkIcon,
   Copy,
   Check,
@@ -56,7 +55,6 @@ export function InviteForm({
 }: InviteFormProps) {
   const [emails, setEmails] = useState<string[]>([""]);
   const [isInviting, setIsInviting] = useState(false);
-  const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -144,7 +142,6 @@ export function InviteForm({
     try {
       for (const email of validEmails) {
         await onInvite(email.trim(), "org:member");
-        setInvitedEmails((prev) => [...prev, email.trim()]);
       }
       setEmails([""]);
     } catch (err) {
@@ -362,59 +359,6 @@ export function InviteForm({
         </div>
       </div>
 
-      {/* Pending invitations */}
-      {(pendingInvitations.length > 0 || invitedEmails.length > 0) && (
-        <div className="space-y-3 pt-4 border-t border-border">
-          <Label className="text-xs font-medium text-muted-foreground">
-            Pending invitations
-          </Label>
-          <div className="space-y-2">
-            {invitedEmails.map((email, index) => (
-              <div
-                key={`sent-${index}`}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50"
-              >
-                <CheckCircle
-                  className="size-5 text-green-600 dark:text-green-500"
-                  weight="fill"
-                />
-                <span className="text-sm text-green-800 dark:text-green-200 flex-1">
-                  {email}
-                </span>
-                <span className="text-[10px] font-medium text-green-600 dark:text-green-400 uppercase">
-                  Sent
-                </span>
-              </div>
-            ))}
-
-            {pendingInvitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg group",
-                  "bg-muted/30 hover:bg-muted/50 transition-colors border border-border/50"
-                )}
-              >
-                <div className="size-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center">
-                  <div className="size-1.5 rounded-full bg-muted-foreground/30" />
-                </div>
-                <span className="text-sm text-muted-foreground flex-1">
-                  {invitation.emailAddress}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => handleRevoke(invitation.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                >
-                  <X className="size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
