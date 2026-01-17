@@ -1,9 +1,10 @@
+import { Resend } from "resend";
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
 /**
- * Send invitation email using inbound.new
+ * Send invitation email using Resend
  */
 export const sendInvitationEmail = action({
   args: {
@@ -13,70 +14,37 @@ export const sendInvitationEmail = action({
     baseUrl: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<{ invitationId: string; token: string }> => {
-    // #region agent log - hypothesis tracking
-    const logFetch = async (data: Record<string, unknown>) => {
-      try {
-        await fetch('http://127.0.0.1:7243/ingest/3caa9c0f-a95a-4c2c-b63a-897bc1df096e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,timestamp:Date.now(),sessionId:'debug-session'})});
-      } catch (e) {
-        // Silent catch - logging service might not be available
-      }
-    };
-    // #endregion
-    
-    // #region agent log - entry point
-    await logFetch({location:'invitations.ts:sendInvitationEmail:entry',message:'Action started',data:{organizationId:args.organizationId,email:args.email,role:args.role},hypothesisId:'all'});
-    // #endregion
-    
     // First create the invitation in the database
     const result = await ctx.runMutation(api.organizations.inviteMember, {
       organizationId: args.organizationId,
       email: args.email,
       role: args.role,
     });
-    
-    // #region agent log - after mutation
-    await logFetch({location:'invitations.ts:sendInvitationEmail:after_mutation',message:'Mutation completed',data:{invitationId:result.invitationId,token:result.token},hypothesisId:'1,2'});
-    // #endregion
 
     // Get organization details for the email
     const org = await ctx.runQuery(api.organizations.getOrganization, {
       id: args.organizationId,
     });
-    
-    // #region agent log - after query
-    await logFetch({location:'invitations.ts:sendInvitationEmail:after_query',message:'Organization query result',data:{orgExists:!!org,orgName:org?.name,orgSlug:org?.slug},hypothesisId:'1,2,4'});
-    // #endregion
 
     if (!org) {
       throw new Error("Organization not found");
     }
 
-    const apiKey = process.env.INBOUND_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      console.warn("INBOUND_API_KEY not set, skipping email send");
-      // #region agent log - no api key
-      await logFetch({location:'invitations.ts:sendInvitationEmail:no_api_key',message:'INBOUND_API_KEY not set',data:{hasApiKey:false},hypothesisId:'3'});
-      // #endregion
-      console.log("[CONVEX EMAIL] Email send skipped - INBOUND_API_KEY is not configured. Invitation created but email not sent.");
+      console.warn("RESEND_API_KEY not set, skipping email send");
+      console.log("[CONVEX EMAIL] Email send skipped - RESEND_API_KEY is not configured. Invitation created but email not sent.");
       return result;
     }
-    
-    const inboundDomain = process.env.INBOUND_DOMAIN || "tryportal.app";
-    
-    // #region agent log - api key present
-    await logFetch({location:'invitations.ts:sendInvitationEmail:api_key_check',message:'API key and domain present',data:{hasApiKey:true,apiKeyLength:apiKey.length,inboundDomain},hypothesisId:'3'});
-    // #endregion
 
+    const resendDomain = process.env.RESEND_DOMAIN || "mail.tryportal.app";
     const inviteUrl = `${args.baseUrl || "http://localhost:3000"}/invite/${result.token}`;
 
-    // Send email using inbound.new API
+    // Send email using Resend SDK
     try {
-      // #region agent log - before fetch
-      await logFetch({location:'invitations.ts:sendInvitationEmail:before_fetch',message:'About to send email',data:{inviteUrl,orgName:org.name,email:args.email,fromEmail:`noreply@${inboundDomain}`},hypothesisId:'3'});
-      // #endregion
-      
-      const emailPayload = {
-        from: `Portal <noreply@${inboundDomain}>`,
+      const resend = new Resend(apiKey);
+      const { data, error } = await resend.emails.send({
+        from: `Portal <noreply@${resendDomain}>`,
         to: [args.email],
         subject: `You've been invited to join ${org.name} on Portal`,
         html: `
@@ -120,117 +88,32 @@ export const sendInvitationEmail = action({
 </html>
         `.trim(),
         text: `You've been invited to join ${org.name} on Portal as ${args.role === "admin" ? "an admin" : "a member"}. Accept your invitation: ${inviteUrl} - This invitation expires in 7 days.`,
-        // Note: tags field may not be supported in inbound.new v2 API
-        // Remove if experiencing 404 errors
-      };
-      
-      // #region agent log - payload debug
-      await logFetch({location:'invitations.ts:sendInvitationEmail:payload_debug',message:'Email payload prepared',data:{from:emailPayload.from,to:emailPayload.to,subject:emailPayload.subject,hasHtml:!!emailPayload.html,hasText:!!emailPayload.text,tagsCount:emailPayload.tags?.length},hypothesisId:'3'});
-      // #endregion
-      
-      console.log("[CONVEX EMAIL] Sending email with payload:", {
-        from: emailPayload.from,
-        to: emailPayload.to,
-        subject: emailPayload.subject,
-        hasHtml: !!emailPayload.html,
-        hasText: !!emailPayload.text,
-        tags: emailPayload.tags,
-        payloadKeys: Object.keys(emailPayload),
-      });
-      
-      console.log("[CONVEX EMAIL] Request details:", {
-        url: "https://inbound.new/api/v2/emails",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)}`,
-        },
-      });
-      
-      const response = await fetch("https://inbound.new/api/v2/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(emailPayload),
+        tags: [
+          { name: "type", value: "invitation" },
+          { name: "organization", value: org.name },
+        ],
       });
 
-      // #region agent log - response check
-      await logFetch({location:'invitations.ts:sendInvitationEmail:response_check',message:'Fetch response received',data:{ok:response.ok,status:response.status,statusText:response.statusText,contentType:response.headers.get('content-type')},hypothesisId:'3'});
-      // #endregion
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `Failed to send invitation email: ${response.status} ${response.statusText}`;
-        let parsedError: any = null;
-        try {
-          parsedError = JSON.parse(errorText);
-          errorMessage = parsedError.message || parsedError.error || errorMessage;
-        } catch {
-          // If errorText is not JSON, use it as-is
-          if (errorText) {
-            errorMessage = errorText;
-          }
-        }
-        
-        // #region agent log - error response detailed
-        await logFetch({location:'invitations.ts:sendInvitationEmail:error_response',message:'Email API returned error',data:{status:response.status,statusText:response.statusText,errorMessage,errorText,rawResponse:errorText.substring(0,500),parsedError:JSON.stringify(parsedError)},hypothesisId:'3'});
-        // #endregion
-        
-        // Provide detailed error logging for debugging
-        console.error("[CONVEX EMAIL] Email API error:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorMessage,
-          from: `noreply@${inboundDomain}`,
+      if (error) {
+        console.error("[CONVEX EMAIL] Resend error:", {
+          name: error.name,
+          message: error.message,
+          from: `noreply@${resendDomain}`,
           to: args.email,
-          domain: inboundDomain,
-          hasApiKey: !!apiKey,
-          rawResponse: errorText.substring(0, 500),
-          requestUrl: "https://inbound.new/api/v2/emails",
         });
-        
-        // For 404 errors, log more details to help troubleshoot
-        if (response.status === 404) {
-          console.error(
-            "[CONVEX EMAIL] 404 NOT_FOUND - Check the following:\n" +
-            "1. API endpoint: https://inbound.new/api/v2/emails\n" +
-            "2. Request headers: Content-Type: application/json, Authorization: Bearer [API_KEY]\n" +
-            "3. Email payload format - check if all required fields are present\n" +
-            "4. Raw error response: " + errorText
-          );
-        }
-        // Don't throw - invitation was created, just email failed
       } else {
-        const emailResult = await response.json();
-        // #region agent log - success
-        await logFetch({location:'invitations.ts:sendInvitationEmail:success',message:'Email sent successfully',data:{messageId:emailResult.id || emailResult.message_id,responseKeys:Object.keys(emailResult)},hypothesisId:'3'});
-        // #endregion
-        console.log("[CONVEX EMAIL] Invitation email sent successfully:", {
-          messageId: emailResult.id || emailResult.message_id,
-          response: JSON.stringify(emailResult).substring(0, 200),
-        });
+        console.log("[CONVEX EMAIL] Email sent successfully:", data?.id);
       }
     } catch (error) {
-      // #region agent log - catch error
-      await logFetch({location:'invitations.ts:sendInvitationEmail:catch_error',message:'Exception during email send',data:{error:String(error),errorStack:error instanceof Error ? error.stack : 'no stack'},hypothesisId:'3,5'});
-      // #endregion
       console.error("[CONVEX EMAIL] Exception during email send:", error);
-      // Don't throw - invitation was created, just email failed
     }
 
-    // #region agent log - return
-    await logFetch({location:'invitations.ts:sendInvitationEmail:return',message:'Action complete, returning result',data:{invitationId:result.invitationId,token:result.token},hypothesisId:'all'});
-    // #endregion
-    
-    console.log("[CONVEX EMAIL] sendInvitationEmail action complete");
     return result;
   },
 });
 
 /**
- * Send shared channel invitation email using inbound.new
+ * Send shared channel invitation email using Resend
  */
 export const sendSharedChannelInvitationEmail = action({
   args: {
@@ -245,29 +128,24 @@ export const sendSharedChannelInvitationEmail = action({
       email: args.email,
     });
 
-    const apiKey = process.env.INBOUND_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      console.warn("INBOUND_API_KEY not set, skipping email send");
-      console.log("[CONVEX EMAIL] Email send skipped - INBOUND_API_KEY is not configured. Invitation created but email not sent.");
+      console.warn("RESEND_API_KEY not set, skipping email send");
+      console.log("[CONVEX EMAIL] Email send skipped - RESEND_API_KEY is not configured. Invitation created but email not sent.");
       return { invitationId: "", token: result.token };
     }
 
-    const inboundDomain = process.env.INBOUND_DOMAIN || "tryportal.app";
+    const resendDomain = process.env.RESEND_DOMAIN || "mail.tryportal.app";
     const inviteUrl = `${args.baseUrl || "http://localhost:3000"}/shared/${result.token}`;
 
-    // Send email using inbound.new API
+    // Send email using Resend SDK
     try {
-      const response = await fetch("https://inbound.new/api/v2/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          from: `Portal <noreply@${inboundDomain}>`,
-          to: [args.email],
-          subject: `You've been invited to #${result.channelName} in ${result.organizationName}`,
-          html: `
+      const resend = new Resend(apiKey);
+      const { data, error } = await resend.emails.send({
+        from: `Portal <noreply@${resendDomain}>`,
+        to: [args.email],
+        subject: `You've been invited to #${result.channelName} in ${result.organizationName}`,
+        html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -306,67 +184,29 @@ export const sendSharedChannelInvitationEmail = action({
   </div>
 </body>
 </html>
-          `.trim(),
-          text: `You've been invited to join #${result.channelName} in ${result.organizationName} on Portal. Join the channel: ${inviteUrl}`,
-          tags: [
-            { name: "type", value: "shared-channel-invitation" },
-            { name: "channel", value: result.channelName },
-            { name: "organization", value: result.organizationName },
-          ],
-        }),
+        `.trim(),
+        text: `You've been invited to join #${result.channelName} in ${result.organizationName} on Portal. Join the channel: ${inviteUrl}`,
+        tags: [
+          { name: "type", value: "shared-channel-invitation" },
+          { name: "channel", value: result.channelName },
+          { name: "organization", value: result.organizationName },
+        ],
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `Failed to send shared channel invitation email: ${response.status} ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch {
-          // If errorText is not JSON, use it as-is
-          if (errorText) {
-            errorMessage = errorText;
-          }
-        }
-        
-        // Provide detailed error logging for debugging
-        console.error("[CONVEX EMAIL] Shared channel email API error:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorMessage,
-          from: `noreply@${inboundDomain}`,
+      if (error) {
+        console.error("[CONVEX EMAIL] Resend error:", {
+          name: error.name,
+          message: error.message,
+          from: `noreply@${resendDomain}`,
           to: args.email,
-          domain: inboundDomain,
-          hasApiKey: !!apiKey,
-          rawResponse: errorText.substring(0, 500),
-          requestUrl: "https://inbound.new/api/v2/emails",
         });
-        
-        // For 404 errors, log more details to help troubleshoot
-        if (response.status === 404) {
-          console.error(
-            "[CONVEX EMAIL] 404 NOT_FOUND - Check the following:\n" +
-            "1. API endpoint: https://inbound.new/api/v2/emails\n" +
-            "2. Request headers: Content-Type: application/json, Authorization: Bearer [API_KEY]\n" +
-            "3. Email payload format - check if all required fields are present\n" +
-            "4. Raw error response: " + errorText
-          );
-        }
-        // Don't throw - invitation was created, just email failed
       } else {
-        const emailResult = await response.json();
-        console.log("[CONVEX EMAIL] Shared channel invitation email sent successfully:", {
-          messageId: emailResult.id || emailResult.message_id,
-          response: JSON.stringify(emailResult).substring(0, 200),
-        });
+        console.log("[CONVEX EMAIL] Shared channel invitation email sent successfully:", data?.id);
       }
     } catch (error) {
       console.error("[CONVEX EMAIL] Exception during shared channel email send:", error);
-      // Don't throw - invitation was created, just email failed
     }
 
-    console.log("[CONVEX EMAIL] sendSharedChannelInvitationEmail action complete");
     return { invitationId: "", token: result.token };
   },
 });
-
