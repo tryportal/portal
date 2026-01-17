@@ -56,45 +56,33 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError("");
 
     try {
-      const result = await signIn!.create({
-        identifier: email,
-        password,
-      });
+      if (mode === "sign-in") {
+        const result = await signIn!.create({
+          identifier: email,
+          password,
+        });
 
-      if (result.status === "complete") {
-        if (result.createdSessionId) {
-          await setSignInActive!({ session: result.createdSessionId });
-          router.push("/setup");
+        if (result.status === "complete") {
+          if (result.createdSessionId) {
+            await setSignInActive!({ session: result.createdSessionId });
+            router.push("/setup");
+          } else {
+            setError("Authentication failed. Please try again.");
+          }
         } else {
-          setError("Authentication failed. Please try again.");
+          setError("Additional verification required. Please complete all steps.");
         }
       } else {
-        setError("Additional verification required. Please complete all steps.");
+        await signUp!.create({
+          emailAddress: email,
+          password,
+        });
+        await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+        setPendingVerification(true);
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { code?: string; message: string }[] };
-      const errorCode = clerkError.errors?.[0]?.code;
-      
-      if (errorCode === "form_identifier_not_found") {
-        if (mode === "sign-up") {
-          try {
-            await signUp!.create({
-              emailAddress: email,
-              password,
-            });
-
-            await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
-            setPendingVerification(true);
-          } catch (signUpErr: unknown) {
-            const signUpError = signUpErr as { errors?: { message: string }[] };
-            setError(signUpError.errors?.[0]?.message || "Something went wrong");
-          }
-        } else {
-          setError("No account found with this email. Please sign up first.");
-        }
-      } else {
-        setError(clerkError.errors?.[0]?.message || "Invalid email or password");
-      }
+      setError(clerkError.errors?.[0]?.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
