@@ -57,6 +57,7 @@ export const sendInvitationEmail = action({
       // #region agent log - no api key
       await logFetch({location:'invitations.ts:sendInvitationEmail:no_api_key',message:'INBOUND_API_KEY not set',data:{hasApiKey:false},hypothesisId:'3'});
       // #endregion
+      console.log("[CONVEX EMAIL] Email send skipped - INBOUND_API_KEY is not configured. Invitation created but email not sent.");
       return result;
     }
     
@@ -204,15 +205,18 @@ export const sendInvitationEmail = action({
       } else {
         const emailResult = await response.json();
         // #region agent log - success
-        await logFetch({location:'invitations.ts:sendInvitationEmail:success',message:'Email sent successfully',data:{messageId:emailResult.id || emailResult.message_id},hypothesisId:'3'});
+        await logFetch({location:'invitations.ts:sendInvitationEmail:success',message:'Email sent successfully',data:{messageId:emailResult.id || emailResult.message_id,responseKeys:Object.keys(emailResult)},hypothesisId:'3'});
         // #endregion
-        console.log("Invitation email sent successfully:", emailResult.id || emailResult.message_id);
+        console.log("[CONVEX EMAIL] Invitation email sent successfully:", {
+          messageId: emailResult.id || emailResult.message_id,
+          response: JSON.stringify(emailResult).substring(0, 200),
+        });
       }
     } catch (error) {
       // #region agent log - catch error
       await logFetch({location:'invitations.ts:sendInvitationEmail:catch_error',message:'Exception during email send',data:{error:String(error),errorStack:error instanceof Error ? error.stack : 'no stack'},hypothesisId:'3,5'});
       // #endregion
-      console.error("Error sending invitation email:", error);
+      console.error("[CONVEX EMAIL] Exception during email send:", error);
       // Don't throw - invitation was created, just email failed
     }
 
@@ -220,6 +224,7 @@ export const sendInvitationEmail = action({
     await logFetch({location:'invitations.ts:sendInvitationEmail:return',message:'Action complete, returning result',data:{invitationId:result.invitationId,token:result.token},hypothesisId:'all'});
     // #endregion
     
+    console.log("[CONVEX EMAIL] sendInvitationEmail action complete");
     return result;
   },
 });
@@ -243,6 +248,7 @@ export const sendSharedChannelInvitationEmail = action({
     const apiKey = process.env.INBOUND_API_KEY;
     if (!apiKey) {
       console.warn("INBOUND_API_KEY not set, skipping email send");
+      console.log("[CONVEX EMAIL] Email send skipped - INBOUND_API_KEY is not configured. Invitation created but email not sent.");
       return { invitationId: "", token: result.token };
     }
 
@@ -349,13 +355,17 @@ export const sendSharedChannelInvitationEmail = action({
         // Don't throw - invitation was created, just email failed
       } else {
         const emailResult = await response.json();
-        console.log("Shared channel invitation email sent successfully:", emailResult.id || emailResult.message_id);
+        console.log("[CONVEX EMAIL] Shared channel invitation email sent successfully:", {
+          messageId: emailResult.id || emailResult.message_id,
+          response: JSON.stringify(emailResult).substring(0, 200),
+        });
       }
     } catch (error) {
-      console.error("Error sending shared channel invitation email:", error);
+      console.error("[CONVEX EMAIL] Exception during shared channel email send:", error);
       // Don't throw - invitation was created, just email failed
     }
 
+    console.log("[CONVEX EMAIL] sendSharedChannelInvitationEmail action complete");
     return { invitationId: "", token: result.token };
   },
 });
