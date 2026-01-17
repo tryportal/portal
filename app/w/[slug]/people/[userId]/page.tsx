@@ -98,6 +98,9 @@ export default function MemberProfilePage({
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (params instanceof Promise) {
@@ -113,6 +116,7 @@ export default function MemberProfilePage({
   const updateRole = useMutation(api.organizations.updateOrganizationMemberRole);
   const removeMember = useMutation(api.organizations.removeOrganizationMember);
   const updateProfile = useMutation(api.organizations.updateMemberProfile);
+  const leaveOrganization = useMutation(api.organizations.leaveOrganization);
 
   React.useEffect(() => {
     const fetchMember = async () => {
@@ -257,6 +261,25 @@ export default function MemberProfilePage({
       setRemoveDialogOpen(false);
     } finally {
       setIsRemoving(false);
+    }
+  };
+
+  const handleLeaveWorkspace = async () => {
+    if (!organization?._id) return;
+
+    setIsLeaving(true);
+    setLeaveError(null);
+
+    try {
+      await leaveOrganization({
+        organizationId: organization._id,
+      });
+
+      router.push("/");
+    } catch (err) {
+      setLeaveError(err instanceof Error ? err.message : "Failed to leave workspace");
+    } finally {
+      setIsLeaving(false);
     }
   };
 
@@ -568,6 +591,47 @@ export default function MemberProfilePage({
                               className="bg-red-600 hover:bg-red-700"
                             >
                               {isRemoving ? "Removing..." : "Remove"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+
+                  {/* Leave Workspace - for own profile only */}
+                  {member && member.userId === currentUserId && (
+                    <div className="pt-4 border-t border-border space-y-4">
+                      <AlertDialog 
+                        open={leaveDialogOpen} 
+                        onOpenChange={(open) => {
+                          setLeaveDialogOpen(open);
+                          if (!open) setLeaveError(null);
+                        }}
+                      >
+                        <AlertDialogTrigger 
+                          render={<button className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1" />}
+                        >
+                          <TrashIcon className="size-3" />
+                          Leave workspace
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Leave Workspace</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to leave this workspace? You will lose access immediately and will need to be re-invited to rejoin.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          {leaveError && (
+                            <p className="text-sm text-red-600">{leaveError}</p>
+                          )}
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleLeaveWorkspace}
+                              disabled={isLeaving}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              {isLeaving ? "Leaving..." : "Leave"}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

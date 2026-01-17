@@ -1226,6 +1226,53 @@ export const removeOrganizationMember = mutation({
 });
 
 /**
+ * Leave an organization (self-removal)
+ */
+export const leaveOrganization = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Get the current user's membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("You are not a member of this organization");
+    }
+
+    // Prevent leaving if user is the last admin
+    if (membership.role === "admin") {
+      const admins = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization", (q) =>
+          q.eq("organizationId", args.organizationId)
+        )
+        .filter((q) => q.eq(q.field("role"), "admin"))
+        .collect();
+
+      if (admins.length <= 1) {
+        throw new Error("Cannot leave as the last admin. Promote another member to admin first.");
+      }
+    }
+
+    await ctx.db.delete(membership._id);
+    return { success: true };
+  },
+});
+
+/**
  * Revoke an invite link
  */
 export const revokeInviteLink = mutation({

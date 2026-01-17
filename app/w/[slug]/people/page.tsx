@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import * as React from "react";
@@ -13,6 +13,7 @@ import {
   MagnifyingGlassIcon,
   ShieldIcon,
   UserIcon,
+  SignOutIcon,
 } from "@phosphor-icons/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,17 @@ import { cn } from "@/lib/utils";
 import { InvitePeopleDialog } from "@/components/invite-people-dialog";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { usePageTitle } from "@/lib/use-page-title";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type MemberWithUserData = {
   _id: Id<"organizationMembers">;
@@ -47,10 +59,34 @@ export default function PeoplePage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+
+  const leaveOrganization = useMutation(api.organizations.leaveOrganization);
 
   usePageTitle("People - Portal");
 
   const isAdmin = membership?.role === "admin";
+
+  const handleLeaveWorkspace = async () => {
+    if (!organization?._id) return;
+
+    setIsLeaving(true);
+    setLeaveError(null);
+
+    try {
+      await leaveOrganization({
+        organizationId: organization._id,
+      });
+
+      router.push("/");
+    } catch (err) {
+      setLeaveError(err instanceof Error ? err.message : "Failed to leave workspace");
+    } finally {
+      setIsLeaving(false);
+    }
+  };
 
   const membersResult = useQuery(
     api.organizations.getOrganizationMembersQuery,
@@ -137,8 +173,49 @@ export default function PeoplePage() {
         <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4">
           <UsersIcon className="size-4 sm:size-5 text-foreground" weight="fill" />
           <h1 className="text-sm sm:text-base font-semibold text-foreground">People</h1>
-          {isAdmin && (
-            <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <AlertDialog 
+              open={leaveDialogOpen} 
+              onOpenChange={(open) => {
+                setLeaveDialogOpen(open);
+                if (!open) setLeaveError(null);
+              }}
+            >
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-red-600 text-xs sm:text-sm"
+                  />
+                }
+              >
+                <SignOutIcon className="size-3.5 sm:size-4 mr-1.5 sm:mr-2" />
+                Leave
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Leave Workspace</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to leave this workspace? You will lose access immediately and will need to be re-invited to rejoin.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {leaveError && (
+                  <p className="text-sm text-red-600">{leaveError}</p>
+                )}
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleLeaveWorkspace}
+                    disabled={isLeaving}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {isLeaving ? "Leaving..." : "Leave"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {isAdmin && (
               <Button
                 onClick={() => setInviteDialogOpen(true)}
                 size="sm"
@@ -147,8 +224,8 @@ export default function PeoplePage() {
                 <UserIcon className="size-3.5 sm:size-4 mr-1.5 sm:mr-2" weight="bold" />
                 Invite
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto">
