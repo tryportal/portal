@@ -76,17 +76,21 @@ export function AuthForm({ mode }: AuthFormProps) {
       const errorCode = clerkError.errors?.[0]?.code;
       
       if (errorCode === "form_identifier_not_found") {
-        try {
-          await signUp!.create({
-            emailAddress: email,
-            password,
-          });
+        if (mode === "sign-up") {
+          try {
+            await signUp!.create({
+              emailAddress: email,
+              password,
+            });
 
-          await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
-          setPendingVerification(true);
-        } catch (signUpErr: unknown) {
-          const signUpError = signUpErr as { errors?: { message: string }[] };
-          setError(signUpError.errors?.[0]?.message || "Something went wrong");
+            await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+            setPendingVerification(true);
+          } catch (signUpErr: unknown) {
+            const signUpError = signUpErr as { errors?: { message: string }[] };
+            setError(signUpError.errors?.[0]?.message || "Something went wrong");
+          }
+        } else {
+          setError("No account found with this email. Please sign up first.");
         }
       } else {
         setError(clerkError.errors?.[0]?.message || "Invalid email or password");
