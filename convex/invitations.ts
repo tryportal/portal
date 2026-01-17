@@ -119,15 +119,32 @@ export const sendInvitationEmail = action({
 </html>
         `.trim(),
         text: `You've been invited to join ${org.name} on Portal as ${args.role === "admin" ? "an admin" : "a member"}. Accept your invitation: ${inviteUrl} - This invitation expires in 7 days.`,
-        tags: [
-          { name: "type", value: "invitation" },
-          { name: "organization", value: org.slug },
-        ],
+        // Note: tags field may not be supported in inbound.new v2 API
+        // Remove if experiencing 404 errors
       };
       
       // #region agent log - payload debug
-      await logFetch({location:'invitations.ts:sendInvitationEmail:payload_debug',message:'Email payload prepared',data:{from:emailPayload.from,to:emailPayload.to,subject:emailPayload.subject,hasHtml:!!emailPayload.html,hasText:!!emailPayload.text},hypothesisId:'3'});
+      await logFetch({location:'invitations.ts:sendInvitationEmail:payload_debug',message:'Email payload prepared',data:{from:emailPayload.from,to:emailPayload.to,subject:emailPayload.subject,hasHtml:!!emailPayload.html,hasText:!!emailPayload.text,tagsCount:emailPayload.tags?.length},hypothesisId:'3'});
       // #endregion
+      
+      console.log("[CONVEX EMAIL] Sending email with payload:", {
+        from: emailPayload.from,
+        to: emailPayload.to,
+        subject: emailPayload.subject,
+        hasHtml: !!emailPayload.html,
+        hasText: !!emailPayload.text,
+        tags: emailPayload.tags,
+        payloadKeys: Object.keys(emailPayload),
+      });
+      
+      console.log("[CONVEX EMAIL] Request details:", {
+        url: "https://inbound.new/api/v2/emails",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)}`,
+        },
+      });
       
       const response = await fetch("https://inbound.new/api/v2/emails", {
         method: "POST",
@@ -139,7 +156,7 @@ export const sendInvitationEmail = action({
       });
 
       // #region agent log - response check
-      await logFetch({location:'invitations.ts:sendInvitationEmail:response_check',message:'Fetch response received',data:{ok:response.ok,status:response.status,statusText:response.statusText},hypothesisId:'3'});
+      await logFetch({location:'invitations.ts:sendInvitationEmail:response_check',message:'Fetch response received',data:{ok:response.ok,status:response.status,statusText:response.statusText,contentType:response.headers.get('content-type')},hypothesisId:'3'});
       // #endregion
       
       if (!response.ok) {
@@ -157,7 +174,7 @@ export const sendInvitationEmail = action({
         }
         
         // #region agent log - error response detailed
-        await logFetch({location:'invitations.ts:sendInvitationEmail:error_response',message:'Email API returned error',data:{status:response.status,statusText:response.statusText,errorMessage,errorText,parsedError:JSON.stringify(parsedError)},hypothesisId:'3'});
+        await logFetch({location:'invitations.ts:sendInvitationEmail:error_response',message:'Email API returned error',data:{status:response.status,statusText:response.statusText,errorMessage,errorText,rawResponse:errorText.substring(0,500),parsedError:JSON.stringify(parsedError)},hypothesisId:'3'});
         // #endregion
         
         // Provide detailed error logging for debugging
@@ -169,15 +186,18 @@ export const sendInvitationEmail = action({
           to: args.email,
           domain: inboundDomain,
           hasApiKey: !!apiKey,
+          rawResponse: errorText.substring(0, 500),
+          requestUrl: "https://inbound.new/api/v2/emails",
         });
         
-        // For 404 errors, suggest configuration
+        // For 404 errors, log more details to help troubleshoot
         if (response.status === 404) {
           console.error(
-            "[CONVEX EMAIL] 404 NOT_FOUND - Possible causes:\n" +
-            "1. Domain 'tryportal.app' is not registered/verified in inbound.new\n" +
-            "2. Please verify the domain in your inbound.new account settings\n" +
-            "3. Make sure INBOUND_DOMAIN is set correctly in Convex environment"
+            "[CONVEX EMAIL] 404 NOT_FOUND - Check the following:\n" +
+            "1. API endpoint: https://inbound.new/api/v2/emails\n" +
+            "2. Request headers: Content-Type: application/json, Authorization: Bearer [API_KEY]\n" +
+            "3. Email payload format - check if all required fields are present\n" +
+            "4. Raw error response: " + errorText
           );
         }
         // Don't throw - invitation was created, just email failed
@@ -312,15 +332,18 @@ export const sendSharedChannelInvitationEmail = action({
           to: args.email,
           domain: inboundDomain,
           hasApiKey: !!apiKey,
+          rawResponse: errorText.substring(0, 500),
+          requestUrl: "https://inbound.new/api/v2/emails",
         });
         
-        // For 404 errors, suggest configuration
+        // For 404 errors, log more details to help troubleshoot
         if (response.status === 404) {
           console.error(
-            "[CONVEX EMAIL] 404 NOT_FOUND - Possible causes:\n" +
-            "1. Domain 'tryportal.app' is not registered/verified in inbound.new\n" +
-            "2. Please verify the domain in your inbound.new account settings\n" +
-            "3. Make sure INBOUND_DOMAIN is set correctly in Convex environment"
+            "[CONVEX EMAIL] 404 NOT_FOUND - Check the following:\n" +
+            "1. API endpoint: https://inbound.new/api/v2/emails\n" +
+            "2. Request headers: Content-Type: application/json, Authorization: Bearer [API_KEY]\n" +
+            "3. Email payload format - check if all required fields are present\n" +
+            "4. Raw error response: " + errorText
           );
         }
         // Don't throw - invitation was created, just email failed
