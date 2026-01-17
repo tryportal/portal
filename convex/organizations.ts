@@ -1418,3 +1418,59 @@ export const updateMemberProfile = mutation({
     return args.membershipId;
   },
 });
+
+/**
+ * Transfer ownership of an organization to another admin
+ * The current user will be demoted to a regular member
+ */
+export const transferOwnership = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    newOwnerMembershipId: v.id("organizationMembers"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Check if current user is an admin
+    const currentMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!currentMembership || currentMembership.role !== "admin") {
+      throw new Error("Only organization admins can transfer ownership");
+    }
+
+    // Get the new owner's membership
+    const newOwnerMembership = await ctx.db.get(args.newOwnerMembershipId);
+    if (!newOwnerMembership) {
+      throw new Error("New owner not found");
+    }
+
+    if (newOwnerMembership.organizationId !== args.organizationId) {
+      throw new Error("New owner does not belong to this organization");
+    }
+
+    // Cannot transfer to yourself
+    if (newOwnerMembership.userId === userId) {
+      throw new Error("Cannot transfer ownership to yourself");
+    }
+
+    // New owner must be an admin
+    if (newOwnerMembership.role !== "admin") {
+      throw new Error("New owner must be an admin. Promote them to admin first.");
+    }
+
+    // Demote current user to member
+    await ctx.db.patch(currentMembership._id, { role: "member" });
+
+    return { success: true };
+  },
+});
