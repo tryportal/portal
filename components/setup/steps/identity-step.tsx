@@ -149,10 +149,6 @@ export function IdentityStep({
           </StepField>
         </div>
 
-        {/* Preview Section */}
-        <div className="hidden lg:flex flex-col items-center justify-start pt-2">
-          <WorkspacePreview name={name} logoUrl={logoUrl} />
-        </div>
       </div>
 
       {/* Mobile Preview - shown below form on smaller screens */}
