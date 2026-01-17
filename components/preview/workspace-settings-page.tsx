@@ -21,9 +21,11 @@ import {
   ShieldIcon,
   WarningIcon,
   GearIcon,
+  UserSwitchIcon,
 } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useUserDataCache } from "@/components/user-data-cache"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface WorkspaceSettingsPageProps {
   organizationId: Id<"organizations">
@@ -53,6 +62,7 @@ export function WorkspaceSettingsPage({
   organizationId,
 }: WorkspaceSettingsPageProps) {
   const router = useRouter()
+  const { cache: userDataCache, fetchUserData } = useUserDataCache()
   const organization = useQuery(api.organizations.getOrganization, {
     id: organizationId,
   })
@@ -60,8 +70,12 @@ export function WorkspaceSettingsPage({
     organizationId,
   })
   const userOrgs = useQuery(api.organizations.getUserOrganizations)
+  const membersResult = useQuery(api.organizations.getOrganizationMembersQuery, {
+    organizationId,
+  })
   const updateOrganization = useMutation(api.organizations.updateOrganization)
   const deleteOrganization = useMutation(api.organizations.deleteOrganization)
+  const transferOwnership = useMutation(api.organizations.transferOwnership)
 
   const [activeSection, setActiveSection] = React.useState<SettingsSection>("general")
   const [name, setName] = React.useState("")
@@ -75,6 +89,9 @@ export function WorkspaceSettingsPage({
   const [deleteConfirmName, setDeleteConfirmName] = React.useState("")
   const [isDeleting, setIsDeleting] = React.useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [transferDialogOpen, setTransferDialogOpen] = React.useState(false)
+  const [selectedNewOwnerId, setSelectedNewOwnerId] = React.useState<Id<"organizationMembers"> | null>(null)
+  const [isTransferring, setIsTransferring] = React.useState(false)
 
   // Initialize form with organization data
   React.useEffect(() => {
@@ -185,6 +202,57 @@ export function WorkspaceSettingsPage({
       setError(null)
     }
   }
+
+  const handleTransferOwnership = async () => {
+    if (!selectedNewOwnerId) {
+      setError("Please select a new owner")
+      return
+    }
+
+    setIsTransferring(true)
+    setError(null)
+
+    try {
+      await transferOwnership({
+        organizationId,
+        newOwnerMembershipId: selectedNewOwnerId,
+      })
+
+      setTransferDialogOpen(false)
+      setSelectedNewOwnerId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to transfer ownership")
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
+  const rawAdminMembers = React.useMemo(() => {
+    return membersResult?.members?.filter(
+      (m) => m.role === "admin" && m.userId !== membership?.userId
+    ) || []
+  }, [membersResult?.members, membership?.userId])
+
+  React.useEffect(() => {
+    if (rawAdminMembers.length > 0) {
+      const userIds = rawAdminMembers.map((m) => m.userId)
+      fetchUserData(userIds)
+    }
+  }, [rawAdminMembers, fetchUserData])
+
+  const adminMembers = React.useMemo(() => {
+    return rawAdminMembers.map((member) => {
+      const cached = userDataCache[member.userId]
+      return {
+        ...member,
+        publicUserData: cached ? {
+          firstName: cached.firstName,
+          lastName: cached.lastName,
+          imageUrl: cached.imageUrl,
+        } : undefined,
+      }
+    })
+  }, [rawAdminMembers, userDataCache])
 
   if (!organization || !membership) {
     return (
@@ -627,6 +695,100 @@ export function WorkspaceSettingsPage({
         {/* Danger Zone Section */}
         {activeSection === "danger" && (
           <div className="space-y-4">
+            {/* Transfer Ownership */}
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10 overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                    <UserSwitchIcon className="size-4" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">
+                      Transfer Ownership
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                      Transfer this workspace to another admin. You will be demoted to a regular member.
+                    </p>
+
+                    <AlertDialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+                      <AlertDialogTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300"
+                            disabled={adminMembers.length === 0}
+                          />
+                        }
+                      >
+                        <UserSwitchIcon className="size-4 mr-1.5" />
+                        Transfer Ownership
+                      </AlertDialogTrigger>
+                      <AlertDialogContent size="default" className="max-w-md">
+                        <AlertDialogHeader>
+                          <AlertDialogMedia className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                            <UserSwitchIcon className="size-5" weight="fill" />
+                          </AlertDialogMedia>
+                          <AlertDialogTitle>Transfer Ownership</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Select a new owner for <strong className="text-foreground">{organization?.name}</strong>. You will be demoted to a regular member.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-3 py-4">
+                          <label className="block text-xs font-medium text-muted-foreground">
+                            Select new owner
+                          </label>
+                          <Select
+                            value={selectedNewOwnerId ?? undefined}
+                            onValueChange={(value) => {
+                              setSelectedNewOwnerId(value as Id<"organizationMembers">)
+                              setError(null)
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {adminMembers.map((member) => (
+                                <SelectItem key={member._id} value={member._id}>
+                                  {member.publicUserData?.firstName || member.publicUserData?.lastName
+                                    ? `${member.publicUserData.firstName ?? ""} ${member.publicUserData.lastName ?? ""}`.trim()
+                                    : "Unknown user"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel
+                            onClick={() => {
+                              setSelectedNewOwnerId(null)
+                              setError(null)
+                            }}
+                          >
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleTransferOwnership}
+                            disabled={!selectedNewOwnerId || isTransferring}
+                            className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isTransferring ? "Transferring..." : "Transfer Ownership"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    {adminMembers.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        No other admins available. Promote a member to admin first.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Delete Workspace */}
             <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10 overflow-hidden">
               <div className="p-3 sm:p-4">

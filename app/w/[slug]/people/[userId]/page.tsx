@@ -12,21 +12,14 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { 
   ArrowLeftIcon, 
   ShieldIcon, 
-  UserIcon,
   WarningCircleIcon,
   CheckIcon,
   TrashIcon,
   PencilSimpleIcon,
   XIcon,
-  FloppyDiskIcon,
-  BriefcaseIcon,
-  BuildingsIcon,
-  MapPinIcon,
-  ClockIcon,
   CircleNotchIcon,
 } from "@phosphor-icons/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -49,11 +42,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
 import { analytics } from "@/lib/analytics";
 
-// Type for member data
 type MemberWithUserData = {
   _id: Id<"organizationMembers">;
   organizationId: Id<"organizations">;
@@ -83,13 +74,11 @@ export default function MemberProfilePage({
   const [userId, setUserId] = useState<string>("");
   const { organization, membership: contextMembership, slug, isLoading: contextLoading } = useWorkspaceData();
 
-  // Member data state
   const [member, setMember] = useState<MemberWithUserData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Profile update state
   const [isEditing, setIsEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({
     jobTitle: "",
@@ -102,7 +91,6 @@ export default function MemberProfilePage({
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
 
-  // Role update state
   const [selectedRole, setSelectedRole] = useState<"admin" | "member">("member");
   const [isSavingRole, setIsSavingRole] = useState(false);
   const [roleSaveError, setRoleSaveError] = useState<string | null>(null);
@@ -111,7 +99,6 @@ export default function MemberProfilePage({
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
-  // Resolve params
   React.useEffect(() => {
     if (params instanceof Promise) {
       params.then((resolved) => {
@@ -122,13 +109,11 @@ export default function MemberProfilePage({
     }
   }, [params]);
 
-  // Actions and mutations
   const getMember = useAction(api.organizations.getOrganizationMember);
   const updateRole = useMutation(api.organizations.updateOrganizationMemberRole);
   const removeMember = useMutation(api.organizations.removeOrganizationMember);
   const updateProfile = useMutation(api.organizations.updateMemberProfile);
 
-  // Fetch member data
   React.useEffect(() => {
     const fetchMember = async () => {
       if (!organization?._id || !userId) return;
@@ -147,10 +132,8 @@ export default function MemberProfilePage({
           setSelectedRole(result.member.role);
           setIsAdmin(result.isAdmin);
 
-          // Track profile view
           analytics.profileViewed({ isOwnProfile: result.member.userId === currentUserId });
 
-          // Initialize form
           setProfileForm({
             jobTitle: result.member.jobTitle || "",
             department: result.member.department || "",
@@ -219,7 +202,6 @@ export default function MemberProfilePage({
       setProfileSaveSuccess(true);
       setIsEditing(false);
       
-      // Clear success message after 3 seconds
       setTimeout(() => setProfileSaveSuccess(false), 3000);
     } catch (err) {
       setProfileSaveError(err instanceof Error ? err.message : "Failed to update profile");
@@ -247,11 +229,10 @@ export default function MemberProfilePage({
       setMember({ ...member, role: newRole });
       setRoleSaveSuccess(true);
       
-      // Clear success message after 3 seconds
       setTimeout(() => setRoleSaveSuccess(false), 3000);
     } catch (err) {
       setRoleSaveError(err instanceof Error ? err.message : "Failed to update role");
-      setSelectedRole(member.role); // Revert on error
+      setSelectedRole(member.role);
     } finally {
       setIsSavingRole(false);
     }
@@ -270,7 +251,6 @@ export default function MemberProfilePage({
       });
 
       analytics.memberRemoved();
-      // Navigate back to people list
       router.push(`/w/${slug}/people`);
     } catch (err) {
       setRemoveError(err instanceof Error ? err.message : "Failed to remove member");
@@ -282,7 +262,6 @@ export default function MemberProfilePage({
 
   const canEdit = isAdmin || (member && member.userId === currentUserId);
 
-  // Set page title
   const displayName = member
     ? member.publicUserData?.firstName && member.publicUserData?.lastName
       ? `${member.publicUserData.firstName} ${member.publicUserData.lastName}`
@@ -290,7 +269,6 @@ export default function MemberProfilePage({
     : "Loading...";
   usePageTitle(`${displayName} - Portal`);
 
-  // Show loading spinner while context is loading
   if (contextLoading) {
     return <LoadingSpinner fullScreen />;
   }
@@ -298,47 +276,40 @@ export default function MemberProfilePage({
   return (
     <main className="flex-1 overflow-hidden">
       <div className="flex h-full flex-col bg-background">
-        {/* Header */}
         <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-background px-4">
           <button
             onClick={() => router.push(`/w/${slug}/people`)}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeftIcon className="size-4" />
-            <span>Back to People</span>
+            <span>People</span>
           </button>
         </header>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-card/50">
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex h-full items-center justify-center py-12">
-              <LoadingSpinner text="Loading member..." />
+              <LoadingSpinner text="Loading..." />
             </div>
           ) : error ? (
             <div className="flex h-full items-center justify-center py-12">
-              <div className="w-full max-w-md rounded-xl bg-card p-8 shadow-sm border border-border text-center">
-                <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
-                  <WarningCircleIcon className="size-6" weight="fill" />
-                </div>
-                <h2 className="text-lg font-semibold text-foreground mb-2">
-                  Member Not Found
-                </h2>
+              <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-4">{error}</p>
                 <Button 
                   variant="outline"
+                  size="sm"
                   onClick={() => router.push(`/w/${slug}/people`)}
                 >
-                  Back to People
+                  Back
                 </Button>
               </div>
             </div>
           ) : member ? (
-            <div className="mx-auto max-w-5xl py-8 px-6">
+            <div className="mx-auto max-w-xl py-8 px-4">
               {isEditing ? (
-                <div className="max-w-2xl mx-auto">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-foreground">Edit Profile</h2>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium text-foreground">Edit Profile</h2>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -354,364 +325,255 @@ export default function MemberProfilePage({
                       }}
                       disabled={isSavingProfile}
                     >
-                      <XIcon className="size-4 mr-1.5" />
-                      Cancel
+                      <XIcon className="size-4" />
                     </Button>
                   </div>
 
-                  <div className="bg-card rounded-xl border border-border shadow-sm p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="jobTitle">Job Title</Label>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="jobTitle" className="text-xs">Job Title</Label>
                         <Input
                           id="jobTitle"
                           value={profileForm.jobTitle}
                           onChange={(e) => setProfileForm({ ...profileForm, jobTitle: e.target.value })}
-                          placeholder="e.g. Senior Designer"
+                          placeholder="e.g. Designer"
+                          className="h-9"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="department">Department</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="department" className="text-xs">Department</Label>
                         <Input
                           id="department"
                           value={profileForm.department}
                           onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
                           placeholder="e.g. Design"
+                          className="h-9"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="location" className="text-xs">Location</Label>
                         <Input
                           id="location"
                           value={profileForm.location}
                           onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
-                          placeholder="e.g. San Francisco, CA"
+                          placeholder="e.g. San Francisco"
+                          className="h-9"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="timezone">Timezone</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="timezone" className="text-xs">Timezone</Label>
                         <Input
                           id="timezone"
                           value={profileForm.timezone}
                           onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
-                          placeholder="e.g. PST (UTC-8)"
+                          placeholder="e.g. PST"
+                          className="h-9"
                         />
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bio" className="text-xs">Bio</Label>
                       <Textarea
                         id="bio"
                         value={profileForm.bio}
                         onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                        placeholder="Tell us a bit about yourself..."
-                        className="min-h-[120px] resize-none"
+                        placeholder="About yourself..."
+                        className="min-h-[100px] resize-none"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Brief description for your profile.
-                      </p>
                     </div>
 
                     {profileSaveError && (
-                      <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2">
-                        <WarningCircleIcon className="size-4" weight="fill" />
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <WarningCircleIcon className="size-3" weight="fill" />
                         {profileSaveError}
-                      </div>
+                      </p>
                     )}
 
-                    {profileSaveSuccess && (
-                      <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600 border border-green-100 flex items-center gap-2">
-                        <CheckIcon className="size-4" weight="bold" />
-                        Profile updated successfully
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-end pt-2">
+                    <div className="flex justify-end">
                       <Button
                         onClick={handleProfileUpdate}
                         disabled={isSavingProfile}
-                        className="min-w-[120px]"
+                        size="sm"
                       >
                         {isSavingProfile ? (
-                          <CircleNotchIcon className="size-4 animate-spin mr-1.5" />
+                          <CircleNotchIcon className="size-4 animate-spin" />
                         ) : (
-                          <FloppyDiskIcon className="size-4 mr-1.5" />
+                          "Save"
                         )}
-                        Save Changes
                       </Button>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-8">
-                  {/* Profile Header Card */}
-                  <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-                    <div className="h-32 bg-gradient-to-r from-background to-muted border-b border-border relative">
-                      {canEdit && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          onClick={() => setIsEditing(true)}
-                          className="absolute top-4 right-4 bg-card/80 hover:bg-card shadow-sm backdrop-blur-sm"
-                        >
-                          <PencilSimpleIcon className="size-4 mr-1.5" />
-                          Edit Profile
-                        </Button>
-                      )}
-                    </div>
-                    <div className="px-8 pb-8">
-                      <div className="relative -mt-12 mb-4 flex justify-between items-end">
-                        <Avatar className="size-32 border-4 border-white shadow-sm">
-                          {member.publicUserData?.imageUrl ? (
-                            <AvatarImage 
-                              src={member.publicUserData.imageUrl} 
-                              alt={getDisplayName(member)} 
-                            />
-                          ) : null}
-                          <AvatarFallback className="text-4xl bg-background text-muted-foreground">
-                            {getInitials(member)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex gap-2 mb-1">
-                          {/* Placeholder for future actions like Message */}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <h1 className="text-2xl font-bold text-foreground">
-                            {getDisplayName(member)}
-                          </h1>
-                          <Badge 
-                            variant={member.role === "admin" ? "default" : "secondary"}
-                            className={cn(
-                              "text-[10px] uppercase tracking-wider h-5",
-                              member.role === "admin" 
-                                ? "bg-foreground text-background" 
-                                : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {member.role === "admin" && (
-                              <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
-                            )}
-                            {member.role}
-                          </Badge>
-                        </div>
-                        <p className="text-base text-muted-foreground font-medium">
-                          {member.jobTitle || "No job title"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column: Info */}
-                    <div className="space-y-6">
-                      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
-                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                          Contact & Info
-                        </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
-                              <UserIcon className="size-4 text-muted-foreground" />
-                            </div>
-                            <div className="overflow-hidden">
-                              <p className="text-xs text-muted-foreground mb-0.5">Email</p>
-                              <p className="text-sm text-foreground truncate" title={member.emailAddress || ""}>
-                                {member.emailAddress}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
-                              <MapPinIcon className="size-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-                              <p className="text-sm text-foreground">
-                                {member.location || "Not specified"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
-                              <ClockIcon className="size-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">Timezone</p>
-                              <p className="text-sm text-foreground">
-                                {member.timezone || "Not specified"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded-lg bg-background flex items-center justify-center shrink-0">
-                              <BuildingsIcon className="size-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">Joined</p>
-                              <p className="text-sm text-foreground">
-                                {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-US", {
-                                  month: "long",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }) : "Unknown"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Admin Controls (Left Col) */}
-                      {isAdmin && (
-                        <div className="bg-card rounded-xl border border-border shadow-sm p-6">
-                          <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                            Admin Controls
-                          </h3>
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                                Role
-                              </Label>
-                              <Select 
-                                value={selectedRole} 
-                                onValueChange={(value) => handleRoleChange(value as "admin" | "member")}
-                                disabled={isSavingRole}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="member">Member</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {roleSaveSuccess && (
-                                <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                                  <CheckIcon className="size-3" weight="bold" />
-                                  Role updated
-                                </p>
-                              )}
-                              {roleSaveError && (
-                                <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
-                                  <WarningCircleIcon className="size-3" weight="fill" />
-                                  {roleSaveError}
-                                </p>
-                              )}
-                            </div>
-                            
-                            <div className="pt-4 border-t border-border">
-                              <AlertDialog 
-                                open={removeDialogOpen} 
-                                onOpenChange={(open) => {
-                                  setRemoveDialogOpen(open);
-                                  if (!open) {
-                                    setRemoveError(null);
-                                  }
-                                }}
-                              >
-                                <AlertDialogTrigger 
-                                  render={<Button 
-                                    variant="outline" 
-                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                  />}
-                                >
-                                  <TrashIcon className="size-4 mr-2" />
-                                  Remove Member
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remove Member</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to remove this member? They will lose access immediately.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  {removeError && (
-                                    <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2 mx-6">
-                                      <WarningCircleIcon className="size-4" weight="fill" />
-                                      {removeError}
-                                    </div>
-                                  )}
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleRemoveMember}
-                                      disabled={isRemoving}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      {isRemoving ? "Removing..." : "Remove"}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Column: Bio & Details */}
-                    <div className="lg:col-span-2 space-y-6">
-                      <div className="bg-card rounded-xl border border-border shadow-sm p-8 min-h-[200px]">
-                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                          About
-                        </h3>
-                        {member.bio ? (
-                          <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                            {member.bio}
-                          </p>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <p className="text-sm text-muted-foreground italic">
-                              No bio provided yet.
-                            </p>
-                            {canEdit && (
-                              <Button 
-                                variant="link" 
-                                size="sm" 
-                                onClick={() => setIsEditing(true)}
-                                className="mt-2 text-muted-foreground"
-                              >
-                                Add a bio
-                              </Button>
-                            )}
-                          </div>
+                  {/* Profile Header */}
+                  <div className="flex items-start gap-4">
+                    <Avatar className="size-16">
+                      {member.publicUserData?.imageUrl ? (
+                        <AvatarImage 
+                          src={member.publicUserData.imageUrl} 
+                          alt={getDisplayName(member)} 
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-lg">
+                        {getInitials(member)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-lg font-semibold text-foreground truncate">
+                          {getDisplayName(member)}
+                        </h1>
+                        {member.role === "admin" && (
+                          <ShieldIcon className="size-4 text-muted-foreground shrink-0" weight="fill" />
                         )}
                       </div>
-
-                      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
-                        <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                          Organization
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Department</p>
-                            <div className="flex items-center gap-2">
-                              <BriefcaseIcon className="size-4 text-muted-foreground" />
-                              <p className="text-sm font-medium text-foreground">
-                                {member.department || "Not specified"}
-                              </p>
-                            </div>
-                          </div>
-                          {/* Placeholder for Manager or Team */}
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Role Type</p>
-                            <div className="flex items-center gap-2">
-                              <ShieldIcon className="size-4 text-muted-foreground" />
-                              <p className="text-sm font-medium text-foreground capitalize">
-                                {member.role}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      {member.jobTitle && (
+                        <p className="text-sm text-muted-foreground">{member.jobTitle}</p>
+                      )}
+                      {canEdit && (
+                        <button 
+                          onClick={() => setIsEditing(true)}
+                          className="text-xs text-muted-foreground hover:text-foreground mt-2 flex items-center gap-1"
+                        >
+                          <PencilSimpleIcon className="size-3" />
+                          Edit
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {profileSaveSuccess && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckIcon className="size-3" weight="bold" />
+                      Profile updated
+                    </p>
+                  )}
+
+                  {/* Details */}
+                  <div className="space-y-3 text-sm">
+                    {member.emailAddress && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Email</span>
+                        <span className="text-foreground">{member.emailAddress}</span>
+                      </div>
+                    )}
+                    {member.department && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Department</span>
+                        <span className="text-foreground">{member.department}</span>
+                      </div>
+                    )}
+                    {member.location && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Location</span>
+                        <span className="text-foreground">{member.location}</span>
+                      </div>
+                    )}
+                    {member.timezone && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Timezone</span>
+                        <span className="text-foreground">{member.timezone}</span>
+                      </div>
+                    )}
+                    {member.joinedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Joined</span>
+                        <span className="text-foreground">
+                          {new Date(member.joinedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bio */}
+                  {member.bio && (
+                    <div className="space-y-2">
+                      <h3 className="text-xs text-muted-foreground uppercase tracking-wider">About</h3>
+                      <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                        {member.bio}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Admin Controls */}
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-border space-y-4">
+                      <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Admin</h3>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role</span>
+                        <Select 
+                          value={selectedRole} 
+                          onValueChange={(value) => handleRoleChange(value as "admin" | "member")}
+                          disabled={isSavingRole}
+                        >
+                          <SelectTrigger className="w-32 h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {roleSaveSuccess && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckIcon className="size-3" weight="bold" />
+                          Role updated
+                        </p>
+                      )}
+                      {roleSaveError && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <WarningCircleIcon className="size-3" weight="fill" />
+                          {roleSaveError}
+                        </p>
+                      )}
+                      
+                      <AlertDialog 
+                        open={removeDialogOpen} 
+                        onOpenChange={(open) => {
+                          setRemoveDialogOpen(open);
+                          if (!open) setRemoveError(null);
+                        }}
+                      >
+                        <AlertDialogTrigger 
+                          render={<button className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1" />}
+                        >
+                          <TrashIcon className="size-3" />
+                          Remove member
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove their access immediately.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          {removeError && (
+                            <p className="text-sm text-red-600">{removeError}</p>
+                          )}
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleRemoveMember}
+                              disabled={isRemoving}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              {isRemoving ? "Removing..." : "Remove"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

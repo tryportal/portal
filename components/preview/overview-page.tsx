@@ -4,14 +4,14 @@ import * as React from "react"
 import { useQuery, useAction } from "convex/react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
-import { HashIcon, BookmarkIcon, AtIcon, ArrowRightIcon, LockIcon } from "@phosphor-icons/react"
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
+  HashIcon,
+  BookmarkIcon,
+  AtIcon,
+  ArrowRightIcon,
+  LockIcon,
+  HouseIcon,
+} from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,6 +35,22 @@ function formatFullDateTime(timestamp: number): string {
     minute: "2-digit",
     hour12: true,
   })
+}
+
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  } else if (diffDays === 1) {
+    return "Yesterday"
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: "short" })
+  } else {
+    return date.toLocaleDateString([], { month: "short", day: "numeric" })
+  }
 }
 
 interface OverviewPageProps {
@@ -187,7 +203,6 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
   }, [categoriesData])
 
   const handleChannelClick = (channelId: Id<"channels">, categoryName: string, channelName: string) => {
-    // Navigate to the channel page
     if (orgSlug) {
       router.push(`/w/${orgSlug}/${encodeURIComponent(categoryName)}/${encodeURIComponent(channelName)}`)
     }
@@ -199,204 +214,228 @@ export function OverviewPage({ organizationId }: OverviewPageProps) {
     }
   }
 
+  const isLoading = savedMessagesLoading || mentionsLoading
+  const hasSavedMessages = savedMessages.length > 0
+  const hasMentions = mentions.length > 0
+
   return (
-    <ScrollArea className="h-full">
-      <div className="p-4 sm:p-6">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-lg sm:text-xl font-semibold text-foreground">Overview</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Your saved messages and quick access to channels
-          </p>
-        </div>
+    <div className="flex h-full flex-col bg-background">
+      {/* Header */}
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4">
+        <HouseIcon className="size-4 sm:size-5 text-foreground" weight="fill" />
+        <h1 className="text-sm sm:text-base font-semibold text-foreground">Overview</h1>
+      </header>
 
-        {/* Cards Grid */}
-        <div className="mb-6 sm:mb-8 grid gap-4 md:grid-cols-2">
-          {/* Saved Messages Card */}
-          <Card 
-            className="cursor-pointer hover:ring-foreground/20 transition-all"
-            onClick={handleViewAllSaved}
-          >
-            <CardHeader className="relative">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <BookmarkIcon className="size-4" weight="fill" />
-                Saved Messages
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Messages you've saved for later</CardDescription>
-              <ArrowRightIcon className="absolute top-4 right-4 size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {savedMessagesLoading ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center">
-                  <LoadingSpinner size="sm" />
-                </div>
-              ) : savedMessages.length === 0 ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
-                  <p className="text-xs sm:text-sm text-muted-foreground">No saved messages</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {savedMessages.map((message) => {
-                    const channel = savedMessagesRaw?.find(m => m._id === message.id)
-                    const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
-                    const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
-                    return (
-                      <div
-                        key={message.id}
-                        className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (channel?.channelId && channelInfo) {
-                            handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
-                          }
-                        }}
-                      >
-                        <Avatar className="size-8 flex-shrink-0">
-                          <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-sm">{message.user.initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className="text-sm font-medium text-foreground truncate">{message.user.name}</p>
-                            {channelInfo && (
-                              <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
-                            )}
-                            <p 
-                              className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default"
-                              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
-                            >
-                              {message.timestamp}
-                            </p>
-                          </div>
-                          <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames
-                              ? parseMentions(message.content, msgWithMentions.mentionUserNames)
-                              : message.content
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Mentions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <AtIcon className="size-4" />
-                Mentions
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Messages where you were mentioned</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {mentionsLoading ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center">
-                  <LoadingSpinner size="sm" />
-                </div>
-              ) : mentions.length === 0 ? (
-                <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
-                  <p className="text-xs sm:text-sm text-muted-foreground">No mentions</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {mentions.map((message) => {
-                    const channel = mentionsRaw?.find(m => m._id === message.id)
-                    const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
-                    const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
-                    return (
-                      <div
-                        key={message.id}
-                        className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          if (channel?.channelId && channelInfo) {
-                            handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
-                          }
-                        }}
-                      >
-                        <Avatar className="size-8 flex-shrink-0">
-                          <AvatarImage src={message.user.avatar} alt={message.user.name} />
-                          <AvatarFallback className="text-sm">{message.user.initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className="text-sm font-medium text-foreground truncate">{message.user.name}</p>
-                            {channelInfo && (
-                              <p className="text-sm text-foreground/40 truncate">in {channelInfo.name}</p>
-                            )}
-                            <p 
-                              className="text-sm text-foreground/50 ml-auto flex-shrink-0 cursor-default"
-                              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
-                            >
-                              {message.timestamp}
-                            </p>
-                          </div>
-                          <p className="text-sm text-foreground/70 line-clamp-2">
-                            {msgWithMentions.mentionUserNames
-                              ? parseMentions(message.content, msgWithMentions.mentionUserNames)
-                              : message.content
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Channels List */}
-        <div>
-          <h2 className="mb-3 sm:mb-4 text-xs sm:text-sm font-medium text-muted-foreground">All Channels</h2>
-          {allChannels.length === 0 ? (
-            <div className="flex h-20 sm:h-24 items-center justify-center rounded-md border border-dashed border-border">
-              <p className="text-xs sm:text-sm text-muted-foreground">No channels available</p>
+      {/* Content */}
+      <ScrollArea className="flex-1">
+        <div className="mx-auto max-w-4xl py-4 sm:py-6 px-4 sm:px-6">
+          {isLoading ? (
+            <div className="flex h-48 items-center justify-center">
+              <LoadingSpinner size="md" />
             </div>
           ) : (
-            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {allChannels.map((channel) => {
-                const Icon = channel.icon ? getIconComponent(channel.icon) : HashIcon
-                return (
-                  <button
-                    key={channel._id}
-                    onClick={() => {
-                      const catData = categoriesData?.find(cat => 
-                        cat.channels.some(ch => ch._id === channel._id)
-                      )
-                      if (catData) {
-                        handleChannelClick(channel._id, catData.name, channel.name)
-                      }
-                    }}
-                    className="flex items-center gap-2.5 sm:gap-3 rounded-lg border border-border bg-card p-2.5 sm:p-3 text-left transition-colors hover:border-border/80 hover:bg-muted/50"
-                  >
-                    <div className="flex size-7 sm:size-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
-                      <Icon className="size-3.5 sm:size-4 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-xs sm:text-sm font-medium text-foreground">
-                          {channel.name}
-                        </p>
-                        {channel.isPrivate && (
-                          <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+            <div className="space-y-6 sm:space-y-8">
+              {/* Quick Access Section */}
+              {(hasSavedMessages || hasMentions) && (
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                  {/* Saved Messages */}
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <BookmarkIcon className="size-4 text-foreground/70" weight="fill" />
+                        <h2 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">
+                          Saved
+                        </h2>
+                        {hasSavedMessages && (
+                          <span className="flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-muted px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-medium text-muted-foreground">
+                            {savedMessagesRaw?.length || 0}
+                          </span>
                         )}
                       </div>
-                      <p className="truncate text-[10px] sm:text-xs text-muted-foreground">
-                        {channel.categoryName}
-                      </p>
+                      {hasSavedMessages && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleViewAllSaved}
+                          className="text-xs text-muted-foreground hover:text-foreground -mr-2"
+                        >
+                          View all
+                          <ArrowRightIcon className="size-3 ml-1" />
+                        </Button>
+                      )}
                     </div>
-                  </button>
-                )
-              })}
+
+                    {!hasSavedMessages ? (
+                      <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border">
+                        <p className="text-xs text-muted-foreground">No saved messages</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {savedMessages.map((message) => {
+                          const channel = savedMessagesRaw?.find(m => m._id === message.id)
+                          const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
+                          const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
+                          return (
+                            <div
+                              key={message.id}
+                              className="group flex items-start gap-2.5 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
+                              onClick={() => {
+                                if (channel?.channelId && channelInfo) {
+                                  handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
+                                }
+                              }}
+                            >
+                              <Avatar className="size-7 sm:size-8 flex-shrink-0">
+                                <AvatarImage src={message.user.avatar} alt={message.user.name} />
+                                <AvatarFallback className="text-[10px] sm:text-xs">{message.user.initials}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
+                                  <span 
+                                    className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0 cursor-default"
+                                    title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                                  >
+                                    {message.createdAt ? formatTime(message.createdAt) : message.timestamp}
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-foreground/70 line-clamp-1">
+                                  {msgWithMentions.mentionUserNames
+                                    ? parseMentions(message.content, msgWithMentions.mentionUserNames)
+                                    : message.content
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Mentions */}
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <AtIcon className="size-4 text-foreground/70" weight="bold" />
+                      <h2 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">
+                        Mentions
+                      </h2>
+                      {hasMentions && (
+                        <span className="flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-muted px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-medium text-muted-foreground">
+                          {mentionsRaw?.length || 0}
+                        </span>
+                      )}
+                    </div>
+
+                    {!hasMentions ? (
+                      <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border">
+                        <p className="text-xs text-muted-foreground">No mentions</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {mentions.map((message) => {
+                          const channel = mentionsRaw?.find(m => m._id === message.id)
+                          const channelInfo = channel?.channelId ? channelMap.get(channel.channelId) : null
+                          const msgWithMentions = message as Message & { mentionUserNames?: Record<string, string> }
+                          return (
+                            <div
+                              key={message.id}
+                              className="group flex items-start gap-2.5 rounded-lg border border-border bg-card p-2.5 sm:p-3 hover:border-border/80 hover:bg-muted/50 transition-colors cursor-pointer"
+                              onClick={() => {
+                                if (channel?.channelId && channelInfo) {
+                                  handleChannelClick(channel.channelId, channelInfo.categoryName, channelInfo.name)
+                                }
+                              }}
+                            >
+                              <Avatar className="size-7 sm:size-8 flex-shrink-0">
+                                <AvatarImage src={message.user.avatar} alt={message.user.name} />
+                                <AvatarFallback className="text-[10px] sm:text-xs">{message.user.initials}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <p className="text-xs sm:text-sm font-medium text-foreground truncate">{message.user.name}</p>
+                                  <span 
+                                    className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0 cursor-default"
+                                    title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                                  >
+                                    {message.createdAt ? formatTime(message.createdAt) : message.timestamp}
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-foreground/70 line-clamp-1">
+                                  {msgWithMentions.mentionUserNames
+                                    ? parseMentions(message.content, msgWithMentions.mentionUserNames)
+                                    : message.content
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}
+
+              {/* Channels Section */}
+              <section>
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                  <HashIcon className="size-4 text-foreground/70" weight="bold" />
+                  <h2 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Channels
+                  </h2>
+                  <span className="flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-muted px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-medium text-muted-foreground">
+                    {allChannels.length}
+                  </span>
+                </div>
+
+                {allChannels.length === 0 ? (
+                  <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border">
+                    <p className="text-xs text-muted-foreground">No channels available</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {allChannels.map((channel) => {
+                      const Icon = channel.icon ? getIconComponent(channel.icon) : HashIcon
+                      return (
+                        <button
+                          key={channel._id}
+                          onClick={() => {
+                            const catData = categoriesData?.find(cat => 
+                              cat.channels.some(ch => ch._id === channel._id)
+                            )
+                            if (catData) {
+                              handleChannelClick(channel._id, catData.name, channel.name)
+                            }
+                          }}
+                          className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-2.5 sm:p-3 text-left transition-colors hover:border-border/80 hover:bg-muted/50"
+                        >
+                          <div className="flex size-7 sm:size-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                            <Icon className="size-3.5 sm:size-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-xs sm:text-sm font-medium text-foreground">
+                                {channel.name}
+                              </p>
+                              {channel.isPrivate && (
+                                <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+                              )}
+                            </div>
+                            <p className="truncate text-[10px] sm:text-xs text-muted-foreground">
+                              {channel.categoryName}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+    </div>
   )
 }
