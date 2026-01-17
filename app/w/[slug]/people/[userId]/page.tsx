@@ -154,7 +154,7 @@ export default function MemberProfilePage({
     if (organization?._id && userId && contextMembership) {
       fetchMember();
     }
-  }, [organization?._id, userId, contextMembership, getMember, currentUserId]);
+  }, [organization?._id, userId, contextMembership, getMember]);
 
   const getDisplayName = (m: MemberWithUserData) => {
     if (m.publicUserData?.firstName || m.publicUserData?.lastName) {
