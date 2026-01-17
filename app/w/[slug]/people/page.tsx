@@ -15,17 +15,8 @@ import {
   UserIcon,
 } from "@phosphor-icons/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { InvitePeopleDialog } from "@/components/invite-people-dialog";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -115,15 +106,6 @@ export default function PeoplePage() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const formatJoinDate = (timestamp?: number) => {
-    if (!timestamp) return "—";
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   const filteredMembers = React.useMemo(() => {
     if (!searchQuery.trim()) return members;
     const query = searchQuery.toLowerCase();
@@ -175,106 +157,67 @@ export default function PeoplePage() {
               <LoadingSpinner text="Loading members..." />
             </div>
           ) : (
-            <div className="mx-auto max-w-5xl py-6 sm:py-8 px-4 sm:px-6">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                  <div className="relative flex-1 max-w-sm">
+            <div className="mx-auto max-w-2xl py-6 px-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                       placeholder="Search people..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 bg-card border-border text-sm"
+                      className="pl-9 bg-transparent border-border text-sm h-9"
                     />
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    {filteredMembers.length} {filteredMembers.length === 1 ? "member" : "members"}
-                    {searchQuery && ` found`}
-                  </p>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {filteredMembers.length}
+                  </span>
                 </div>
 
-                <div className="rounded-lg border border-border bg-card overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[300px]">Name</TableHead>
-                        <TableHead className="hidden sm:table-cell">Role</TableHead>
-                        <TableHead className="hidden md:table-cell">Department</TableHead>
-                        <TableHead className="hidden lg:table-cell">Joined</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredMembers.length === 0 ? (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={4} className="h-32 text-center">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <UserIcon className="size-8 text-muted-foreground/40" />
-                              <p className="text-sm text-muted-foreground">
-                                {searchQuery ? "No members found matching your search" : "No members yet"}
-                              </p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredMembers.map((member) => (
-                          <TableRow
-                            key={member._id}
-                            onClick={() => handleMemberClick(member)}
-                            onMouseEnter={() => handleMemberPrefetch(member)}
-                            className="cursor-pointer"
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="size-9">
-                                  {member.publicUserData?.imageUrl ? (
-                                    <AvatarImage
-                                      src={member.publicUserData.imageUrl}
-                                      alt={getDisplayName(member)}
-                                    />
-                                  ) : null}
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(member)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0">
-                                  <p className="font-medium text-foreground truncate">
-                                    {getDisplayName(member)}
-                                  </p>
-                                  {member.jobTitle && (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {member.jobTitle}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              <Badge
-                                variant={member.role === "admin" ? "default" : "secondary"}
-                                className={cn(
-                                  "text-[10px] uppercase tracking-wider",
-                                  member.role === "admin"
-                                    ? "bg-foreground text-background"
-                                    : "bg-muted text-muted-foreground"
-                                )}
-                              >
-                                {member.role === "admin" && (
-                                  <ShieldIcon className="size-2.5 mr-0.5" weight="fill" />
-                                )}
-                                {member.role}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-muted-foreground">
-                              {member.department || "—"}
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell text-muted-foreground">
-                              {formatJoinDate(member.joinedAt)}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="divide-y divide-border">
+                  {filteredMembers.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {searchQuery ? "No results" : "No members"}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredMembers.map((member) => (
+                      <div
+                        key={member._id}
+                        onClick={() => handleMemberClick(member)}
+                        onMouseEnter={() => handleMemberPrefetch(member)}
+                        className="flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/50 -mx-2 px-2 rounded-md transition-colors"
+                      >
+                        <Avatar className="size-8">
+                          {member.publicUserData?.imageUrl ? (
+                            <AvatarImage
+                              src={member.publicUserData.imageUrl}
+                              alt={getDisplayName(member)}
+                            />
+                          ) : null}
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(member)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {getDisplayName(member)}
+                            </span>
+                            {member.role === "admin" && (
+                              <ShieldIcon className="size-3 text-muted-foreground shrink-0" weight="fill" />
+                            )}
+                          </div>
+                          {member.jobTitle && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {member.jobTitle}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
