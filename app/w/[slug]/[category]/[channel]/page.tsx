@@ -163,9 +163,9 @@ export default function ChannelPage({
   const forwardMessage = useMutation(api.messages.forwardMessage);
   const markChannelAsRead = useMutation(api.channels.markChannelAsRead);
 
-  // Mark channel as read when viewing, when new messages arrive, and when leaving
+  // Mark channel as read when viewing and when leaving
   React.useEffect(() => {
-    if (channelId && filteredMessages && filteredMessages.length > 0) {
+    if (channelId) {
       markChannelAsRead({ channelId }).catch(() => {
         // Ignore errors - user may not have access or channel may not exist
       });
