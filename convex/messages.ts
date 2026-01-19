@@ -330,7 +330,7 @@ export const getMentions = query({
       .filter(Boolean)
       .map((name) => name!.toLowerCase());
 
-    // Get all messages from these channels that mention the current user
+    // Get all messages from these channels that mention the current user or @everyone
     const allMessages = await Promise.all(
       channelIds.map(async (channelId) => {
         const messages = await ctx.db
@@ -341,6 +341,8 @@ export const getMentions = query({
         return messages.filter((m) => {
           // Structured mentions stored in the message document
           const hasStructuredMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+          // Check for @everyone mention (structured)
+          const hasEveryoneMention = Array.isArray(m.mentions) && m.mentions.includes("everyone");
           // Fallback for any legacy messages without the mentions array
           const hasLegacyMention = !m.mentions && m.content.includes(`@${userId}`);
           // Fallback for manual @name mentions (case-insensitive)
@@ -348,8 +350,10 @@ export const getMentions = query({
           const hasNameMention = displayNameParts.some((name) =>
             contentLower.includes(`@${name}`)
           );
+          // Fallback for legacy @everyone in content
+          const hasLegacyEveryoneMention = !m.mentions && contentLower.includes("@everyone");
 
-          return hasStructuredMention || hasLegacyMention || hasNameMention;
+          return hasStructuredMention || hasEveryoneMention || hasLegacyMention || hasNameMention || hasLegacyEveryoneMention;
         });
       })
     );
@@ -371,10 +375,10 @@ export const getMentions = query({
 
 /**
  * Helper function to parse mentions from message content
- * Mentions are in the format @userId
+ * Mentions are in the format @userId or @everyone
  */
 function parseMentions(content: string): string[] {
-  const mentionRegex = /@(user_[a-zA-Z0-9]+)/g;
+  const mentionRegex = /@(user_[a-zA-Z0-9]+|everyone)/g;
   const mentions: string[] = [];
   let match;
   while ((match = mentionRegex.exec(content)) !== null) {

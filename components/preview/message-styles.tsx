@@ -355,15 +355,31 @@ function processMentions(content: string, mentions?: string[], userNames?: Recor
 
   const mentionMap: Record<string, string> = {}
   mentions.forEach(userId => {
-    const userName = userNames[userId]
-    if (userName) {
-      mentionMap[userId] = userName
+    if (userId === "everyone") {
+      mentionMap[userId] = "everyone"
+    } else {
+      const userName = userNames[userId]
+      if (userName) {
+        mentionMap[userId] = userName
+      }
     }
   })
 
   let processedContent = replaceMentionsInText(content, mentionMap)
 
-  const displayNames = Object.values(mentionMap).sort((a, b) => b.length - a.length)
+  // Handle @everyone with special styling (amber/gold highlight)
+  if (mentions.includes("everyone")) {
+    processedContent = processedContent.replace(
+      /@everyone(?=\s|$|[^\w])/g,
+      '<span class="mention-everyone">@everyone</span>'
+    )
+  }
+
+  // Handle regular user mentions
+  const displayNames = Object.entries(mentionMap)
+    .filter(([userId]) => userId !== "everyone")
+    .map(([, name]) => name)
+    .sort((a, b) => b.length - a.length)
 
   for (const displayName of displayNames) {
     const escapedName = displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

@@ -13,10 +13,16 @@ interface MentionProps {
  * Renders as a styled badge with the user's name
  */
 export function Mention({ userId, displayName, className = "" }: MentionProps) {
+  const isEveryone = userId === "everyone"
+  
   return (
     <span
       data-mention-user-id={userId}
-      className={`inline-flex items-center rounded px-1 py-0.5 text-sm font-medium bg-secondary text-foreground/80 hover:bg-foreground/15 transition-colors ${className}`}
+      className={`inline-flex items-center rounded px-1 py-0.5 text-sm font-medium transition-colors ${
+        isEveryone 
+          ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" 
+          : "bg-secondary text-foreground/80 hover:bg-foreground/15"
+      } ${className}`}
     >
       @{displayName}
     </span>
@@ -24,15 +30,15 @@ export function Mention({ userId, displayName, className = "" }: MentionProps) {
 }
 
 /**
- * Parses message content and extracts mentions in @userId format
+ * Parses message content and extracts mentions in @userId format (including @everyone)
  * Returns an array of React nodes (text + Mention components)
  */
 export function parseMentions(
   content: string,
   userNames: Record<string, string>
 ): React.ReactNode[] {
-  // Match @userId pattern
-  const mentionPattern = /@(\w+)/g
+  // Match @userId or @everyone pattern
+  const mentionPattern = /@(user_\w+|everyone)/g
   const parts: React.ReactNode[] = []
   let lastIndex = 0
   let match: RegExpExecArray | null
@@ -47,7 +53,7 @@ export function parseMentions(
     }
     
     // Add mention component
-    const displayName = userNames[userId] || userId
+    const displayName = userId === "everyone" ? "everyone" : (userNames[userId] || userId)
     parts.push(
       <Mention
         key={`mention-${userId}-${matchStart}`}
@@ -76,7 +82,8 @@ export function replaceMentionsInText(
   content: string,
   userNames: Record<string, string>
 ): string {
-  return content.replace(/@(\w+)/g, (match, userId) => {
+  return content.replace(/@(user_\w+|everyone)/g, (match, userId) => {
+    if (userId === "everyone") return "@everyone"
     const displayName = userNames[userId]
     return displayName ? `@${displayName}` : match
   })
