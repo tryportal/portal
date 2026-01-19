@@ -77,6 +77,7 @@ export function FeedbackForm() {
       setIsSubmitted(true)
     } catch (error) {
       console.error("Failed to submit feedback:", error)
+      alert("Failed to submit feedback. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
