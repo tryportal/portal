@@ -11,7 +11,7 @@ export function Footer() {
   const isDark = resolvedTheme === "dark";
 
   return (
-    <footer className="py-6 px-4 border-t border-border">
+    <footer className="py-6 px-4 border-t border-border mt-auto">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">

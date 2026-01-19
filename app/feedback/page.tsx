@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function FeedbackPage() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="pt-32 pb-20 px-6">
         <FeedbackForm />
