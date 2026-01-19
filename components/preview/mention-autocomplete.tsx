@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { UsersIcon } from "@phosphor-icons/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
@@ -9,6 +10,7 @@ export interface MentionUser {
   firstName: string | null
   lastName: string | null
   imageUrl: string | null
+  isEveryone?: boolean
 }
 
 interface MentionAutocompleteProps {
@@ -30,11 +32,24 @@ export function MentionAutocomplete({
 }: MentionAutocompleteProps) {
   const listRef = React.useRef<HTMLDivElement>(null)
 
-  // Filter users based on search query
+  // Filter users based on search query and add @everyone option
   const filteredUsers = React.useMemo(() => {
-    if (!searchQuery) return users
+    const everyoneOption: MentionUser = {
+      userId: "everyone",
+      firstName: "everyone",
+      lastName: null,
+      imageUrl: null,
+      isEveryone: true,
+    }
+    
+    const usersWithEveryone = [everyoneOption, ...users]
+    
+    if (!searchQuery) return usersWithEveryone
     const query = searchQuery.toLowerCase()
-    return users.filter((user) => {
+    return usersWithEveryone.filter((user) => {
+      if (user.isEveryone) {
+        return "everyone".includes(query)
+      }
       const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase()
       return fullName.includes(query)
     })
@@ -59,9 +74,11 @@ export function MentionAutocomplete({
       <ScrollArea className="max-h-48">
         <div ref={listRef} className="py-1">
           {filteredUsers.map((user, index) => {
-            const name = user.firstName && user.lastName
-              ? `${user.firstName} ${user.lastName}`
-              : user.firstName || "Unknown User"
+            const name = user.isEveryone
+              ? "everyone"
+              : user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user.firstName || "Unknown User"
             const initials = user.firstName && user.lastName
               ? `${user.firstName[0]}${user.lastName[0]}`
               : user.firstName?.[0] || "?"
@@ -78,15 +95,24 @@ export function MentionAutocomplete({
                     : "hover:bg-muted/50"
                 }`}
               >
-                <Avatar className="size-6">
-                  {user.imageUrl && (
-                    <AvatarImage src={user.imageUrl} alt={name} />
-                  )}
-                  <AvatarFallback className="text-[10px] bg-secondary text-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                {user.isEveryone ? (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-secondary">
+                    <UsersIcon className="size-3.5 text-foreground" weight="fill" />
+                  </div>
+                ) : (
+                  <Avatar className="size-6">
+                    {user.imageUrl && (
+                      <AvatarImage src={user.imageUrl} alt={name} />
+                    )}
+                    <AvatarFallback className="text-[10px] bg-secondary text-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <span className="text-sm font-medium text-foreground">{name}</span>
+                {user.isEveryone && (
+                  <span className="text-xs text-muted-foreground">Notify everyone in this channel</span>
+                )}
               </button>
             )
           })}
