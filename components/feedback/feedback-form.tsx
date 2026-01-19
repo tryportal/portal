@@ -59,7 +59,7 @@ export function FeedbackForm() {
         timestamp: new Date().toISOString(),
       }
 
-      await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,6 +69,10 @@ export function FeedbackForm() {
           embeds: [embed],
         }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to submit feedback")
+      }
 
       setIsSubmitted(true)
     } catch (error) {
