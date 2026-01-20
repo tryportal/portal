@@ -12,6 +12,7 @@ import { EmptyForumState } from "./empty-forum-state"
 import type { ForumPost, PostAuthor } from "./post-item"
 import type { Message, Attachment, Reaction, LinkEmbed } from "@/components/preview/message-list"
 import type { MentionUser } from "@/components/preview/mention-autocomplete"
+import { ResizablePanel } from "@/components/ui/resizable-panel"
 
 interface ForumInterfaceProps {
   channelId: Id<"channels">
@@ -376,10 +377,13 @@ export function ForumInterface({
   return (
     <div className="flex flex-1 h-full min-h-0 bg-background">
       {/* Posts list - hidden on mobile when viewing a post */}
-      <div
+      <ResizablePanel
+        storageKey="portal-forum-posts-width"
+        defaultWidth={320}
+        minWidth={240}
+        maxWidth={600}
         className={cn(
-          "flex flex-col h-full border-r border-border",
-          "w-full md:w-80 lg:w-96 shrink-0",
+          "flex flex-col h-full border-r border-border shrink-0",
           isMobilePostView && "hidden md:flex"
         )}
       >
@@ -416,7 +420,7 @@ export function ForumInterface({
             canCreatePost={canPost}
           />
         )}
-      </div>
+      </ResizablePanel>
 
       {/* Post view - shown on mobile when a post is selected */}
       <div
