@@ -23,6 +23,7 @@ import {
   WarningCircleIcon,
   LockIcon,
   ShareNetworkIcon,
+  ChatCircleDotsIcon,
 } from "@phosphor-icons/react"
 import { useQuery, useMutation } from "convex/react"
 import { useParams, useRouter, usePathname } from "next/navigation"
@@ -93,6 +94,7 @@ interface SortableChannelProps {
     icon: string
     isPrivate?: boolean
     isShared?: boolean
+    channelType?: "chat" | "forum"
   }
   isActive: boolean
   onSelect: () => void
@@ -134,6 +136,7 @@ function SortableChannel({
     opacity: isDragging ? 0.5 : 1,
   }
 
+  // Use the configured icon for all channels (including forum channels)
   const Icon = getIconComponent(channel.icon)
 
   return (
@@ -170,6 +173,9 @@ function SortableChannel({
           weight: isActive ? "fill" : "regular",
         })}
         <span className="truncate min-w-0">{channel.name}</span>
+        {channel.channelType === "forum" && (
+          <ChatCircleDotsIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
         {channel.isPrivate && (
           <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
         )}
@@ -247,6 +253,8 @@ interface SortableCategoryProps {
       name: string
       icon: string
       isPrivate?: boolean
+      isShared?: boolean
+      channelType?: "chat" | "forum"
     }>
   }
   isExpanded: boolean

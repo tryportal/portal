@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { IconPicker, getIconComponent } from "@/components/icon-picker"
 import { MemberSelector } from "@/components/member-selector"
-import { ArrowLeftIcon, ArrowRightIcon, LockIcon } from "@phosphor-icons/react"
+import { ArrowLeftIcon, ArrowRightIcon, LockIcon, ChatCircleDotsIcon, HashIcon } from "@phosphor-icons/react"
 import { analytics } from "@/lib/analytics"
 
 interface CreateChannelDialogProps {
@@ -40,7 +40,9 @@ export function CreateChannelDialog({
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
   const [icon, setIcon] = React.useState("Hash")
+  const [channelType, setChannelType] = React.useState<"chat" | "forum">("chat")
   const [permissions, setPermissions] = React.useState<"open" | "readOnly">("open")
+  const [whoCanPost, setWhoCanPost] = React.useState<"everyone" | "admins">("everyone")
   const [isPrivate, setIsPrivate] = React.useState(false)
   const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([])
   const [categoryId, setCategoryId] = React.useState<Id<"channelCategories"> | null>(
@@ -69,7 +71,9 @@ export function CreateChannelDialog({
       setName("")
       setDescription("")
       setIcon("Hash")
+      setChannelType("chat")
       setPermissions("open")
+      setWhoCanPost("everyone")
       setIsPrivate(false)
       setSelectedMemberIds([])
       setCategoryId(defaultCategoryId ?? null)
@@ -124,6 +128,8 @@ export function CreateChannelDialog({
         permissions,
         isPrivate,
         memberIds: isPrivate ? selectedMemberIds : undefined,
+        channelType,
+        forumSettings: channelType === "forum" ? { whoCanPost } : undefined,
       })
       analytics.channelCreated({
         channelId,
@@ -154,7 +160,9 @@ export function CreateChannelDialog({
       setName("")
       setDescription("")
       setIcon("Hash")
+      setChannelType("chat")
       setPermissions("open")
+      setWhoCanPost("everyone")
       setIsPrivate(false)
       setSelectedMemberIds([])
       setError(null)
@@ -228,6 +236,43 @@ export function CreateChannelDialog({
                 />
               </div>
 
+              {/* Channel Type */}
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Type</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-all ${channelType === "chat" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                    <input
+                      type="radio"
+                      name="channelType"
+                      value="chat"
+                      checked={channelType === "chat"}
+                      onChange={() => setChannelType("chat")}
+                      className="sr-only"
+                    />
+                    <HashIcon className="size-5 text-muted-foreground" weight="bold" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground text-sm">Chat</div>
+                      <div className="text-xs text-muted-foreground">Real-time messaging</div>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-all ${channelType === "forum" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                    <input
+                      type="radio"
+                      name="channelType"
+                      value="forum"
+                      checked={channelType === "forum"}
+                      onChange={() => setChannelType("forum")}
+                      className="sr-only"
+                    />
+                    <ChatCircleDotsIcon className="size-5 text-muted-foreground" weight="bold" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground text-sm">Forum</div>
+                      <div className="text-xs text-muted-foreground">Threaded discussions</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Icon Picker */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Icon</Label>
@@ -248,54 +293,107 @@ export function CreateChannelDialog({
 
           {step === "permissions" && (
             <div className="space-y-6 py-4">
-              {/* Permissions */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissions</Label>
-                <div className="grid gap-3">
-                  <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "open" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
-                    <div className="mt-1">
-                      <input
-                        type="radio"
-                        name="permissions"
-                        value="open"
-                        checked={permissions === "open"}
-                        onChange={() => setPermissions("open")}
-                        className="sr-only"
-                      />
-                      <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "open" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
-                        {permissions === "open" && <div className="size-1.5 rounded-full bg-card" />}
+              {/* Chat Channel Permissions */}
+              {channelType === "chat" && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissions</Label>
+                  <div className="grid gap-3">
+                    <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "open" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                      <div className="mt-1">
+                        <input
+                          type="radio"
+                          name="permissions"
+                          value="open"
+                          checked={permissions === "open"}
+                          onChange={() => setPermissions("open")}
+                          className="sr-only"
+                        />
+                        <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "open" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                          {permissions === "open" && <div className="size-1.5 rounded-full bg-card" />}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-foreground">Open to everyone</div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        All members can send messages in this channel.
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">Open to everyone</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          All members can send messages in this channel.
+                        </div>
                       </div>
-                    </div>
-                  </label>
-                  <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "readOnly" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
-                    <div className="mt-1">
-                      <input
-                        type="radio"
-                        name="permissions"
-                        value="readOnly"
-                        checked={permissions === "readOnly"}
-                        onChange={() => setPermissions("readOnly")}
-                        className="sr-only"
-                      />
-                      <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "readOnly" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
-                        {permissions === "readOnly" && <div className="size-1.5 rounded-full bg-card" />}
+                    </label>
+                    <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${permissions === "readOnly" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                      <div className="mt-1">
+                        <input
+                          type="radio"
+                          name="permissions"
+                          value="readOnly"
+                          checked={permissions === "readOnly"}
+                          onChange={() => setPermissions("readOnly")}
+                          className="sr-only"
+                        />
+                        <div className={`flex size-4 items-center justify-center rounded-full border ${permissions === "readOnly" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                          {permissions === "readOnly" && <div className="size-1.5 rounded-full bg-card" />}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-foreground">Read-only</div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        Only admins can send messages. Great for announcements.
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">Read-only</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          Only admins can send messages. Great for announcements.
+                        </div>
                       </div>
-                    </div>
-                  </label>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Forum Channel Permissions */}
+              {channelType === "forum" && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Who Can Create Posts</Label>
+                  <div className="grid gap-3">
+                    <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${whoCanPost === "everyone" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                      <div className="mt-1">
+                        <input
+                          type="radio"
+                          name="whoCanPost"
+                          value="everyone"
+                          checked={whoCanPost === "everyone"}
+                          onChange={() => setWhoCanPost("everyone")}
+                          className="sr-only"
+                        />
+                        <div className={`flex size-4 items-center justify-center rounded-full border ${whoCanPost === "everyone" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                          {whoCanPost === "everyone" && <div className="size-1.5 rounded-full bg-card" />}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">Everyone</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          All members can create posts and reply to discussions.
+                        </div>
+                      </div>
+                    </label>
+                    <label className={`flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-all ${whoCanPost === "admins" ? "border-primary bg-muted shadow-sm" : "border-border hover:border-border/80 hover:bg-muted"}`}>
+                      <div className="mt-1">
+                        <input
+                          type="radio"
+                          name="whoCanPost"
+                          value="admins"
+                          checked={whoCanPost === "admins"}
+                          onChange={() => setWhoCanPost("admins")}
+                          className="sr-only"
+                        />
+                        <div className={`flex size-4 items-center justify-center rounded-full border ${whoCanPost === "admins" ? "border-primary bg-foreground" : "border-muted-foreground"}`}>
+                          {whoCanPost === "admins" && <div className="size-1.5 rounded-full bg-card" />}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">Admins only</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          Only admins can create posts. Everyone can comment.
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Private Channel Toggle */}
               <div className="space-y-3">

@@ -52,6 +52,11 @@ export default defineSchema({
     order: v.number(),
     createdAt: v.number(),
     createdBy: v.string(), // Clerk user ID
+    // Forum channel type settings
+    channelType: v.optional(v.union(v.literal("chat"), v.literal("forum"))), // Default "chat" if not set
+    forumSettings: v.optional(v.object({
+      whoCanPost: v.union(v.literal("everyone"), v.literal("admins")), // Who can create new forum posts
+    })),
   })
     .index("by_organization", ["organizationId"])
     .index("by_category", ["categoryId"])
@@ -116,9 +121,10 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   messages: defineTable({
-    // Either channelId OR conversationId must be present (not both)
+    // Either channelId OR conversationId OR forumPostId must be present (not multiple)
     channelId: v.optional(v.id("channels")), // For channel messages
     conversationId: v.optional(v.id("conversations")), // For direct messages
+    forumPostId: v.optional(v.id("forumPosts")), // For forum post comments
     userId: v.string(), // Clerk user ID
     content: v.string(),
     attachments: v.optional(v.array(v.object({
@@ -159,7 +165,9 @@ export default defineSchema({
     .index("by_channel_and_created", ["channelId", "createdAt"])
     .index("by_conversation", ["conversationId"])
     .index("by_conversation_and_created", ["conversationId", "createdAt"])
-    .index("by_parent_message", ["parentMessageId"]),
+    .index("by_parent_message", ["parentMessageId"])
+    .index("by_forum_post", ["forumPostId"])
+    .index("by_forum_post_and_created", ["forumPostId", "createdAt"]),
 
   savedMessages: defineTable({
     userId: v.string(), // Clerk user ID
@@ -254,4 +262,42 @@ export default defineSchema({
     .index("by_channel", ["channelId"])
     .index("by_user", ["userId"])
     .index("by_channel_and_user", ["channelId", "userId"]),
+
+  // ============================================================================
+  // Forum Posts - Posts in forum-type channels
+  // ============================================================================
+
+  forumPosts: defineTable({
+    channelId: v.id("channels"), // The forum channel this post belongs to
+    title: v.string(), // Post title
+    content: v.string(), // Initial post content (rich text/markdown)
+    authorId: v.string(), // Clerk user ID of the post author
+    status: v.union(v.literal("open"), v.literal("closed"), v.literal("solved")), // Post status
+    isPinned: v.optional(v.boolean()), // Pinned posts appear at top
+    solvedCommentId: v.optional(v.id("messages")), // The accepted answer comment
+    createdAt: v.number(),
+    lastActivityAt: v.number(), // Updated when new comments are added
+    commentCount: v.number(), // Denormalized for performance
+    // Support same attachment features as messages
+    attachments: v.optional(v.array(v.object({
+      storageId: v.id("_storage"),
+      name: v.string(),
+      size: v.number(),
+      type: v.string(),
+    }))),
+    // Link embed preview (Open Graph metadata)
+    linkEmbed: v.optional(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      siteName: v.optional(v.string()),
+      favicon: v.optional(v.string()),
+    })),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_channel_and_status", ["channelId", "status"])
+    .index("by_channel_and_last_activity", ["channelId", "lastActivityAt"])
+    .index("by_channel_and_pinned", ["channelId", "isPinned"])
+    .index("by_author", ["authorId"]),
 });

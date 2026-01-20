@@ -485,6 +485,10 @@ export const createChannel = mutation({
     permissions: v.union(v.literal("open"), v.literal("readOnly")),
     isPrivate: v.optional(v.boolean()),
     memberIds: v.optional(v.array(v.string())), // Clerk user IDs for private channel members
+    channelType: v.optional(v.union(v.literal("chat"), v.literal("forum"))), // Default is "chat"
+    forumSettings: v.optional(v.object({
+      whoCanPost: v.union(v.literal("everyone"), v.literal("admins")),
+    })),
   },
   handler: async (ctx, args) => {
     const userId = await requireAdmin(ctx, args.organizationId);
@@ -513,6 +517,12 @@ export const createChannel = mutation({
 
     const maxOrder = channels.reduce((max, c) => Math.max(max, c.order), -1);
 
+    // Determine channel type and settings
+    const channelType = args.channelType || "chat";
+    const forumSettings = channelType === "forum" 
+      ? (args.forumSettings || { whoCanPost: "everyone" })
+      : undefined;
+
     const channelId = await ctx.db.insert("channels", {
       organizationId: args.organizationId,
       categoryId: args.categoryId,
@@ -524,6 +534,8 @@ export const createChannel = mutation({
       order: maxOrder + 1,
       createdAt: Date.now(),
       createdBy: userId,
+      channelType,
+      forumSettings,
     });
 
     // If this is a private channel, add the selected members
@@ -558,6 +570,9 @@ export const updateChannel = mutation({
     permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
     isPrivate: v.optional(v.boolean()),
     memberIds: v.optional(v.array(v.string())), // Clerk user IDs for private channel members
+    forumSettings: v.optional(v.object({
+      whoCanPost: v.union(v.literal("everyone"), v.literal("admins")),
+    })),
   },
   handler: async (ctx, args) => {
     const channel = await ctx.db.get(args.channelId);
@@ -573,6 +588,10 @@ export const updateChannel = mutation({
     if (args.icon !== undefined) updates.icon = args.icon;
     if (args.permissions !== undefined) updates.permissions = args.permissions;
     if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate;
+    // Only allow updating forum settings for forum channels
+    if (args.forumSettings !== undefined && channel.channelType === "forum") {
+      updates.forumSettings = args.forumSettings;
+    }
 
     await ctx.db.patch(args.channelId, updates);
 
