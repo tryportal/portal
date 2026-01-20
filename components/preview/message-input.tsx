@@ -65,6 +65,7 @@ interface MessageInputProps {
   mentionUsers?: MentionUser[]
   isDirectMessage?: boolean
   typingUsers?: TypingUser[]
+  placeholder?: string
 }
 
 // URL detection regex - matches http(s) URLs
@@ -90,6 +91,7 @@ export function MessageInput({
   mentionUsers = [],
   isDirectMessage = false,
   typingUsers = [],
+  placeholder,
 }: MessageInputProps) {
   const { resolvedTheme } = useTheme()
   const [message, setMessage] = React.useState("")
@@ -802,9 +804,11 @@ export function MessageInput({
             placeholder={
               disabled && disabledReason
                 ? disabledReason
-                : isDirectMessage
-                  ? `Message ${channelName}`
-                  : `Message #${channelName}`
+                : placeholder
+                  ? placeholder
+                  : isDirectMessage
+                    ? `Message ${channelName}`
+                    : `Message #${channelName}`
             }
             disabled={disabled}
             className="min-h-[20px] max-h-[60px] w-full resize-none border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:border-0 shadow-none leading-[20px] disabled:cursor-not-allowed overflow-y-auto"

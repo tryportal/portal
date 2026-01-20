@@ -104,6 +104,9 @@ export interface Message {
     channelName?: string
     userName?: string
   }
+  // Forum-specific fields
+  isOP?: boolean // Is original poster (for forum posts)
+  isSolvedAnswer?: boolean // Is the accepted answer (for forum posts)
 }
 
 interface MessageListProps {
@@ -127,6 +130,11 @@ interface MessageListProps {
   isAdmin?: boolean
   searchQuery?: string
   isDirectMessage?: boolean
+  // Forum-specific props
+  isForumPost?: boolean
+  postAuthorId?: string
+  solvedCommentId?: string
+  onMarkSolution?: (messageId: string) => void
 }
 
 function formatFileSize(bytes: number): string {
@@ -877,6 +885,11 @@ export function MessageList({
   isAdmin,
   searchQuery = "",
   isDirectMessage = false,
+  // Forum-specific props
+  isForumPost = false,
+  postAuthorId,
+  solvedCommentId,
+  onMarkSolution,
 }: MessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)

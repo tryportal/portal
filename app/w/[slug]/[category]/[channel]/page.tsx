@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { getIconComponent } from "@/components/icon-picker";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ChatInterface } from "@/components/preview/chat-interface";
+import { ForumInterface } from "@/components/forum/forum-interface";
 import { useUserDataCache } from "@/components/user-data-cache";
 import type { Message, Attachment, Reaction, LinkEmbed } from "@/components/preview/message-list";
 import type { PinnedMessage } from "@/components/preview/pinned-messages-dialog";
@@ -76,20 +77,23 @@ export default function ChannelPage({
 
   // Get channel ID for queries
   const channelId = channelData?.channel?._id;
+  const isForumChannel = channelData?.channel?.channelType === "forum";
 
   // Get messages for the channel (paginated - loads 50 most recent)
+  // Skip for forum channels since they use their own query
   const messagesData = useQuery(
     api.messages.getMessages,
-    channelId ? { channelId, limit: 50 } : "skip"
+    channelId && !isForumChannel ? { channelId, limit: 50 } : "skip"
   );
   
   // Extract messages array from paginated response
   const rawMessages = messagesData?.messages;
 
   // Server-side search (only if search query is long enough and we have a channel)
+  // Skip for forum channels
   const serverSearchResults = useQuery(
     api.messages.searchMessages,
-    channelId && debouncedSearchQuery.length > 2
+    channelId && debouncedSearchQuery.length > 2 && !isForumChannel
       ? { channelId, query: debouncedSearchQuery, limit: 50 }
       : "skip"
   );
@@ -332,9 +336,10 @@ export default function ChannelPage({
     }
   }, [channelId, channelName]);
 
-  // Optimized loading state - only wait for essential data (channel + messages)
+  // Optimized loading state - only wait for essential data (channel + messages for chat, or just channel for forum)
   // User data and images load progressively
-  if (!routeParams || channelData === undefined || messagesData === undefined) {
+  const isChatDataLoading = !isForumChannel && messagesData === undefined;
+  if (!routeParams || channelData === undefined || isChatDataLoading) {
     return <LoadingSpinner fullScreen />;
   }
 
@@ -583,6 +588,27 @@ export default function ChannelPage({
       router.push(`/w/${routeParams.slug}/people/${userId}`);
     }
   };
+
+  // Render ForumInterface for forum channels
+  if (isForumChannel) {
+    return (
+      <div className="flex flex-1 flex-col h-full min-h-0 bg-card overflow-hidden">
+        <ForumInterface
+          channelId={channelId!}
+          channelName={channel.name}
+          channelDescription={channel.description}
+          channelIcon={Icon as React.ComponentType<{ className?: string }> | undefined}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin || false}
+          canPost={canPost}
+          userDataCache={userDataCache}
+          mentionUsers={mentionUsers}
+          generateUploadUrl={handleGenerateUploadUrl}
+          onTyping={handleTyping}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col h-full min-h-0 bg-card overflow-hidden">
