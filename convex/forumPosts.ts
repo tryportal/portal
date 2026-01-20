@@ -182,7 +182,7 @@ export const getPosts = query({
     let startIndex = 0;
     if (args.cursor) {
       const cursorIndex = allPosts.findIndex(
-        (post) => post.lastActivityAt < args.cursor!
+        (post) => !post.isPinned && post.lastActivityAt < args.cursor!
       );
       if (cursorIndex !== -1) {
         startIndex = cursorIndex;
