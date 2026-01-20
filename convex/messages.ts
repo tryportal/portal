@@ -415,6 +415,11 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     const { userId, channel, isAdmin } = await checkChannelAccess(ctx, args.channelId);
 
+    // Check if this is a forum channel - forum channels use posts and comments, not direct messages
+    if (channel.channelType === "forum") {
+      throw new Error("This is a forum channel. Use posts and comments instead of direct messages.");
+    }
+
     // Check if channel is read-only and user is not admin
     if (channel.permissions === "readOnly" && !isAdmin) {
       throw new Error("Only admins can post in this read-only channel");
