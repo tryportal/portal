@@ -86,8 +86,7 @@ export function PostsList({
         {canCreatePost && (
           <Button
             onClick={onCreatePost}
-            className="w-full justify-center gap-2"
-            size="sm"
+            className="w-auto justify-start gap-2"
           >
             <PlusIcon className="size-4" />
             New Post
