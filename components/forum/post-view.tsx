@@ -15,6 +15,7 @@ import type { Id, Doc } from "@/convex/_generated/dataModel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { CheckCircleIcon, LockIcon, ImageIcon, VideoCameraIcon, FileIcon, DownloadSimpleIcon, Spinner } from "@phosphor-icons/react"
+import { ResizableVerticalPanel } from "@/components/ui/resizable-vertical-panel"
 
 interface PostViewProps {
   post: Doc<"forumPosts">
@@ -270,63 +271,73 @@ export function PostView({
         showBackButton={showBackButton}
       />
 
-      {/* Post content */}
-      <div className="px-4 py-4 border-b border-border bg-muted/30">
-        <div className="flex gap-3">
-          <Avatar className="size-10 shrink-0">
-            <AvatarImage src={author.avatar} alt={author.name} />
-            <AvatarFallback>{author.initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-medium text-sm">{author.name}</span>
-              <OPBadge />
-            </div>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="whitespace-pre-wrap text-sm text-foreground">
-                {post.content}
-              </p>
-            </div>
-            {/* Post attachments */}
-            {post.attachments && post.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {post.attachments.map((attachment, index) => (
-                  <PostAttachmentItem
-                    key={`${attachment.storageId}-${index}`}
-                    attachment={attachment}
-                    url={postAttachmentUrls[attachment.storageId] || null}
-                  />
-                ))}
+      {/* Post content and comments header - resizable */}
+      <ResizableVerticalPanel
+        storageKey="portal-forum-post-content-height"
+        defaultHeight={220}
+        minHeight={120}
+        maxHeight={500}
+        className="overflow-hidden flex flex-col"
+      >
+        {/* Post content */}
+        <div className="flex-1 min-h-0 overflow-auto px-4 py-4 border-b border-border bg-muted/30">
+          <div className="flex gap-3">
+            <Avatar className="size-10 shrink-0">
+              <AvatarImage src={author.avatar} alt={author.name} />
+              <AvatarFallback>{author.initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium text-sm">{author.name}</span>
+                <OPBadge />
               </div>
-            )}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <p className="whitespace-pre-wrap text-sm text-foreground">
+                  {post.content}
+                </p>
+              </div>
+              {/* Post attachments */}
+              {post.attachments && post.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {post.attachments.map((attachment, index) => (
+                    <PostAttachmentItem
+                      key={`${attachment.storageId}-${index}`}
+                      attachment={attachment}
+                      url={postAttachmentUrls[attachment.storageId] || null}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Closed post banner */}
-      {post.status === "closed" && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted border-b border-border text-sm text-muted-foreground">
-          <LockIcon className="size-4" />
-          This post is closed. No new comments can be added.
-        </div>
-      )}
+        {/* Closed post banner */}
+        {post.status === "closed" && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted border-b border-border text-sm text-muted-foreground shrink-0">
+            <LockIcon className="size-4" />
+            This post is closed. No new comments can be added.
+          </div>
+        )}
 
-      {/* Solved banner with solution link */}
-      {post.status === "solved" && post.solvedCommentId && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircleIcon className="size-4" weight="fill" />
-          This post has been marked as solved
-        </div>
-      )}
+        {/* Solved banner with solution link */}
+        {post.status === "solved" && post.solvedCommentId && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-sm text-emerald-600 dark:text-emerald-400 shrink-0">
+            <CheckCircleIcon className="size-4" weight="fill" />
+            This post has been marked as solved
+          </div>
+        )}
 
-      {/* Comments section */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <div className="px-4 py-2 border-b border-border bg-muted/20">
+        {/* Comments counter */}
+        <div className="px-4 py-2 border-b border-border bg-muted/20 shrink-0">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {post.commentCount} {post.commentCount === 1 ? "Comment" : "Comments"}
           </span>
         </div>
+      </ResizableVerticalPanel>
 
+      {/* Comments section */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {/* Comments list - reuse MessageList but with forum enhancements */}
         <MessageList
           messages={enhancedComments}
