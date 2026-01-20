@@ -136,8 +136,8 @@ function SortableChannel({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // Use ChatCircleDotsIcon for forum channels, otherwise use the configured icon
-  const Icon = channel.channelType === "forum" ? ChatCircleDotsIcon : getIconComponent(channel.icon)
+  // Use the configured icon for all channels (including forum channels)
+  const Icon = getIconComponent(channel.icon)
 
   return (
     <div
@@ -173,6 +173,9 @@ function SortableChannel({
           weight: isActive ? "fill" : "regular",
         })}
         <span className="truncate min-w-0">{channel.name}</span>
+        {channel.channelType === "forum" && (
+          <ChatCircleDotsIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+        )}
         {channel.isPrivate && (
           <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
         )}
@@ -250,6 +253,8 @@ interface SortableCategoryProps {
       name: string
       icon: string
       isPrivate?: boolean
+      isShared?: boolean
+      channelType?: "chat" | "forum"
     }>
   }
   isExpanded: boolean
