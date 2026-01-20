@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import { PostHeader } from "./post-header"
 import { OPBadge } from "./op-badge"
@@ -12,7 +14,7 @@ import type { LinkEmbedData } from "@/components/preview/link-preview"
 import type { Id, Doc } from "@/convex/_generated/dataModel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CheckCircleIcon, LockIcon } from "@phosphor-icons/react"
+import { CheckCircleIcon, LockIcon, ImageIcon, VideoCameraIcon, FileIcon, DownloadSimpleIcon, Spinner } from "@phosphor-icons/react"
 
 interface PostViewProps {
   post: Doc<"forumPosts">
@@ -61,6 +63,119 @@ interface PostViewProps {
   userNames?: Record<string, string>
 }
 
+// Utility functions for attachments
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
+}
+
+function isImageType(type: string): boolean {
+  return type.startsWith("image/")
+}
+
+function isVideoType(type: string): boolean {
+  return type.startsWith("video/")
+}
+
+// Attachment display component
+function PostAttachmentItem({ 
+  attachment, 
+  url 
+}: { 
+  attachment: { storageId: string; name: string; size: number; type: string }
+  url: string | null 
+}) {
+  const isImage = isImageType(attachment.type)
+  const isVideo = isVideoType(attachment.type)
+
+  if (isImage && url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block max-w-xs rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm"
+      >
+        <img
+          src={url}
+          alt={attachment.name}
+          className="max-h-64 w-auto object-contain bg-muted/30"
+        />
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <ImageIcon className="size-3.5 shrink-0" />
+          <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
+          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+        </div>
+      </a>
+    )
+  }
+
+  if (isVideo && url) {
+    return (
+      <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
+        <video
+          src={url}
+          controls
+          preload="metadata"
+          className="max-h-80 w-auto bg-black"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <VideoCameraIcon className="size-3.5 shrink-0" />
+          <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
+          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+          <a
+            href={url}
+            download={attachment.name}
+            className="hover:text-foreground transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DownloadSimpleIcon className="size-3.5 shrink-0" />
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  if (!url) {
+    return (
+      <div
+        className="flex items-center gap-2.5 rounded-md border border-border px-2.5 py-2 opacity-60 cursor-not-allowed max-w-xs"
+        aria-disabled="true"
+        tabIndex={-1}
+        title="Attachment loading..."
+      >
+        <FileIcon className="size-8 text-muted-foreground shrink-0" weight="duotone" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-foreground truncate min-w-0">{attachment.name}</div>
+          <div className="text-xs text-muted-foreground font-medium">{formatFileSize(attachment.size)}</div>
+        </div>
+        <Spinner className="size-4 text-muted-foreground shrink-0 animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2.5 rounded-md border border-border px-2.5 py-2 hover:border-border/80 hover:bg-muted/30 transition-all hover:shadow-sm max-w-xs"
+    >
+      <FileIcon className="size-8 text-muted-foreground shrink-0" weight="duotone" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate min-w-0">{attachment.name}</div>
+        <div className="text-xs text-muted-foreground font-medium">{formatFileSize(attachment.size)}</div>
+      </div>
+      <DownloadSimpleIcon className="size-4 text-muted-foreground shrink-0" />
+    </a>
+  )
+}
+
 export function PostView({
   post,
   author,
@@ -91,6 +206,17 @@ export function PostView({
   userNames = {},
 }: PostViewProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
+
+  // Fetch attachment URLs for post attachments
+  const postAttachmentStorageIds = React.useMemo(() => {
+    if (!post.attachments || post.attachments.length === 0) return []
+    return post.attachments.map(att => att.storageId)
+  }, [post.attachments])
+
+  const postAttachmentUrls = useQuery(
+    api.messages.getBatchStorageUrls,
+    postAttachmentStorageIds.length > 0 ? { storageIds: postAttachmentStorageIds } : "skip"
+  ) ?? {}
 
   const handleReply = (messageId: string) => {
     const comment = comments.find((c) => c.id === messageId)
@@ -161,6 +287,18 @@ export function PostView({
                 {post.content}
               </p>
             </div>
+            {/* Post attachments */}
+            {post.attachments && post.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {post.attachments.map((attachment, index) => (
+                  <PostAttachmentItem
+                    key={`${attachment.storageId}-${index}`}
+                    attachment={attachment}
+                    url={postAttachmentUrls[attachment.storageId] || null}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

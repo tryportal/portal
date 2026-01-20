@@ -466,6 +466,7 @@ export function ForumInterface({
         onOpenChange={setCreatePostOpen}
         channelId={channelId}
         onPostCreated={handlePostCreated}
+        generateUploadUrl={generateUploadUrl}
       />
     </div>
   )
