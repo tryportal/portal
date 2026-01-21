@@ -14,6 +14,7 @@ interface ThemeContextValue {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   resolvedTheme: "light" | "dark";
+  mounted: boolean;
 }
 
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined);
@@ -90,8 +91,8 @@ export function ThemeProvider({
 
   // Prevent flash by not rendering until mounted
   const value = React.useMemo(
-    () => ({ theme, setTheme, resolvedTheme }),
-    [theme, setTheme, resolvedTheme]
+    () => ({ theme, setTheme, resolvedTheme, mounted }),
+    [theme, setTheme, resolvedTheme, mounted]
   );
 
   return (

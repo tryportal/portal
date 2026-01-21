@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import { useTheme } from "@/lib/theme-provider";
@@ -14,9 +14,13 @@ export default function Page() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const [showLoading, setShowLoading] = useState(false);
 
-  // Get user's organizations from Convex
-  const userOrgs = useQuery(api.organizations.getUserOrganizations);
+  // Get user's organizations from Convex - only query if signed in
+  const userOrgs = useQuery(
+    api.organizations.getUserOrganizations,
+    isSignedIn ? undefined : "skip"
+  );
 
   // Prioritize organization where user is admin, otherwise use first org
   const targetOrg = userOrgs?.find((org: { role: string }) => org.role === "admin") || userOrgs?.[0];
@@ -30,11 +34,14 @@ export default function Page() {
   useEffect(() => {
     if (!authLoaded) return;
 
-    // If not signed in, redirect to landing page
+    // If not signed in, redirect immediately to landing page (no loading screen)
     if (!isSignedIn) {
       router.replace("/home");
       return;
     }
+
+    // User is signed in - now we show loading while we figure out where to send them
+    setShowLoading(true);
 
     // Wait for organizations to load
     if (userOrgs === undefined) return;
@@ -63,7 +70,11 @@ export default function Page() {
     }
   }, [authLoaded, isSignedIn, userOrgs, targetOrg, isOrgSetup, router]);
 
-  // Show branded loading while redirecting
+  // Only show loading for authenticated users while we determine their workspace
+  if (!showLoading) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">

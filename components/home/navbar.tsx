@@ -24,93 +24,97 @@ export function Navbar() {
 
   return (
     <motion.nav
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border"
     >
-      <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/home" className="flex items-center gap-2">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        {/* Left: Logo and Macis attribution */}
+        <div className="flex items-center gap-4">
+          <Link href="/home" className="flex items-center">
             <Image
               src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
               alt="Portal"
-              width={80}
+              width={88}
               height={24}
-              className="h-5 w-auto"
+              className="h-6 w-auto"
               priority
             />
           </Link>
-          <Link
-            href="https://macis.vercel.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="text-border">|</span>
             <span>a</span>
-            <Image
-              src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
-              alt="Macis"
-              width={40}
-              height={16}
-              className="h-4 w-auto"
-            />
+            <Link
+              href="https://macis.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              <Image
+                src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
+                alt="Macis"
+                width={40}
+                height={16}
+                className="h-3.5 w-auto opacity-70 hover:opacity-100 transition-opacity"
+              />
+            </Link>
             <span>project</span>
-          </Link>
+          </div>
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden sm:flex items-center gap-3">
+        {/* Right: Desktop Navigation */}
+        <div className="hidden sm:flex items-center gap-2">
           <ThemeToggle variant="icon" />
           <Link
             href="https://github.com/tryportal/portal"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
           >
-            <GitHubLogo size={16} />
+            <GitHubLogo size={18} />
           </Link>
           {authLoaded && (
-            <>
+            <div className="flex items-center gap-2 ml-2">
               {isSignedIn && workspaceUrl ? (
                 <Link
                   href={workspaceUrl}
-                  className="inline-flex items-center gap-1.5 bg-foreground text-background px-3 py-1.5 rounded-md font-medium text-xs hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-1.5 bg-foreground text-background px-4 py-2 rounded-md font-medium text-sm hover:opacity-90 transition-all shadow-sm"
                 >
-                  Open App
-                  <ArrowRight size={12} weight="bold" />
+                  Open Portal
+                  <ArrowRight size={14} weight="bold" />
                 </Link>
               ) : (
                 <>
                   <Link
                     href="/sign-in"
-                    className="text-muted-foreground hover:text-foreground transition-colors text-xs font-medium px-2 py-1.5"
+                    className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium px-3 py-2"
                   >
-                    Sign In
+                    Sign in
                   </Link>
                   <Link
                     href="/sign-up"
-                    className="inline-flex items-center gap-1.5 bg-foreground text-background px-3 py-1.5 rounded-md font-medium text-xs hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-1.5 bg-foreground text-background px-4 py-2 rounded-md font-medium text-sm hover:opacity-90 transition-all shadow-sm"
                   >
-                    Get Started
-                    <ArrowRight size={12} weight="bold" />
+                    Get started
+                    <ArrowRight size={14} weight="bold" />
                   </Link>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
 
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="sm:hidden p-1.5 text-foreground"
+          className="sm:hidden p-2 text-foreground rounded-md hover:bg-muted transition-colors"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? (
-            <X size={18} weight="bold" />
+            <X size={20} weight="bold" />
           ) : (
-            <List size={18} weight="bold" />
+            <List size={20} weight="bold" />
           )}
         </button>
       </div>
@@ -122,56 +126,58 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="sm:hidden border-t border-border bg-background"
           >
-            <div className="px-4 py-3 space-y-2">
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Theme</span>
+            <div className="px-4 py-4 space-y-3">
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm font-medium text-muted-foreground">Theme</span>
                 <ThemeToggle variant="dropdown" />
               </div>
               <Link
                 href="https://github.com/tryportal/portal"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2.5 py-2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <GitHubLogo size={14} />
-                <span className="text-xs font-medium">GitHub</span>
+                <GitHubLogo size={16} />
+                <span className="text-sm font-medium">GitHub</span>
               </Link>
-              {authLoaded && (
-                <>
-                  {isSignedIn && workspaceUrl ? (
-                    <Link
-                      href={workspaceUrl}
-                      className="flex items-center justify-center gap-1.5 w-full bg-foreground text-background px-3 py-2 rounded-md font-medium text-xs hover:opacity-90 transition-opacity"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Open App
-                      <ArrowRight size={12} weight="bold" />
-                    </Link>
-                  ) : (
-                    <>
+              <div className="pt-2 border-t border-border">
+                {authLoaded && (
+                  <>
+                    {isSignedIn && workspaceUrl ? (
                       <Link
-                        href="/sign-in"
-                        className="block py-1.5 text-muted-foreground hover:text-foreground transition-colors text-xs font-medium"
+                        href={workspaceUrl}
+                        className="flex items-center justify-center gap-2 w-full bg-foreground text-background px-4 py-2.5 rounded-md font-medium text-sm hover:opacity-90 transition-all shadow-sm"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        Sign In
+                        Open Portal
+                        <ArrowRight size={14} weight="bold" />
                       </Link>
-                      <Link
-                        href="/sign-up"
-                        className="flex items-center justify-center gap-1.5 w-full bg-foreground text-background px-3 py-2 rounded-md font-medium text-xs hover:opacity-90 transition-opacity"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Get Started
-                        <ArrowRight size={12} weight="bold" />
-                      </Link>
-                    </>
-                  )}
-                </>
-              )}
+                    ) : (
+                      <div className="space-y-2">
+                        <Link
+                          href="/sign-in"
+                          className="block text-center py-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Sign in
+                        </Link>
+                        <Link
+                          href="/sign-up"
+                          className="flex items-center justify-center gap-2 w-full bg-foreground text-background px-4 py-2.5 rounded-md font-medium text-sm hover:opacity-90 transition-all shadow-sm"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Get started
+                          <ArrowRight size={14} weight="bold" />
+                        </Link>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

@@ -8,10 +8,12 @@ import { CTA } from "@/components/home/cta";
 import { Footer } from "@/components/home/footer";
 
 export const metadata: Metadata = {
-  title: "Portal - Free Open Source Team Chat | Slack Alternative",
+  title: "Portal - Your Team's Home Base | Free Open Source Team Chat",
   description:
-    "Portal is a free, open-source team chat app and Slack alternative. Real-time messaging, organized channels, direct messages, and seamless collaboration — privacy-first and free forever. Self-host or use our cloud.",
+    "Portal is your team's home base — a free, open-source workspace that brings messaging, channels, and collaboration together. The modern Slack alternative that's privacy-first and free forever.",
   keywords: [
+    "team home base",
+    "team workspace",
     "team chat app",
     "slack alternative",
     "open source slack",
@@ -27,14 +29,15 @@ export const metadata: Metadata = {
     "workplace chat",
     "team communication tool",
     "free collaboration software",
+    "unified workspace",
   ],
   alternates: {
     canonical: "https://tryportal.app/home",
   },
   openGraph: {
-    title: "Portal - Free Open Source Team Chat | Slack Alternative",
+    title: "Portal - Your Team's Home Base | Free Open Source Team Chat",
     description:
-      "Portal is a free, open-source team chat app and Slack alternative. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
+      "Portal is your team's home base — a free, open-source workspace for messaging and collaboration. Privacy-first and free forever.",
     url: "https://tryportal.app/home",
   },
 };
@@ -47,7 +50,7 @@ const organizationSchema = {
   logo: "https://tryportal.app/portal.svg",
   sameAs: ["https://github.com/tryportal/portal"],
   description:
-    "Portal is a free, open-source team chat platform focused on privacy and simplicity.",
+    "Portal is your team's home base — a free, open-source workspace for team communication and collaboration.",
 };
 
 const softwareApplicationSchema = {
@@ -62,7 +65,7 @@ const softwareApplicationSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
+    "Your team's home base. Open-source workspace alternative to Slack with real-time messaging, organized channels, and seamless collaboration — privacy-first and free forever.",
   featureList: [
     "Real-time messaging",
     "Team channels",
@@ -82,10 +85,18 @@ const faqSchema = {
   mainEntity: [
     {
       "@type": "Question",
+      name: "What makes Portal different?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Portal is designed to be your team's home base — the first place you go when you start work. It brings messaging, organization, and collaboration into one focused space. Plus, it's completely open source.",
+      },
+    },
+    {
+      "@type": "Question",
       name: "Is Portal really free?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes, Portal is 100% free and open source. No paid tiers, no hidden fees. Team communication shouldn't cost a fortune.",
+        text: "Yes, Portal is 100% free and open source. No paid tiers, no hidden fees, no usage limits. Your team's workspace shouldn't come with a monthly bill.",
       },
     },
     {
@@ -93,7 +104,7 @@ const faqSchema = {
       name: "How does Portal compare to Slack?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Portal offers similar core features — channels, DMs, file sharing, mentions — but with a focus on privacy and simplicity. Plus, it's open source so you can self-host.",
+        text: "Portal offers real-time channels, DMs, file sharing, and mentions — but with a focus on simplicity over feature bloat. It's open source, privacy-first, and designed to stay fast as your team grows.",
       },
     },
     {
@@ -101,7 +112,7 @@ const faqSchema = {
       name: "Can I self-host Portal?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Absolutely. Check out our GitHub repository for deployment guides. Run Portal on your own infrastructure with full control over your data.",
+        text: "Absolutely. Check out our GitHub repository for deployment guides. Run Portal on your own infrastructure with full control over your data and security.",
       },
     },
     {
@@ -109,7 +120,7 @@ const faqSchema = {
       name: "What does 'alpha' mean?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Portal is actively being developed. Core features work well, but you may encounter bugs. We're shipping fast and improving based on user feedback.",
+        text: "We're actively shipping new features every week. Core functionality works great, but you may encounter rough edges. Early adopters help shape what Portal becomes.",
       },
     },
     {
@@ -117,15 +128,7 @@ const faqSchema = {
       name: "Is my data secure?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Security is a priority. Portal is designed with privacy-first principles. When self-hosting, you have complete control. E2E encryption is coming soon.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How can I contribute?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "We welcome contributions! Check out our GitHub for open issues, submit PRs, or join our community to discuss features.",
+        text: "Security is foundational. Portal is privacy-first by design. Self-host for complete control, or use our cloud with confidence. End-to-end encryption is on the roadmap.",
       },
     },
   ],
