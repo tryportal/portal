@@ -56,6 +56,8 @@ interface ChatInterfaceProps {
   isDirectMessage?: boolean
   isSharedChannel?: boolean
   sharedChannelSourceOrg?: string
+  // Loading state to prevent empty channel flash during transitions
+  isLoading?: boolean
 }
 
 export function ChatInterface({
@@ -92,6 +94,7 @@ export function ChatInterface({
   isDirectMessage = false,
   isSharedChannel = false,
   sharedChannelSourceOrg,
+  isLoading = false,
 }: ChatInterfaceProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
   const [pinnedDialogOpen, setPinnedDialogOpen] = React.useState(false)
@@ -196,6 +199,7 @@ export function ChatInterface({
         isAdmin={isAdmin}
         searchQuery={searchQuery}
         isDirectMessage={isDirectMessage}
+        isLoading={isLoading}
       />
 
       {/* Message Input with Typing Indicator */}

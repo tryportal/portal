@@ -130,6 +130,8 @@ interface MessageListProps {
   isAdmin?: boolean
   searchQuery?: string
   isDirectMessage?: boolean
+  // Loading state to prevent empty channel flash during transitions
+  isLoading?: boolean
   // Forum-specific props
   isForumPost?: boolean
   postAuthorId?: string
@@ -885,6 +887,7 @@ export function MessageList({
   isAdmin,
   searchQuery = "",
   isDirectMessage = false,
+  isLoading = false,
   // Forum-specific props
   isForumPost = false,
   postAuthorId,
@@ -1087,11 +1090,16 @@ export function MessageList({
     return () => resizeObserver.disconnect()
   }, [scrollToBottom])
 
+  // Derive the latest message ID safely to avoid dependency issues with empty arrays
+  const latestMessageId = memoizedMessages.length > 0 
+    ? memoizedMessages[memoizedMessages.length - 1].id 
+    : null;
+
   // Scroll to bottom on initial load and when new messages arrive (if user is near bottom or sent by current user)
   React.useLayoutEffect(() => {
-    if (memoizedMessages.length > 0) {
+    if (memoizedMessages.length > 0 && latestMessageId) {
       const latestMessage = memoizedMessages[memoizedMessages.length - 1]
-      const isNewMessage = latestMessage.id !== lastMessageId.current
+      const isNewMessage = latestMessageId !== lastMessageId.current
       const isFromCurrentUser = latestMessage.user.id === currentUserId
 
       // Always scroll on initial load, when current user sends a message, or when new messages arrive and user is near bottom
@@ -1116,11 +1124,11 @@ export function MessageList({
       }
 
       previousMessageCount.current = memoizedMessages.length
-      lastMessageId.current = latestMessage.id
+      lastMessageId.current = latestMessageId
       
       // Initialize lastSeenMessageId on first load
       if (!lastSeenMessageId.current && isInitialLoad.current) {
-        lastSeenMessageId.current = latestMessage.id
+        lastSeenMessageId.current = latestMessageId
       }
 
       if (!hasInitialScrolled.current) {
@@ -1132,7 +1140,7 @@ export function MessageList({
         }, 3000)
       }
     }
-  }, [memoizedMessages.length, memoizedMessages[memoizedMessages.length - 1]?.id, scrollToBottom, currentUserId])
+  }, [memoizedMessages.length, latestMessageId, scrollToBottom, currentUserId, memoizedMessages])
 
   // Additional effect for initial load only
   React.useEffect(() => {
@@ -1150,8 +1158,9 @@ export function MessageList({
     }
   }, [memoizedMessages.length, scrollToBottom])
 
-  // Show empty state if no messages
-  if (messages.length === 0 && channelName) {
+  // Show empty state only if no messages AND not loading
+  // This prevents the empty channel state from flashing during channel transitions
+  if (messages.length === 0 && channelName && !isLoading) {
     return (
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
