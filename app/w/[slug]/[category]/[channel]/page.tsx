@@ -350,6 +350,86 @@ export default function ChannelPage({
     }
   }, [channelId, channelName]);
 
+  // Transform raw messages to the format expected by ChatInterface
+  // This must be a hook and called before any early returns to maintain hook order
+  const messages: Message[] = React.useMemo(() => {
+    return (filteredMessages || []).map((msg) => {
+      // Get user info from cache, fallback to current user's data if it's their message
+      const cachedUserData = userDataCache[msg.userId];
+      const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null);
+      const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null);
+      const imageUrl = cachedUserData?.imageUrl ?? (user?.id === msg.userId ? user?.imageUrl : null);
+      
+      const name = firstName && lastName 
+        ? `${firstName} ${lastName}`
+        : firstName || "Unknown User";
+      
+      const initials = firstName && lastName
+        ? `${firstName[0]}${lastName[0]}`
+        : firstName?.[0] || "?";
+
+      // Transform attachments
+      const attachments: Attachment[] = msg.attachments?.map((att: any) => ({
+        storageId: att.storageId,
+        name: att.name,
+        size: att.size,
+        type: att.type,
+      })) || [];
+
+      // Transform reactions
+      const reactions: Reaction[] | undefined = msg.reactions?.map((r: any) => ({
+        userId: r.userId,
+        emoji: r.emoji,
+      }));
+
+      // Get parent message info for replies
+      let parentMessage: { content: string; userName: string } | undefined;
+      if (msg.parentMessageId) {
+        const parent = messageMap.get(msg.parentMessageId);
+        if (parent) {
+          parentMessage = {
+            content: parent.content,
+            userName: userNames[parent.userId] || "Unknown User",
+          };
+        }
+      }
+
+      return {
+        id: msg._id,
+        content: msg.content,
+        timestamp: new Date(msg.createdAt).toLocaleTimeString([], { 
+          hour: "numeric", 
+          minute: "2-digit" 
+        }),
+        createdAt: msg.createdAt, // Add raw timestamp for grouping
+        user: {
+          id: msg.userId,
+          name,
+          avatar: imageUrl || undefined,
+          initials,
+        },
+        attachments: attachments.length > 0 ? attachments : undefined,
+        linkEmbed: msg.linkEmbed,
+        editedAt: msg.editedAt,
+        parentMessageId: msg.parentMessageId,
+        parentMessage,
+        reactions: reactions && reactions.length > 0 ? reactions : undefined,
+        pinned: msg.pinned,
+        mentions: msg.mentions,
+        forwardedFrom: msg.forwardedFrom ? {
+          channelName: msg.forwardedFrom.channelName,
+          userName: msg.forwardedFrom.userName,
+        } : undefined,
+      };
+    });
+  }, [filteredMessages, userDataCache, user, messageMap, userNames]);
+
+  // Combine server messages with pending (optimistic) messages for instant feedback
+  // This must be called before any early returns to maintain hook order
+  const allMessages = React.useMemo(() => {
+    return [...messages, ...pendingMessages];
+  }, [messages, pendingMessages]);
+
   // Optimized loading state - only wait for essential data (channel + messages for chat, or just channel for forum)
   // User data and images load progressively
   // Show loading only if we don't have channel data yet AND we don't have cached messages to display
@@ -369,82 +449,6 @@ export default function ChannelPage({
   const isAdmin = membership?.role === "admin";
   const canPost = !isReadOnly || isAdmin;
   const currentUserId = user?.id;
-
-  // Transform raw messages to the format expected by ChatInterface
-  const messages: Message[] = (filteredMessages || []).map((msg) => {
-    // Get user info from cache, fallback to current user's data if it's their message
-    const cachedUserData = userDataCache[msg.userId];
-    const firstName = cachedUserData?.firstName ?? (user?.id === msg.userId ? user?.firstName : null);
-    const lastName = cachedUserData?.lastName ?? (user?.id === msg.userId ? user?.lastName : null);
-    const imageUrl = cachedUserData?.imageUrl ?? (user?.id === msg.userId ? user?.imageUrl : null);
-    
-    const name = firstName && lastName 
-      ? `${firstName} ${lastName}`
-      : firstName || "Unknown User";
-    
-    const initials = firstName && lastName
-      ? `${firstName[0]}${lastName[0]}`
-      : firstName?.[0] || "?";
-
-    // Transform attachments
-    const attachments: Attachment[] = msg.attachments?.map((att: any) => ({
-      storageId: att.storageId,
-      name: att.name,
-      size: att.size,
-      type: att.type,
-    })) || [];
-
-    // Transform reactions
-    const reactions: Reaction[] | undefined = msg.reactions?.map((r: any) => ({
-      userId: r.userId,
-      emoji: r.emoji,
-    }));
-
-    // Get parent message info for replies
-    let parentMessage: { content: string; userName: string } | undefined;
-    if (msg.parentMessageId) {
-      const parent = messageMap.get(msg.parentMessageId);
-      if (parent) {
-        parentMessage = {
-          content: parent.content,
-          userName: userNames[parent.userId] || "Unknown User",
-        };
-      }
-    }
-
-    return {
-      id: msg._id,
-      content: msg.content,
-      timestamp: new Date(msg.createdAt).toLocaleTimeString([], { 
-        hour: "numeric", 
-        minute: "2-digit" 
-      }),
-      createdAt: msg.createdAt, // Add raw timestamp for grouping
-      user: {
-        id: msg.userId,
-        name,
-        avatar: imageUrl || undefined,
-        initials,
-      },
-      attachments: attachments.length > 0 ? attachments : undefined,
-      linkEmbed: msg.linkEmbed,
-      editedAt: msg.editedAt,
-      parentMessageId: msg.parentMessageId,
-      parentMessage,
-      reactions: reactions && reactions.length > 0 ? reactions : undefined,
-      pinned: msg.pinned,
-      mentions: msg.mentions,
-      forwardedFrom: msg.forwardedFrom ? {
-        channelName: msg.forwardedFrom.channelName,
-        userName: msg.forwardedFrom.userName,
-      } : undefined,
-    };
-  });
-
-  // Combine server messages with pending (optimistic) messages for instant feedback
-  const allMessages = React.useMemo(() => {
-    return [...messages, ...pendingMessages];
-  }, [messages, pendingMessages]);
 
   const handleSendMessage = async (
     content: string, 
