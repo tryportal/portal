@@ -52,6 +52,9 @@ export default function ChannelPage({
   const [searchQuery, setSearchQuery] = React.useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+  // Pending messages state for optimistic updates
+  const [pendingMessages, setPendingMessages] = React.useState<Message[]>([]);
+
   // Get channel data by route - routeParams is now always defined via React.use()
   const channelData = useQuery(
     api.channels.getChannelByRoute,
@@ -438,6 +441,11 @@ export default function ChannelPage({
     };
   });
 
+  // Combine server messages with pending (optimistic) messages for instant feedback
+  const allMessages = React.useMemo(() => {
+    return [...messages, ...pendingMessages];
+  }, [messages, pendingMessages]);
+
   const handleSendMessage = async (
     content: string, 
     attachments?: Array<{
@@ -449,7 +457,54 @@ export default function ChannelPage({
     parentMessageId?: string,
     linkEmbed?: LinkEmbed
   ) => {
-    if (!channelId) return;
+    if (!channelId || !currentUserId) return;
+
+    // Create optimistic message for instant feedback
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = Date.now();
+    
+    // Get current user's display info
+    const userName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}` 
+      : user?.firstName || "You";
+    const initials = user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`
+      : user?.firstName?.[0] || "?";
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      content,
+      timestamp: new Date(now).toLocaleTimeString([], { 
+        hour: "numeric", 
+        minute: "2-digit" 
+      }),
+      createdAt: now,
+      user: {
+        id: currentUserId,
+        name: userName,
+        avatar: user?.imageUrl || undefined,
+        initials,
+      },
+      attachments: attachments?.map(a => ({
+        storageId: a.storageId,
+        name: a.name,
+        size: a.size,
+        type: a.type,
+      })),
+      linkEmbed,
+      parentMessageId,
+      parentMessage: parentMessageId ? (() => {
+        const parent = messageMap.get(parentMessageId);
+        return parent ? {
+          content: parent.content,
+          userName: userNames[parent.userId] || "Unknown User",
+        } : undefined;
+      })() : undefined,
+      isPending: true,
+    };
+
+    // Add optimistic message immediately
+    setPendingMessages(prev => [...prev, optimisticMessage]);
 
     try {
       await sendMessage({
@@ -469,6 +524,11 @@ export default function ChannelPage({
       });
     } catch (error) {
       console.error("Failed to send message:", error);
+      // Show error toast on failure
+      toast.error("Failed to send message");
+    } finally {
+      // Remove pending message - the real message will appear via subscription
+      setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     }
   };
 
@@ -631,7 +691,7 @@ export default function ChannelPage({
         channelName={channel.name}
         channelDescription={channel.description}
         channelIcon={Icon}
-        messages={messages}
+        messages={allMessages}
         onSendMessage={handleSendMessage}
         onDeleteMessage={handleDeleteMessage}
         onEditMessage={handleEditMessage}
