@@ -30,6 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { ReactionPicker, ReactionDisplay } from "./reaction-picker"
 import { Textarea } from "@/components/ui/textarea"
 import ReactMarkdown from "react-markdown"
@@ -712,6 +719,119 @@ function HoverActions({
   )
 }
 
+// Shared context menu content for messages (right-click menu)
+function MessageContextMenuContent({
+  message,
+  isOwner,
+  isAdmin,
+  isSaved,
+  onReply,
+  onForward,
+  onPin,
+  onSave,
+  onUnsave,
+  onDeleteMessage,
+  handleEditClick,
+  handleCopy,
+  // Forum-specific props
+  isForumPost,
+  canMarkSolution,
+  onMarkSolution,
+}: {
+  message: Message
+  isOwner: boolean
+  isAdmin?: boolean
+  isSaved?: boolean
+  onReply?: (messageId: string) => void
+  onForward?: (messageId: string) => void
+  onPin?: (messageId: string) => void
+  onSave?: (messageId: string) => void
+  onUnsave?: (messageId: string) => void
+  onDeleteMessage?: (messageId: string) => void
+  handleEditClick: () => void
+  handleCopy: () => void
+  // Forum-specific props
+  isForumPost?: boolean
+  canMarkSolution?: boolean
+  onMarkSolution?: (messageId: string) => void
+}) {
+  const handleSaveToggle = () => {
+    if (isSaved) {
+      onUnsave?.(message.id)
+    } else {
+      onSave?.(message.id)
+    }
+  }
+
+  const isSolvedAnswer = message.isSolvedAnswer
+
+  return (
+    <ContextMenuContent className="w-48">
+      <ContextMenuItem onClick={() => onReply?.(message.id)}>
+        <ArrowBendUpLeftIcon className="size-4" />
+        Reply
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => onForward?.(message.id)}>
+        <ShareIcon className="size-4" />
+        Forward
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      {/* Forum: Mark as Solution option */}
+      {isForumPost && canMarkSolution && onMarkSolution && (
+        <>
+          <ContextMenuItem 
+            onClick={() => onMarkSolution(message.id)}
+            className={isSolvedAnswer ? "text-emerald-600 dark:text-emerald-400" : ""}
+          >
+            <CheckCircleIcon className="size-4" weight={isSolvedAnswer ? "fill" : "regular"} />
+            {isSolvedAnswer ? "Unmark as solution" : "Mark as solution"}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      )}
+      <ContextMenuItem onClick={handleCopy}>
+        <CopyIcon className="size-4" />
+        Copy text
+      </ContextMenuItem>
+      {isAdmin && (
+        <ContextMenuItem onClick={() => onPin?.(message.id)}>
+          <PushPinIcon className="size-4" />
+          {message.pinned ? "Unpin message" : "Pin message"}
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem onClick={handleSaveToggle}>
+        {isSaved ? (
+          <>
+            <BookmarkSimpleIcon className="size-4" />
+            Unsave message
+          </>
+        ) : (
+          <>
+            <BookmarkIcon className="size-4" />
+            Save message
+          </>
+        )}
+      </ContextMenuItem>
+      {isOwner && (
+        <>
+          <ContextMenuItem onClick={handleEditClick}>
+            <PencilIcon className="size-4" />
+            Edit message
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onClick={() => onDeleteMessage?.(message.id)}
+          >
+            <TrashIcon className="size-4" />
+            Delete message
+          </ContextMenuItem>
+        </>
+      )}
+    </ContextMenuContent>
+  )
+}
+
 // ============================================
 // COMPACT MESSAGE STYLE
 // ============================================
@@ -783,155 +903,178 @@ export function CompactMessageItem({
   const processedContent = processMentions(message.content, message.mentions, userNames)
 
   return (
-    <div
-      className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""}`}
-      style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
-      onMouseEnter={() => onHover?.(message.id)}
-      onMouseLeave={() => onHover?.(null)}
-    >
-      {/* Solution indicator */}
-      {message.isSolvedAnswer && !isGrouped && (
-        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-          <CheckCircleIcon className="size-3" weight="fill" />
-          <span>Accepted Answer</span>
-        </div>
-      )}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <div
+            className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""}`}
+            style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
+            onMouseEnter={() => onHover?.(message.id)}
+            onMouseLeave={() => onHover?.(null)}
+          />
+        }
+      >
+        {/* Solution indicator */}
+        {message.isSolvedAnswer && !isGrouped && (
+          <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <CheckCircleIcon className="size-3" weight="fill" />
+            <span>Accepted Answer</span>
+          </div>
+        )}
 
-      {/* Reply indicator */}
-      {message.parentMessage && message.parentMessageId && (
-        <button
-          onClick={() => onScrollToMessage?.(message.parentMessageId!)}
-          className="flex items-center gap-2 mb-1 ml-[48px] text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        >
-          <ArrowBendUpLeftIcon className="size-3" />
-          <span>Replying to</span>
-          <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
-          <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
-        </button>
-      )}
-
-      {/* Forwarded indicator */}
-      {message.forwardedFrom && (
-        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-muted-foreground">
-          <ArrowBendDoubleUpRightIcon className="size-3" />
-          <span>Forwarded from</span>
-          <span className="font-medium text-foreground/70">
-            {message.forwardedFrom.channelName 
-              ? `#${message.forwardedFrom.channelName}` 
-              : message.forwardedFrom.userName 
-                ? `@${message.forwardedFrom.userName}` 
-                : "unknown"}
-          </span>
-        </div>
-      )}
-
-      {/* Pin indicator */}
-      {message.pinned && (
-        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-amber-600 font-medium">
-          <PushPinIcon className="size-3" weight="fill" />
-          <span>Pinned message</span>
-        </div>
-      )}
-
-      <div className="flex gap-3">
-        {/* Avatar - hidden when grouped */}
-        {!isGrouped ? (
-          <Avatar
-            className="size-9 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-            onClick={() => onAvatarClick?.(message.user.id)}
+        {/* Reply indicator */}
+        {message.parentMessage && message.parentMessageId && (
+          <button
+            onClick={() => onScrollToMessage?.(message.parentMessageId!)}
+            className="flex items-center gap-2 mb-1 ml-[48px] text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
-            {message.user.avatar ? (
-              <AvatarImage src={message.user.avatar} alt={message.user.name} />
-            ) : null}
-            <AvatarFallback className="bg-muted text-foreground text-[11px] font-medium">
-              {message.user.initials}
-            </AvatarFallback>
-          </Avatar>
-        ) : (
-          <div className="w-9 shrink-0 flex items-start justify-center pt-[2px]">
-            <span 
-              className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default select-none"
-              title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
-            >
-              {message.timestamp}
+            <ArrowBendUpLeftIcon className="size-3" />
+            <span>Replying to</span>
+            <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
+            <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
+          </button>
+        )}
+
+        {/* Forwarded indicator */}
+        {message.forwardedFrom && (
+          <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-muted-foreground">
+            <ArrowBendDoubleUpRightIcon className="size-3" />
+            <span>Forwarded from</span>
+            <span className="font-medium text-foreground/70">
+              {message.forwardedFrom.channelName 
+                ? `#${message.forwardedFrom.channelName}` 
+                : message.forwardedFrom.userName 
+                  ? `@${message.forwardedFrom.userName}` 
+                  : "unknown"}
             </span>
           </div>
         )}
 
-        {/* Message content */}
-        <div className="flex-1 min-w-0">
-          {!isGrouped && (
-            <div className="flex items-center gap-2 mb-0.5">
-              <button
-                onClick={() => onNameClick?.(message.user.id)}
-                className="font-semibold text-sm text-foreground hover:underline"
-              >
-                {message.user.name}
-              </button>
+        {/* Pin indicator */}
+        {message.pinned && (
+          <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-amber-600 font-medium">
+            <PushPinIcon className="size-3" weight="fill" />
+            <span>Pinned message</span>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          {/* Avatar - hidden when grouped */}
+          {!isGrouped ? (
+            <Avatar
+              className="size-9 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+              onClick={() => onAvatarClick?.(message.user.id)}
+            >
+              {message.user.avatar ? (
+                <AvatarImage src={message.user.avatar} alt={message.user.name} />
+              ) : null}
+              <AvatarFallback className="bg-muted text-foreground text-[11px] font-medium">
+                {message.user.initials}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div className="w-9 shrink-0 flex items-start justify-center pt-[2px]">
               <span 
-                className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default select-none"
+                className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default select-none"
                 title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
               >
                 {message.timestamp}
               </span>
-              {message.editedAt && (
-                <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
-              )}
             </div>
           )}
 
-          <MessageContent
-            message={message}
-            processedContent={processedContent}
-            searchQuery={searchQuery}
-            isEditing={isEditing}
-            editContent={editContent}
-            setEditContent={setEditContent}
-            handleEditKeyDown={handleEditKeyDown}
-            handleEditSave={handleEditSave}
-            handleEditCancel={handleEditCancel}
-            isGrouped={isGrouped}
-            userNames={userNames}
-            currentUserId={currentUserId}
-            onReaction={onReaction}
-          />
+          {/* Message content */}
+          <div className="flex-1 min-w-0">
+            {!isGrouped && (
+              <div className="flex items-center gap-2 mb-0.5">
+                <button
+                  onClick={() => onNameClick?.(message.user.id)}
+                  className="font-semibold text-sm text-foreground hover:underline"
+                >
+                  {message.user.name}
+                </button>
+                <span 
+                  className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default select-none"
+                  title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
+                >
+                  {message.timestamp}
+                </span>
+                {message.editedAt && (
+                  <span className="text-[10px] text-muted-foreground/70 font-medium">(edited)</span>
+                )}
+              </div>
+            )}
 
-          {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {message.attachments.map((attachment, index) => (
-                <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
-              ))}
-            </div>
-          )}
+            <MessageContent
+              message={message}
+              processedContent={processedContent}
+              searchQuery={searchQuery}
+              isEditing={isEditing}
+              editContent={editContent}
+              setEditContent={setEditContent}
+              handleEditKeyDown={handleEditKeyDown}
+              handleEditSave={handleEditSave}
+              handleEditCancel={handleEditCancel}
+              isGrouped={isGrouped}
+              userNames={userNames}
+              currentUserId={currentUserId}
+              onReaction={onReaction}
+            />
+
+            {/* Attachments */}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {message.attachments.map((attachment, index) => (
+                  <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Hover actions */}
-      {showHoverActions && (
-        <HoverActions
-          message={message}
-          isOwner={isOwner}
-          isAdmin={isAdmin}
-          isSaved={isSaved}
-          onReply={onReply}
-          onForward={onForward}
-          onReaction={onReaction}
-          onPin={onPin}
-          onSave={onSave}
-          onUnsave={onUnsave}
-          onDeleteMessage={onDeleteMessage}
-          handleEditClick={handleEditClick}
-          handleCopy={handleCopy}
-          setIsMenuOpen={setIsMenuOpen}
-          onHover={onHover}
-          position="right"
-          isForumPost={isForumPost}
-          canMarkSolution={canMarkSolution}
-          onMarkSolution={onMarkSolution}
-        />
-      )}
-    </div>
+        {/* Hover actions */}
+        {showHoverActions && (
+          <HoverActions
+            message={message}
+            isOwner={isOwner}
+            isAdmin={isAdmin}
+            isSaved={isSaved}
+            onReply={onReply}
+            onForward={onForward}
+            onReaction={onReaction}
+            onPin={onPin}
+            onSave={onSave}
+            onUnsave={onUnsave}
+            onDeleteMessage={onDeleteMessage}
+            handleEditClick={handleEditClick}
+            handleCopy={handleCopy}
+            setIsMenuOpen={setIsMenuOpen}
+            onHover={onHover}
+            position="right"
+            isForumPost={isForumPost}
+            canMarkSolution={canMarkSolution}
+            onMarkSolution={onMarkSolution}
+          />
+        )}
+      </ContextMenuTrigger>
+      <MessageContextMenuContent
+        message={message}
+        isOwner={isOwner}
+        isAdmin={isAdmin}
+        isSaved={isSaved}
+        onReply={onReply}
+        onForward={onForward}
+        onPin={onPin}
+        onSave={onSave}
+        onUnsave={onUnsave}
+        onDeleteMessage={onDeleteMessage}
+        handleEditClick={handleEditClick}
+        handleCopy={handleCopy}
+        isForumPost={isForumPost}
+        canMarkSolution={canMarkSolution}
+        onMarkSolution={onMarkSolution}
+      />
+    </ContextMenu>
   )
 }
 
@@ -1007,158 +1150,181 @@ export function BubbleMessageItem({
   const processedContent = processMentions(message.content, message.mentions, userNames)
 
   return (
-    <div
-      className={`group relative ${isHighlighted ? "animate-highlight-message" : ""}`}
-      style={{ marginTop: isGrouped ? "2px" : "12px" }}
-      onMouseEnter={() => onHover?.(message.id)}
-      onMouseLeave={() => onHover?.(null)}
-    >
-      {/* Solution indicator */}
-      {message.isSolvedAnswer && !isGrouped && (
-        <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-emerald-600 dark:text-emerald-400 font-medium ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
-          <CheckCircleIcon className="size-3" weight="fill" />
-          <span>Accepted Answer</span>
-        </div>
-      )}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <div
+            className={`group relative ${isHighlighted ? "animate-highlight-message" : ""}`}
+            style={{ marginTop: isGrouped ? "2px" : "12px" }}
+            onMouseEnter={() => onHover?.(message.id)}
+            onMouseLeave={() => onHover?.(null)}
+          />
+        }
+      >
+        {/* Solution indicator */}
+        {message.isSolvedAnswer && !isGrouped && (
+          <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-emerald-600 dark:text-emerald-400 font-medium ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
+            <CheckCircleIcon className="size-3" weight="fill" />
+            <span>Accepted Answer</span>
+          </div>
+        )}
 
-      {/* Reply indicator */}
-      {message.parentMessage && message.parentMessageId && (
-        <button
-          onClick={() => onScrollToMessage?.(message.parentMessageId!)}
-          className={`flex items-center gap-2 mb-1 px-4 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${isOwn ? "justify-end" : "justify-start ml-11"}`}
-        >
-          <ArrowBendUpLeftIcon className="size-3" />
-          <span>Replying to</span>
-          <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
-          <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
-        </button>
-      )}
+        {/* Reply indicator */}
+        {message.parentMessage && message.parentMessageId && (
+          <button
+            onClick={() => onScrollToMessage?.(message.parentMessageId!)}
+            className={`flex items-center gap-2 mb-1 px-4 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${isOwn ? "justify-end" : "justify-start ml-11"}`}
+          >
+            <ArrowBendUpLeftIcon className="size-3" />
+            <span>Replying to</span>
+            <span className="font-medium text-foreground/70">{message.parentMessage.userName}</span>
+            <span className="truncate max-w-[200px] break-words">{message.parentMessage.content}</span>
+          </button>
+        )}
 
-      {/* Forwarded indicator */}
-      {message.forwardedFrom && (
-        <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-muted-foreground ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
-          <ArrowBendDoubleUpRightIcon className="size-3" />
-          <span>Forwarded from</span>
-          <span className="font-medium text-foreground/70">
-            {message.forwardedFrom.channelName 
-              ? `#${message.forwardedFrom.channelName}` 
-              : message.forwardedFrom.userName 
-                ? `@${message.forwardedFrom.userName}` 
-                : "unknown"}
-          </span>
-        </div>
-      )}
+        {/* Forwarded indicator */}
+        {message.forwardedFrom && (
+          <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-muted-foreground ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
+            <ArrowBendDoubleUpRightIcon className="size-3" />
+            <span>Forwarded from</span>
+            <span className="font-medium text-foreground/70">
+              {message.forwardedFrom.channelName 
+                ? `#${message.forwardedFrom.channelName}` 
+                : message.forwardedFrom.userName 
+                  ? `@${message.forwardedFrom.userName}` 
+                  : "unknown"}
+            </span>
+          </div>
+        )}
 
-      {/* Pin indicator */}
-      {message.pinned && (
-        <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-amber-600 font-medium ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
-          <PushPinIcon className="size-3" weight="fill" />
-          <span>Pinned message</span>
-        </div>
-      )}
+        {/* Pin indicator */}
+        {message.pinned && (
+          <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-amber-600 font-medium ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
+            <PushPinIcon className="size-3" weight="fill" />
+            <span>Pinned message</span>
+          </div>
+        )}
 
-      <div className={`flex px-3 ${isOwn ? "justify-end" : "justify-start"}`}>
-        <div className={`flex gap-2 max-w-[75%] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-          {/* Avatar - hidden when grouped */}
-          {!isGrouped ? (
-            <Avatar
-              className="size-8 cursor-pointer hover:opacity-80 transition-opacity shrink-0"
-              onClick={() => onAvatarClick?.(message.user.id)}
-            >
-              {message.user.avatar ? (
-                <AvatarImage src={message.user.avatar} alt={message.user.name} />
-              ) : null}
-              <AvatarFallback className="bg-muted text-foreground text-[10px] font-medium">
-                {message.user.initials}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <div className="w-8 shrink-0" />
-          )}
-
-          {/* Bubble */}
-          <div className="flex flex-col">
-            {!isGrouped && !isOwn && (
-              <button
-                onClick={() => onNameClick?.(message.user.id)}
-                className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-3 hover:underline text-left"
+        <div className={`flex px-3 ${isOwn ? "justify-end" : "justify-start"}`}>
+          <div className={`flex gap-2 max-w-[75%] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+            {/* Avatar - hidden when grouped */}
+            {!isGrouped ? (
+              <Avatar
+                className="size-8 cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+                onClick={() => onAvatarClick?.(message.user.id)}
               >
-                {message.user.name}
-              </button>
+                {message.user.avatar ? (
+                  <AvatarImage src={message.user.avatar} alt={message.user.name} />
+                ) : null}
+                <AvatarFallback className="bg-muted text-foreground text-[10px] font-medium">
+                  {message.user.initials}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="w-8 shrink-0" />
             )}
-            
-            <div
-              className={`relative px-3 py-2 ${
-                isOwn
-                  ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                  : message.isSolvedAnswer
-                    ? "bg-emerald-500/10 text-foreground rounded-2xl rounded-bl-md ring-1 ring-emerald-500/30"
-                    : "bg-muted text-foreground rounded-2xl rounded-bl-md"
-              }`}
-            >
-              <MessageContent
-                message={message}
-                processedContent={processedContent}
-                searchQuery={searchQuery}
-                isEditing={isEditing}
-                editContent={editContent}
-                setEditContent={setEditContent}
-                handleEditKeyDown={handleEditKeyDown}
-                handleEditSave={handleEditSave}
-                handleEditCancel={handleEditCancel}
-                isGrouped={isGrouped}
-                isOwn={isOwn}
-                userNames={userNames}
-                currentUserId={currentUserId}
-                onReaction={onReaction}
-              />
+
+            {/* Bubble */}
+            <div className="flex flex-col">
+              {!isGrouped && !isOwn && (
+                <button
+                  onClick={() => onNameClick?.(message.user.id)}
+                  className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-3 hover:underline text-left"
+                >
+                  {message.user.name}
+                </button>
+              )}
               
               <div
-                className={`text-[10px] mt-1 flex items-center gap-1.5 ${
-                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                className={`relative px-3 py-2 ${
+                  isOwn
+                    ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                    : message.isSolvedAnswer
+                      ? "bg-emerald-500/10 text-foreground rounded-2xl rounded-bl-md ring-1 ring-emerald-500/30"
+                      : "bg-muted text-foreground rounded-2xl rounded-bl-md"
                 }`}
               >
-                <span>{message.timestamp}</span>
-                {message.editedAt && <span>(edited)</span>}
+                <MessageContent
+                  message={message}
+                  processedContent={processedContent}
+                  searchQuery={searchQuery}
+                  isEditing={isEditing}
+                  editContent={editContent}
+                  setEditContent={setEditContent}
+                  handleEditKeyDown={handleEditKeyDown}
+                  handleEditSave={handleEditSave}
+                  handleEditCancel={handleEditCancel}
+                  isGrouped={isGrouped}
+                  isOwn={isOwn}
+                  userNames={userNames}
+                  currentUserId={currentUserId}
+                  onReaction={onReaction}
+                />
+                
+                <div
+                  className={`text-[10px] mt-1 flex items-center gap-1.5 ${
+                    isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                  }`}
+                >
+                  <span>{message.timestamp}</span>
+                  {message.editedAt && <span>(edited)</span>}
+                </div>
               </div>
-            </div>
 
-            {/* Attachments - rendered outside the bubble */}
-            {message.attachments && message.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {message.attachments.map((attachment, index) => (
-                  <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
-                ))}
-              </div>
-            )}
+              {/* Attachments - rendered outside the bubble */}
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {message.attachments.map((attachment, index) => (
+                    <AttachmentItem key={`${attachment.storageId}-${index}`} attachment={attachment} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Hover actions */}
-      {showHoverActions && (
-        <HoverActions
-          message={message}
-          isOwner={isOwner}
-          isAdmin={isAdmin}
-          isSaved={isSaved}
-          onReply={onReply}
-          onForward={onForward}
-          onReaction={onReaction}
-          onPin={onPin}
-          onSave={onSave}
-          onUnsave={onUnsave}
-          onDeleteMessage={onDeleteMessage}
-          handleEditClick={handleEditClick}
-          handleCopy={handleCopy}
-          setIsMenuOpen={setIsMenuOpen}
-          onHover={onHover}
-          position={isOwn ? "left" : "right"}
-          isForumPost={isForumPost}
-          canMarkSolution={canMarkSolution}
-          onMarkSolution={onMarkSolution}
-        />
-      )}
-    </div>
+        {/* Hover actions */}
+        {showHoverActions && (
+          <HoverActions
+            message={message}
+            isOwner={isOwner}
+            isAdmin={isAdmin}
+            isSaved={isSaved}
+            onReply={onReply}
+            onForward={onForward}
+            onReaction={onReaction}
+            onPin={onPin}
+            onSave={onSave}
+            onUnsave={onUnsave}
+            onDeleteMessage={onDeleteMessage}
+            handleEditClick={handleEditClick}
+            handleCopy={handleCopy}
+            setIsMenuOpen={setIsMenuOpen}
+            onHover={onHover}
+            position={isOwn ? "left" : "right"}
+            isForumPost={isForumPost}
+            canMarkSolution={canMarkSolution}
+            onMarkSolution={onMarkSolution}
+          />
+        )}
+      </ContextMenuTrigger>
+      <MessageContextMenuContent
+        message={message}
+        isOwner={isOwner}
+        isAdmin={isAdmin}
+        isSaved={isSaved}
+        onReply={onReply}
+        onForward={onForward}
+        onPin={onPin}
+        onSave={onSave}
+        onUnsave={onUnsave}
+        onDeleteMessage={onDeleteMessage}
+        handleEditClick={handleEditClick}
+        handleCopy={handleCopy}
+        isForumPost={isForumPost}
+        canMarkSolution={canMarkSolution}
+        onMarkSolution={onMarkSolution}
+      />
+    </ContextMenu>
   )
 }

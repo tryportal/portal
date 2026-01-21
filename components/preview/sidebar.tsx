@@ -40,6 +40,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   AlertDialog,
@@ -140,107 +147,151 @@ function SortableChannel({
   const Icon = getIconComponent(channel.icon)
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="group relative"
-      onMouseEnter={onPrefetch}
-    >
-      <button
-        className={cn(
-          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-          isActive
-            ? "bg-secondary text-foreground"
-            : hasUnread && !isMuted
-              ? "text-foreground hover:bg-muted font-medium"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-          isAdmin && "pl-1",
-          isMuted && "opacity-60"
-        )}
-        onClick={onSelect}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <div
+            ref={setNodeRef}
+            style={style}
+            className="group relative"
+            onMouseEnter={onPrefetch}
+          />
+        }
       >
-        {isAdmin && (
-          <span
-            {...attributes}
-            {...listeners}
-            className="cursor-grab opacity-0 group-hover:opacity-100 text-muted-foreground/50 hover:text-muted-foreground"
-          >
-            <DotsSixVerticalIcon className="size-4" />
-          </span>
-        )}
-        {React.createElement(Icon, {
-          className: "size-4",
-          weight: isActive ? "fill" : "regular",
-        })}
-        <span className="truncate min-w-0">{channel.name}</span>
-        {channel.channelType === "forum" && (
-          <ChatCircleDotsIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
-        )}
-        {channel.isPrivate && (
-          <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
-        )}
-        {channel.isShared && (
-          <ShareNetworkIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
-        )}
-        {isMuted && (
-          <BellSlashIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
-        )}
-        {hasUnread && !isActive && !isMuted && (
-          <span className="ml-auto w-2 h-2 rounded-full bg-foreground shrink-0" />
-        )}
-      </button>
-
-      {/* More button on hover */}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-            />
-          }
+        <button
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            isActive
+              ? "bg-secondary text-foreground"
+              : hasUnread && !isMuted
+                ? "text-foreground hover:bg-muted font-medium"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            isAdmin && "pl-1",
+            isMuted && "opacity-60"
+          )}
+          onClick={onSelect}
         >
-          <DotsThreeIcon className="size-4" weight="bold" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={onMuteToggle}>
-            {isMuted ? (
+          {isAdmin && (
+            <span
+              {...attributes}
+              {...listeners}
+              className="cursor-grab opacity-0 group-hover:opacity-100 text-muted-foreground/50 hover:text-muted-foreground"
+            >
+              <DotsSixVerticalIcon className="size-4" />
+            </span>
+          )}
+          {React.createElement(Icon, {
+            className: "size-4",
+            weight: isActive ? "fill" : "regular",
+          })}
+          <span className="truncate min-w-0">{channel.name}</span>
+          {channel.channelType === "forum" && (
+            <ChatCircleDotsIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+          )}
+          {channel.isPrivate && (
+            <LockIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+          )}
+          {channel.isShared && (
+            <ShareNetworkIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+          )}
+          {isMuted && (
+            <BellSlashIcon className="size-3 text-muted-foreground shrink-0" weight="bold" />
+          )}
+          {hasUnread && !isActive && !isMuted && (
+            <span className="ml-auto w-2 h-2 rounded-full bg-foreground shrink-0" />
+          )}
+        </button>
+
+        {/* More button on hover */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+              />
+            }
+          >
+            <DotsThreeIcon className="size-4" weight="bold" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={onMuteToggle}>
+              {isMuted ? (
+                <>
+                  <BellIcon className="size-4" />
+                  Unmute channel
+                </>
+              ) : (
+                <>
+                  <BellSlashIcon className="size-4" />
+                  Mute channel
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <LinkIcon className="size-4" />
+              Copy link
+            </DropdownMenuItem>
+            {isAdmin && (
               <>
-                <BellIcon className="size-4" />
-                Unmute channel
-              </>
-            ) : (
-              <>
-                <BellSlashIcon className="size-4" />
-                Mute channel
+                <DropdownMenuItem onClick={onShare}>
+                  <ShareNetworkIcon className="size-4" />
+                  Share externally
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onEdit}>
+                  <PencilIcon className="size-4" />
+                  Edit channel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                  <TrashIcon className="size-4" />
+                  Delete channel
+                </DropdownMenuItem>
               </>
             )}
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <LinkIcon className="size-4" />
-            Copy link
-          </DropdownMenuItem>
-          {isAdmin && (
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ContextMenuTrigger>
+      
+      {/* Right-click context menu */}
+      <ContextMenuContent className="w-44">
+        <ContextMenuItem onClick={onMuteToggle}>
+          {isMuted ? (
             <>
-              <DropdownMenuItem onClick={onShare}>
-                <ShareNetworkIcon className="size-4" />
-                Share externally
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit}>
-                <PencilIcon className="size-4" />
-                Edit channel
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                <TrashIcon className="size-4" />
-                Delete channel
-              </DropdownMenuItem>
+              <BellIcon className="size-4" />
+              Unmute channel
+            </>
+          ) : (
+            <>
+              <BellSlashIcon className="size-4" />
+              Mute channel
             </>
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        </ContextMenuItem>
+        <ContextMenuItem>
+          <LinkIcon className="size-4" />
+          Copy link
+        </ContextMenuItem>
+        {isAdmin && (
+          <>
+            <ContextMenuItem onClick={onShare}>
+              <ShareNetworkIcon className="size-4" />
+              Share externally
+            </ContextMenuItem>
+            <ContextMenuItem onClick={onEdit}>
+              <PencilIcon className="size-4" />
+              Edit channel
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={onDelete}>
+              <TrashIcon className="size-4" />
+              Delete channel
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -754,39 +805,44 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 <LoadingSpinner size="sm" />
               </div>
             ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <div className="space-y-2">
-                  <SortableContext
-                    items={categoriesData?.map((c) => c._id) || []}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {categoriesData?.map((category) => (
-                      <SortableCategory
-                        key={category._id}
-                        category={category}
-                        isExpanded={expandedCategories.includes(category._id)}
-                        onToggle={() => toggleCategory(category._id)}
-                        activeChannelId={activeChannelFromUrl}
-                        onChannelSelect={handleChannelSelect}
-                        onChannelPrefetch={handleChannelPrefetch}
-                        isAdmin={isAdmin}
-                        onEditChannel={handleEditChannel}
-                        onDeleteChannel={handleDeleteChannel}
-                        onShareChannel={handleShareChannel}
-                        onDeleteCategory={handleDeleteCategory}
-                        mutedChannelIds={mutedChannelIds}
-                        onMuteToggle={handleMuteToggle}
-                        unreadChannelIds={unreadChannelIds}
-                      />
-                    ))}
-                  </SortableContext>
-                </div>
-                <DragOverlay>
+              <ContextMenu>
+                <ContextMenuTrigger
+                  render={
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                    />
+                  }
+                >
+                  <div className="space-y-2">
+                    <SortableContext
+                      items={categoriesData?.map((c) => c._id) || []}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {categoriesData?.map((category) => (
+                        <SortableCategory
+                          key={category._id}
+                          category={category}
+                          isExpanded={expandedCategories.includes(category._id)}
+                          onToggle={() => toggleCategory(category._id)}
+                          activeChannelId={activeChannelFromUrl}
+                          onChannelSelect={handleChannelSelect}
+                          onChannelPrefetch={handleChannelPrefetch}
+                          isAdmin={isAdmin}
+                          onEditChannel={handleEditChannel}
+                          onDeleteChannel={handleDeleteChannel}
+                          onShareChannel={handleShareChannel}
+                          onDeleteCategory={handleDeleteCategory}
+                          mutedChannelIds={mutedChannelIds}
+                          onMuteToggle={handleMuteToggle}
+                          unreadChannelIds={unreadChannelIds}
+                        />
+                      ))}
+                    </SortableContext>
+                  </div>
+                  <DragOverlay>
                   {activeId ? (() => {
                     // Check if dragging a category
                     const activeCategory = categoriesData?.find((c) => c._id === activeId)
@@ -824,7 +880,25 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     return null
                   })() : null}
                 </DragOverlay>
-              </DndContext>
+              </ContextMenuTrigger>
+              {/* Right-click context menu for channel list area (admin only) */}
+              {isAdmin && (
+                <ContextMenuContent className="w-44">
+                  <ContextMenuItem 
+                    onClick={() => setCreateChannelOpen(true)}
+                    disabled={!categoriesData || categoriesData.length === 0}
+                    className={(!categoriesData || categoriesData.length === 0) ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    <HashIcon className="size-4" />
+                    New channel
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => setCreateCategoryOpen(true)}>
+                    <FolderIcon className="size-4" />
+                    New category
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              )}
+            </ContextMenu>
             )
           )}
 
