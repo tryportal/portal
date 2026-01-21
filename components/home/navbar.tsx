@@ -5,7 +5,8 @@ import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import * as React from "react"
 import { List, X, ArrowRight } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { GitHubLogo } from "./icons/github-logo"
@@ -16,11 +17,20 @@ export function Navbar() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth()
   const userOrgs = useQuery(api.organizations.getUserOrganizations)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { resolvedTheme } = useTheme()
+  const [isMounted, setIsMounted] = useState(false)
+  const { resolvedTheme, mounted } = useTheme()
   const isDark = resolvedTheme === "dark"
+  
+  // Track client-side mount to prevent hydration mismatches
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   const targetOrg = userOrgs?.find((org: { role: string }) => org.role === "admin") || userOrgs?.[0]
   const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null
+  
+  // Only show auth-dependent content after mount and auth is loaded
+  const showAuthContent = isMounted && authLoaded
 
   return (
     <motion.nav
@@ -28,18 +38,30 @@ export function Navbar() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
       className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border"
+      suppressHydrationWarning
     >
       <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/home" className="flex items-center gap-2">
-            <Image
-              src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
-              alt="Portal"
-              width={80}
-              height={24}
-              className="h-5 w-auto"
-              priority
-            />
+            {mounted ? (
+              <Image
+                src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
+                alt="Portal"
+                width={80}
+                height={24}
+                className="h-5 w-auto"
+                priority
+              />
+            ) : (
+              <Image
+                src="/portal-full.svg"
+                alt="Portal"
+                width={80}
+                height={24}
+                className="h-5 w-auto"
+                priority
+              />
+            )}
           </Link>
           <Link
             href="https://macis.vercel.app"
@@ -48,13 +70,23 @@ export function Navbar() {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <span>a</span>
-            <Image
-              src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
-              alt="Macis"
-              width={40}
-              height={16}
-              className="h-4 w-auto"
-            />
+            {mounted ? (
+              <Image
+                src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
+                alt="Macis"
+                width={40}
+                height={16}
+                className="h-4 w-auto"
+              />
+            ) : (
+              <Image
+                src="/macis-black.svg"
+                alt="Macis"
+                width={40}
+                height={16}
+                className="h-4 w-auto"
+              />
+            )}
             <span>project</span>
           </Link>
         </div>
@@ -70,7 +102,7 @@ export function Navbar() {
           >
             <GitHubLogo size={16} />
           </Link>
-          {authLoaded && (
+          {showAuthContent ? (
             <>
               {isSignedIn && workspaceUrl ? (
                 <Link
@@ -98,7 +130,7 @@ export function Navbar() {
                 </>
               )}
             </>
-          )}
+          ) : null}
         </div>
 
         {/* Mobile Menu Button */}
@@ -140,7 +172,7 @@ export function Navbar() {
                 <GitHubLogo size={14} />
                 <span className="text-xs font-medium">GitHub</span>
               </Link>
-              {authLoaded && (
+              {showAuthContent ? (
                 <>
                   {isSignedIn && workspaceUrl ? (
                     <Link
@@ -171,7 +203,7 @@ export function Navbar() {
                     </>
                   )}
                 </>
-              )}
+              ) : null}
             </div>
           </motion.div>
         )}
