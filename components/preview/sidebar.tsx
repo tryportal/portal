@@ -806,15 +806,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               </div>
             ) : (
               <ContextMenu>
-                <ContextMenuTrigger
-                  render={
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                    />
-                  }
+                <ContextMenuTrigger>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  >
                 >
                   <div className="space-y-2">
                     <SortableContext
