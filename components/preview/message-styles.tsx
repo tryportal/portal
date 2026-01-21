@@ -13,6 +13,7 @@ import {
   PencilIcon,
   BookmarkSimpleIcon,
   CheckIcon,
+  CheckCircleIcon,
   XIcon,
   FileIcon,
   DownloadSimpleIcon,
@@ -41,6 +42,7 @@ import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 import type { Message, Attachment } from "./message-list"
 import { sanitizeSchema } from "@/lib/markdown-config"
+import { SolvedBadge } from "@/components/forum/solved-badge"
 
 // Utility functions for attachments
 function formatFileSize(bytes: number): string {
@@ -83,6 +85,10 @@ export interface MessageItemProps {
   // Controlled hover state from parent to prevent duplicate menus
   isHovered?: boolean
   onHover?: (messageId: string | null) => void
+  // Forum-specific props
+  isForumPost?: boolean
+  canMarkSolution?: boolean
+  onMarkSolution?: (messageId: string) => void
 }
 
 // Attachment context for getting URLs
@@ -568,6 +574,10 @@ function HoverActions({
   setIsMenuOpen,
   onHover,
   position = "right",
+  // Forum-specific props
+  isForumPost,
+  canMarkSolution,
+  onMarkSolution,
 }: {
   message: Message
   isOwner: boolean
@@ -585,6 +595,10 @@ function HoverActions({
   setIsMenuOpen: (open: boolean) => void
   onHover?: (messageId: string | null) => void
   position?: "left" | "right"
+  // Forum-specific props
+  isForumPost?: boolean
+  canMarkSolution?: boolean
+  onMarkSolution?: (messageId: string) => void
 }) {
   const handleSaveToggle = () => {
     if (isSaved) {
@@ -593,6 +607,9 @@ function HoverActions({
       onSave?.(message.id)
     }
   }
+
+  // Check if this message is currently the solution
+  const isSolvedAnswer = message.isSolvedAnswer
 
   return (
     <div 
@@ -636,7 +653,20 @@ function HoverActions({
         >
           <DotsThreeIcon className="size-3.5" weight="bold" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-48">
+          {/* Forum: Mark as Solution option */}
+          {isForumPost && canMarkSolution && onMarkSolution && (
+            <>
+              <DropdownMenuItem 
+                onClick={() => onMarkSolution(message.id)}
+                className={isSolvedAnswer ? "text-emerald-600 dark:text-emerald-400" : ""}
+              >
+                <CheckCircleIcon className="size-4" weight={isSolvedAnswer ? "fill" : "regular"} />
+                {isSolvedAnswer ? "Unmark as solution" : "Mark as solution"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem onClick={handleCopy}>
             <CopyIcon className="size-4" />
             Copy text
@@ -707,6 +737,10 @@ export function CompactMessageItem({
   isHighlighted,
   isHovered = false,
   onHover,
+  // Forum-specific props
+  isForumPost,
+  canMarkSolution,
+  onMarkSolution,
 }: MessageItemProps) {
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
@@ -750,11 +784,19 @@ export function CompactMessageItem({
 
   return (
     <div
-      className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""}`}
+      className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""}`}
       style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
       onMouseEnter={() => onHover?.(message.id)}
       onMouseLeave={() => onHover?.(null)}
     >
+      {/* Solution indicator */}
+      {message.isSolvedAnswer && !isGrouped && (
+        <div className="flex items-center gap-1.5 mb-1 ml-[48px] text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          <CheckCircleIcon className="size-3" weight="fill" />
+          <span>Accepted Answer</span>
+        </div>
+      )}
+
       {/* Reply indicator */}
       {message.parentMessage && message.parentMessageId && (
         <button
@@ -806,7 +848,7 @@ export function CompactMessageItem({
             </AvatarFallback>
           </Avatar>
         ) : (
-          <div className="w-9 flex-shrink-0 flex items-start justify-center pt-[2px]">
+          <div className="w-9 shrink-0 flex items-start justify-center pt-[2px]">
             <span 
               className="text-[8px] leading-none whitespace-nowrap text-transparent group-hover:text-muted-foreground transition-colors font-medium tabular-nums cursor-default select-none"
               title={message.createdAt ? formatFullDateTime(message.createdAt) : undefined}
@@ -819,7 +861,7 @@ export function CompactMessageItem({
         {/* Message content */}
         <div className="flex-1 min-w-0">
           {!isGrouped && (
-            <div className="flex items-baseline gap-2 mb-0.5">
+            <div className="flex items-center gap-2 mb-0.5">
               <button
                 onClick={() => onNameClick?.(message.user.id)}
                 className="font-semibold text-sm text-foreground hover:underline"
@@ -884,6 +926,9 @@ export function CompactMessageItem({
           setIsMenuOpen={setIsMenuOpen}
           onHover={onHover}
           position="right"
+          isForumPost={isForumPost}
+          canMarkSolution={canMarkSolution}
+          onMarkSolution={onMarkSolution}
         />
       )}
     </div>
@@ -915,6 +960,10 @@ export function BubbleMessageItem({
   isHighlighted,
   isHovered = false,
   onHover,
+  // Forum-specific props
+  isForumPost,
+  canMarkSolution,
+  onMarkSolution,
 }: MessageItemProps) {
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
@@ -964,6 +1013,14 @@ export function BubbleMessageItem({
       onMouseEnter={() => onHover?.(message.id)}
       onMouseLeave={() => onHover?.(null)}
     >
+      {/* Solution indicator */}
+      {message.isSolvedAnswer && !isGrouped && (
+        <div className={`flex items-center gap-1.5 mb-1 px-4 text-xs text-emerald-600 dark:text-emerald-400 font-medium ${isOwn ? "justify-end" : "justify-start ml-11"}`}>
+          <CheckCircleIcon className="size-3" weight="fill" />
+          <span>Accepted Answer</span>
+        </div>
+      )}
+
       {/* Reply indicator */}
       {message.parentMessage && message.parentMessageId && (
         <button
@@ -1005,7 +1062,7 @@ export function BubbleMessageItem({
           {/* Avatar - hidden when grouped */}
           {!isGrouped ? (
             <Avatar
-              className="size-8 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+              className="size-8 cursor-pointer hover:opacity-80 transition-opacity shrink-0"
               onClick={() => onAvatarClick?.(message.user.id)}
             >
               {message.user.avatar ? (
@@ -1016,7 +1073,7 @@ export function BubbleMessageItem({
               </AvatarFallback>
             </Avatar>
           ) : (
-            <div className="w-8 flex-shrink-0" />
+            <div className="w-8 shrink-0" />
           )}
 
           {/* Bubble */}
@@ -1034,7 +1091,9 @@ export function BubbleMessageItem({
               className={`relative px-3 py-2 ${
                 isOwn
                   ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                  : "bg-muted text-foreground rounded-2xl rounded-bl-md"
+                  : message.isSolvedAnswer
+                    ? "bg-emerald-500/10 text-foreground rounded-2xl rounded-bl-md ring-1 ring-emerald-500/30"
+                    : "bg-muted text-foreground rounded-2xl rounded-bl-md"
               }`}
             >
               <MessageContent
@@ -1095,6 +1154,9 @@ export function BubbleMessageItem({
           setIsMenuOpen={setIsMenuOpen}
           onHover={onHover}
           position={isOwn ? "left" : "right"}
+          isForumPost={isForumPost}
+          canMarkSolution={canMarkSolution}
+          onMarkSolution={onMarkSolution}
         />
       )}
     </div>

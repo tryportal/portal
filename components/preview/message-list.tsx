@@ -1254,6 +1254,9 @@ export function MessageList({
                         isHighlighted={highlightedMessageId === message.id}
                         isHovered={hoveredMessageId === message.id}
                         onHover={handleMessageHover}
+                        isForumPost={isForumPost}
+                        canMarkSolution={!!onMarkSolution}
+                        onMarkSolution={onMarkSolution}
                       />
                     </div>
                   </React.Fragment>

@@ -291,14 +291,19 @@ export function ForumInterface({
   }
 
   const handleMarkSolutionComment = async (messageId: string) => {
-    if (!selectedPostId) return
+    if (!selectedPostId || !selectedPost?.post) return
     try {
-      await markAsSolved({
-        postId: selectedPostId,
-        solvedCommentId: messageId as Id<"messages">,
-      })
+      // Toggle: if this message is already the solution, unmark it; otherwise mark it
+      if (selectedPost.post.solvedCommentId === messageId) {
+        await markAsUnsolved({ postId: selectedPostId })
+      } else {
+        await markAsSolved({
+          postId: selectedPostId,
+          solvedCommentId: messageId as Id<"messages">,
+        })
+      }
     } catch (error) {
-      console.error("Failed to mark solution:", error)
+      console.error("Failed to toggle solution:", error)
     }
   }
 
