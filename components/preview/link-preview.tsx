@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import { XIcon, LinkIcon, GlobeIcon } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -22,9 +21,26 @@ interface LinkPreviewProps {
   compact?: boolean
 }
 
-export function LinkPreview({ embed, onRemove, className, compact = false }: LinkPreviewProps) {
+// Memoized LinkPreview to prevent unnecessary re-renders during scroll/hover
+function LinkPreviewComponent({ 
+  embed, 
+  onRemove, 
+  className, 
+  compact = false 
+}: LinkPreviewProps) {
+  // Use refs to track error state to avoid re-renders during scroll
+  // Only use state for the initial render decision
   const [imageError, setImageError] = React.useState(false)
   const [faviconError, setFaviconError] = React.useState(false)
+  
+  // Prevent error state updates after unmount
+  const isMountedRef = React.useRef(true)
+  React.useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const hostname = React.useMemo(() => {
     try {
@@ -34,9 +50,22 @@ export function LinkPreview({ embed, onRemove, className, compact = false }: Lin
     }
   }, [embed.url, embed.siteName])
 
-  const handleClick = () => {
+  const handleClick = React.useCallback(() => {
     window.open(embed.url, "_blank", "noopener,noreferrer")
-  }
+  }, [embed.url])
+
+  // Stable error handlers that check mount status
+  const handleImageError = React.useCallback(() => {
+    if (isMountedRef.current) {
+      setImageError(true)
+    }
+  }, [])
+
+  const handleFaviconError = React.useCallback(() => {
+    if (isMountedRef.current) {
+      setFaviconError(true)
+    }
+  }, [])
 
   if (compact) {
     return (
@@ -46,14 +75,16 @@ export function LinkPreview({ embed, onRemove, className, compact = false }: Lin
           className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted w-full"
         >
           {embed.favicon && !faviconError ? (
-            <Image
+            // Use native img to avoid Next.js Image lazy loading issues in scroll containers
+            <img
               src={embed.favicon}
               alt=""
               width={16}
               height={16}
-              className="rounded-sm flex-shrink-0"
-              onError={() => setFaviconError(true)}
-              unoptimized
+              className="rounded-sm flex-shrink-0 size-4 object-contain"
+              onError={handleFaviconError}
+              loading="eager"
+              decoding="async"
             />
           ) : (
             <GlobeIcon className="size-4 text-muted-foreground flex-shrink-0" />
@@ -86,16 +117,16 @@ export function LinkPreview({ embed, onRemove, className, compact = false }: Lin
         onClick={handleClick}
         className="flex rounded-lg border border-border bg-card overflow-hidden text-left transition-colors hover:bg-muted w-full"
       >
-        {/* Image preview */}
+        {/* Image preview - use native img to avoid lazy loading issues */}
         {embed.image && !imageError && (
-          <div className="relative w-24 h-24 flex-shrink-0 bg-muted">
-            <Image
+          <div className="relative w-24 h-24 flex-shrink-0 bg-muted overflow-hidden">
+            <img
               src={embed.image}
               alt=""
-              fill
-              className="object-cover"
-              onError={() => setImageError(true)}
-              unoptimized
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={handleImageError}
+              loading="eager"
+              decoding="async"
             />
           </div>
         )}
@@ -105,14 +136,15 @@ export function LinkPreview({ embed, onRemove, className, compact = false }: Lin
           {/* Site info */}
           <div className="flex items-center gap-1.5 mb-1">
             {embed.favicon && !faviconError ? (
-              <Image
+              <img
                 src={embed.favicon}
                 alt=""
                 width={14}
                 height={14}
-                className="rounded-sm"
-                onError={() => setFaviconError(true)}
-                unoptimized
+                className="rounded-sm size-3.5 object-contain"
+                onError={handleFaviconError}
+                loading="eager"
+                decoding="async"
               />
             ) : (
               <GlobeIcon className="size-3.5 text-muted-foreground" />
@@ -155,6 +187,9 @@ export function LinkPreview({ embed, onRemove, className, compact = false }: Lin
     </div>
   )
 }
+
+// Export the memoized component
+export const LinkPreview = React.memo(LinkPreviewComponent)
 
 // Loading state component
 export function LinkPreviewSkeleton({ onRemove }: { onRemove?: () => void }) {
