@@ -148,16 +148,13 @@ function SortableChannel({
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger
-        render={
-          <div
-            ref={setNodeRef}
-            style={style}
-            className="group relative"
-            onMouseEnter={onPrefetch}
-          />
-        }
-      >
+      <ContextMenuTrigger>
+        <div
+          ref={setNodeRef}
+          style={style}
+          className="group relative"
+          onMouseEnter={onPrefetch}
+        >
         <button
           className={cn(
             "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -252,6 +249,7 @@ function SortableChannel({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </ContextMenuTrigger>
       
       {/* Right-click context menu */}
@@ -813,7 +811,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                   >
-                >
                   <div className="space-y-2">
                     <SortableContext
                       items={categoriesData?.map((c) => c._id) || []}
@@ -878,6 +875,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     return null
                   })() : null}
                 </DragOverlay>
+              </DndContext>
               </ContextMenuTrigger>
               {/* Right-click context menu for channel list area (admin only) */}
               {isAdmin && (
