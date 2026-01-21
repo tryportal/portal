@@ -371,7 +371,8 @@ export function ForumInterface({
     // TODO: Implement edit post dialog
   }
 
-  // Check if we have posts
+  // Check loading state and posts
+  const isLoading = postsData === undefined
   const hasPosts = posts.length > 0
 
   return (
@@ -405,7 +406,7 @@ export function ForumInterface({
         </div>
 
         {/* Posts list */}
-        {hasPosts ? (
+        {isLoading || hasPosts ? (
           <PostsList
             posts={posts}
             authors={authors}
@@ -413,6 +414,7 @@ export function ForumInterface({
             onSelectPost={handleSelectPost}
             onCreatePost={handleCreatePost}
             canCreatePost={canPost}
+            isLoading={isLoading}
           />
         ) : (
           <EmptyForumState

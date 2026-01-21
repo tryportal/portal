@@ -150,9 +150,28 @@ export function PostsList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-              Loading posts...
-            </div>
+            <>
+              {/* Skeleton loaders for posts */}
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-lg border border-border bg-card animate-pulse"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="size-8 rounded-full bg-muted shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-full" />
+                      <div className="h-3 bg-muted rounded w-5/6" />
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="h-3 bg-muted rounded w-16" />
+                        <div className="h-3 bg-muted rounded w-12" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
           ) : filteredPosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center px-4">
               <p className="text-muted-foreground text-sm">
