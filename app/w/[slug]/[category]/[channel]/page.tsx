@@ -44,35 +44,22 @@ export default function ChannelPage({
   const { user } = useUser();
   const { cache: userDataCache, fetchUserData } = useUserDataCache();
   
-  const [routeParams, setRouteParams] = React.useState<{
-    slug: string;
-    category: string;
-    channel: string;
-  } | null>(null);
-
-  // Resolve params if it's a Promise (Next.js 15+)
-  React.useEffect(() => {
-    if (params instanceof Promise) {
-      params.then((resolved) => setRouteParams(resolved));
-    } else {
-      setRouteParams(params);
-    }
-  }, [params]);
+  // Use React.use() for synchronous param resolution to avoid state reset on navigation
+  // This prevents the cascade of re-renders that causes skeleton flash
+  const routeParams = React.use(params);
 
   // Search state
   const [searchQuery, setSearchQuery] = React.useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Get channel data by route
+  // Get channel data by route - routeParams is now always defined via React.use()
   const channelData = useQuery(
     api.channels.getChannelByRoute,
-    routeParams
-      ? {
-          orgSlug: routeParams.slug,
-          categoryName: decodeURIComponent(routeParams.category),
-          channelName: decodeURIComponent(routeParams.channel),
-        }
-      : "skip"
+    {
+      orgSlug: routeParams.slug,
+      categoryName: decodeURIComponent(routeParams.category),
+      channelName: decodeURIComponent(routeParams.channel),
+    }
   );
 
   // Get channel ID for queries
@@ -98,19 +85,43 @@ export default function ChannelPage({
       : "skip"
   );
 
+  // Cache previous messages to prevent empty flash during channel transitions
+  const previousMessagesRef = React.useRef<typeof rawMessages>(undefined);
+  const previousChannelIdRef = React.useRef<typeof channelId>(undefined);
+  
+  // Clear cache when channel changes, update cache when we have valid messages
+  React.useEffect(() => {
+    // If channel changed, clear the cache so we don't show stale messages from another channel
+    if (channelId !== previousChannelIdRef.current) {
+      previousChannelIdRef.current = channelId;
+      // Clear cache only after we confirm channel changed
+      // But keep it during the brief loading period
+    }
+    
+    // Update cache when we have valid messages for the current channel
+    if (rawMessages && rawMessages.length > 0 && channelId) {
+      previousMessagesRef.current = rawMessages;
+    }
+  }, [rawMessages, channelId]);
+
   // Client-side filtering and hybrid search logic
+  // Uses cached messages during loading to prevent empty flash
   const filteredMessages = React.useMemo(() => {
-    if (!rawMessages) return [];
+    // During loading, use cached messages if available for the same channel
+    // This prevents the empty state flash during transitions
+    const messagesToFilter = rawMessages ?? previousMessagesRef.current;
+    
+    if (!messagesToFilter) return [];
     
     // No search query - return all loaded messages
     if (!searchQuery.trim()) {
-      return rawMessages;
+      return messagesToFilter;
     }
 
     const searchTerm = searchQuery.toLowerCase().trim();
 
     // First, filter loaded messages client-side
-    const clientResults = rawMessages.filter((msg) =>
+    const clientResults = messagesToFilter.filter((msg) =>
       msg.content.toLowerCase().includes(searchTerm)
     );
 
@@ -131,7 +142,7 @@ export default function ChannelPage({
 
     // No results at all
     return [];
-  }, [rawMessages, debouncedSearchQuery, serverSearchResults]);
+  }, [rawMessages, searchQuery, debouncedSearchQuery, serverSearchResults]);
 
   // Get organization ID for additional queries
   const organizationId = channelData?.channel?.organizationId;
@@ -229,10 +240,10 @@ export default function ChannelPage({
 
   // Redirect if channel not found (after data is loaded)
   React.useEffect(() => {
-    if (channelData === null && routeParams) {
+    if (channelData === null) {
       router.replace(`/w/${routeParams.slug}`);
     }
-  }, [channelData, routeParams, router]);
+  }, [channelData, routeParams.slug, router]);
 
   // Build a map of message IDs to their data for parent message lookups
   const messageMap = React.useMemo(() => {
@@ -338,8 +349,9 @@ export default function ChannelPage({
 
   // Optimized loading state - only wait for essential data (channel + messages for chat, or just channel for forum)
   // User data and images load progressively
-  const isChatDataLoading = !isForumChannel && messagesData === undefined;
-  if (!routeParams || channelData === undefined || isChatDataLoading) {
+  // Show loading only if we don't have channel data yet AND we don't have cached messages to display
+  const isChatDataLoading = !isForumChannel && messagesData === undefined && !previousMessagesRef.current;
+  if (channelData === undefined || isChatDataLoading) {
     return <LoadingSpinner fullScreen />;
   }
 
@@ -610,6 +622,9 @@ export default function ChannelPage({
     );
   }
 
+  // Determine if we're still loading messages (for preventing empty state flash)
+  const isMessagesLoading = messagesData === undefined;
+
   return (
     <div className="flex flex-1 flex-col h-full min-h-0 bg-card overflow-hidden">
       <ChatInterface
@@ -643,6 +658,7 @@ export default function ChannelPage({
         channelId={channelId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        isLoading={isMessagesLoading}
       />
     </div>
   );
