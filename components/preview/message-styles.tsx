@@ -867,7 +867,8 @@ export function CompactMessageItem({
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const isOwner = currentUserId === message.user.id
 
-  const showHoverActions = isHovered || isMenuOpen
+  // Don't show hover actions for pending messages (they don't exist on server yet)
+  const showHoverActions = (isHovered || isMenuOpen) && !message.isPending
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -907,7 +908,7 @@ export function CompactMessageItem({
       <ContextMenuTrigger
         render={
           <div
-            className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""}`}
+            className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""} ${message.isPending ? "opacity-50" : ""}`}
             style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
             onMouseEnter={() => onHover?.(message.id)}
             onMouseLeave={() => onHover?.(null)}
@@ -1114,7 +1115,8 @@ export function BubbleMessageItem({
   const isOwner = currentUserId === message.user.id
   const isOwn = isOwner
 
-  const showHoverActions = isHovered || isMenuOpen
+  // Don't show hover actions for pending messages (they don't exist on server yet)
+  const showHoverActions = (isHovered || isMenuOpen) && !message.isPending
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -1154,7 +1156,7 @@ export function BubbleMessageItem({
       <ContextMenuTrigger
         render={
           <div
-            className={`group relative ${isHighlighted ? "animate-highlight-message" : ""}`}
+            className={`group relative ${isHighlighted ? "animate-highlight-message" : ""} ${message.isPending ? "opacity-50" : ""}`}
             style={{ marginTop: isGrouped ? "2px" : "12px" }}
             onMouseEnter={() => onHover?.(message.id)}
             onMouseLeave={() => onHover?.(null)}

@@ -68,6 +68,9 @@ export default function ConversationPage({
   const [searchQuery, setSearchQuery] = React.useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+  // Pending messages state for optimistic updates
+  const [pendingMessages, setPendingMessages] = React.useState<Message[]>([]);
+
   // Get organization by slug for forward dialog
   const organization = useQuery(
     api.organizations.getOrganizationBySlug,
@@ -325,6 +328,11 @@ export default function ConversationPage({
     })
   }, [filteredMessages, userDataCache, user, messageMap, userNames])
 
+  // Combine server messages with pending (optimistic) messages for instant feedback
+  const allMessages = React.useMemo(() => {
+    return [...messages, ...pendingMessages];
+  }, [messages, pendingMessages]);
+
   // Loading state
   if (!routeParams || conversation === undefined || messagesData === undefined) {
     return <LoadingSpinner fullScreen />
@@ -358,7 +366,54 @@ export default function ConversationPage({
     parentMessageId?: string,
     linkEmbed?: LinkEmbed
   ) => {
-    if (!conversationId) return
+    if (!conversationId || !currentUserId) return
+
+    // Create optimistic message for instant feedback
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = Date.now();
+    
+    // Get current user's display info
+    const userName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}` 
+      : user?.firstName || "You";
+    const initials = user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`
+      : user?.firstName?.[0] || "?";
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      content,
+      timestamp: new Date(now).toLocaleTimeString([], { 
+        hour: "numeric", 
+        minute: "2-digit" 
+      }),
+      createdAt: now,
+      user: {
+        id: currentUserId,
+        name: userName,
+        avatar: user?.imageUrl || undefined,
+        initials,
+      },
+      attachments: attachments?.map(a => ({
+        storageId: a.storageId,
+        name: a.name,
+        size: a.size,
+        type: a.type,
+      })),
+      linkEmbed,
+      parentMessageId,
+      parentMessage: parentMessageId ? (() => {
+        const parent = messageMap.get(parentMessageId);
+        return parent ? {
+          content: parent.content,
+          userName: userNames[parent.userId] || "Unknown User",
+        } : undefined;
+      })() : undefined,
+      isPending: true,
+    };
+
+    // Add optimistic message immediately
+    setPendingMessages(prev => [...prev, optimisticMessage]);
 
     try {
       await sendMessage({
@@ -378,6 +433,10 @@ export default function ConversationPage({
       })
     } catch (error) {
       console.error("Failed to send message:", error)
+      toast.error("Failed to send message")
+    } finally {
+      // Remove pending message - the real message will appear via subscription
+      setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     }
   }
 
@@ -518,7 +577,7 @@ export default function ConversationPage({
 
       {/* Message List - takes up available space */}
       <MessageList
-        messages={messages}
+        messages={allMessages}
         currentUserId={currentUserId}
         onDeleteMessage={handleDeleteMessage}
         onEditMessage={handleEditMessage}

@@ -107,6 +107,8 @@ export interface Message {
   // Forum-specific fields
   isOP?: boolean // Is original poster (for forum posts)
   isSolvedAnswer?: boolean // Is the accepted answer (for forum posts)
+  // Optimistic update state
+  isPending?: boolean // Message is being sent (not yet confirmed by server)
 }
 
 interface MessageListProps {
