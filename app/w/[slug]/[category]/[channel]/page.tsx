@@ -89,23 +89,24 @@ export default function ChannelPage({
   );
 
   // Cache previous messages to prevent empty flash during channel transitions
+  // Store both messages and the channel ID they belong to
   const previousMessagesRef = React.useRef<typeof rawMessages>(undefined);
   const previousChannelIdRef = React.useRef<typeof channelId>(undefined);
   
-  // Clear cache when channel changes, update cache when we have valid messages
-  React.useEffect(() => {
-    // If channel changed, clear the cache so we don't show stale messages from another channel
-    if (channelId !== previousChannelIdRef.current) {
-      previousChannelIdRef.current = channelId;
-      // Clear cache only after we confirm channel changed
-      // But keep it during the brief loading period
-    }
-    
-    // Update cache when we have valid messages for the current channel
-    if (rawMessages && rawMessages.length > 0 && channelId) {
-      previousMessagesRef.current = rawMessages;
-    }
-  }, [rawMessages, channelId]);
+  // Synchronously detect channel change during render to prevent stale data flash
+  // This runs before any rendering with potentially stale data
+  const isChannelChanging = channelId !== previousChannelIdRef.current;
+  
+  // Update cache refs - this must happen during render to be synchronous
+  // We use a layout effect pattern embedded in render for immediate updates
+  if (isChannelChanging) {
+    // Channel changed - clear the stale cache immediately (during render)
+    previousMessagesRef.current = undefined;
+    previousChannelIdRef.current = channelId;
+  } else if (rawMessages && rawMessages.length > 0 && channelId) {
+    // Same channel with new messages - update the cache
+    previousMessagesRef.current = rawMessages;
+  }
 
   // Client-side filtering and hybrid search logic
   // Uses cached messages during loading to prevent empty flash
@@ -433,6 +434,7 @@ export default function ChannelPage({
   // Optimized loading state - only wait for essential data (channel + messages for chat, or just channel for forum)
   // User data and images load progressively
   // Show loading only if we don't have channel data yet AND we don't have cached messages to display
+  // The cache is now correctly cleared on channel change, so stale messages won't be shown
   const isChatDataLoading = !isForumChannel && messagesData === undefined && !previousMessagesRef.current;
   if (channelData === undefined || isChatDataLoading) {
     return <LoadingSpinner fullScreen />;
