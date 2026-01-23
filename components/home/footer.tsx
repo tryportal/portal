@@ -49,7 +49,6 @@ export function Footer() {
         <div className="pt-4 border-t border-border">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              a{" "}
               <Link
                 href="https://macis.vercel.app"
                 target="_blank"
@@ -57,14 +56,15 @@ export function Footer() {
                 className="hover:text-foreground transition-colors"
               >
                 <Image
-                  src={isDark ? "/macis-white.svg" : "/macis-black.svg"}
+                  src="/macis-full.svg"
                   alt="Macis"
-                  width={40}
-                  height={16}
-                  className="h-3 w-auto inline-block opacity-60 hover:opacity-100 transition-opacity"
+                  width={411}
+                  height={128}
+                  className={`h-4 w-auto inline-block opacity-60 hover:opacity-100 transition-opacity ${
+                    isDark ? "invert" : ""
+                  }`}
                 />
-              </Link>{" "}
-              project
+              </Link>
             </span>
             <Link
               href="https://github.com/tryportal/portal"
