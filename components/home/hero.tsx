@@ -27,8 +27,8 @@ export function Hero() {
   const workspaceUrl = targetOrg?.slug ? `/w/${targetOrg.slug}` : null;
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-center px-6 font-[family-name:var(--font-jetbrains-mono)]">
-      <div className="max-w-xl w-full py-6">
+    <section className="flex-1 flex flex-col items-center justify-center font-[family-name:var(--font-jetbrains-mono)]">
+      <div className="max-w-xl mx-auto w-full px-6 py-6">
         {/* Logo */}
         <div className="flex items-center gap-4 mb-6">
           <Image

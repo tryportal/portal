@@ -11,8 +11,8 @@ export function Footer() {
   const isDark = resolvedTheme === "dark";
 
   return (
-    <footer className="py-4 px-6 font-[family-name:var(--font-jetbrains-mono)] shrink-0">
-      <div className="max-w-xl mx-auto space-y-4">
+    <footer className="font-[family-name:var(--font-jetbrains-mono)] shrink-0">
+      <div className="max-w-xl mx-auto w-full px-6 py-4 space-y-4">
         {/* Top row: Copyright and links */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()}</span>

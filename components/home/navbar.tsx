@@ -24,7 +24,7 @@ export function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 font-[family-name:var(--font-jetbrains-mono)]">
-      <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/home" className="flex items-center gap-3 group">
           <Image
             src={isDark ? "/portal-dark.svg" : "/portal.svg"}
