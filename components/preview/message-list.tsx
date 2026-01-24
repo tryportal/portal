@@ -52,18 +52,18 @@ import { sanitizeSchema } from "@/lib/markdown-config"
 
 export type { LinkEmbedData as LinkEmbed }
 
-// Context for message hover state to avoid re-rendering entire list
-const HoveredMessageContext = React.createContext<{
-  hoveredMessageId: string | null
-  setHoveredMessageId: (id: string | null) => void
-} | null>(null)
+// Context for coordinating hover state across messages without causing re-renders
+// Uses a ref + callback pattern so setting hover doesn't trigger parent re-render
+type HoverCoordinatorContextType = {
+  hoveredIdRef: React.MutableRefObject<string | null>
+  setHoveredId: (id: string | null) => void
+  subscribe: (callback: () => void) => () => void
+}
 
-export const useHoveredMessage = () => {
-  const context = React.useContext(HoveredMessageContext)
-  if (!context) {
-    throw new Error("useHoveredMessage must be used within MessageListProvider")
-  }
-  return context
+const HoverCoordinatorContext = React.createContext<HoverCoordinatorContextType | null>(null)
+
+export const useHoverCoordinator = () => {
+  return React.useContext(HoverCoordinatorContext)
 }
 
 export interface Attachment {
@@ -915,10 +915,25 @@ export function MessageList({
   const [newMessageCount, setNewMessageCount] = React.useState(0)
   // State for highlighting a message after scrolling to it
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<string | null>(null)
-  // Track which message is currently hovered (lifted state to prevent duplicate menus)
-  const [hoveredMessageId, setHoveredMessageId] = React.useState<string | null>(null)
-  // Ref for debouncing hover state changes to prevent flickering
-  const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Hover coordination system - uses refs and subscriptions to avoid re-renders
+  const hoveredIdRef = React.useRef<string | null>(null)
+  const hoverSubscribersRef = React.useRef<Set<() => void>>(new Set())
+  
+  const hoverCoordinator = React.useMemo<HoverCoordinatorContextType>(() => ({
+    hoveredIdRef,
+    setHoveredId: (id: string | null) => {
+      hoveredIdRef.current = id
+      // Notify all subscribers that hover state changed
+      hoverSubscribersRef.current.forEach(callback => callback())
+    },
+    subscribe: (callback: () => void) => {
+      hoverSubscribersRef.current.add(callback)
+      return () => {
+        hoverSubscribersRef.current.delete(callback)
+      }
+    }
+  }), [])
 
   // Get user message style settings
   const { settings } = useUserSettings()
@@ -988,37 +1003,6 @@ export function MessageList({
       }
     }
   }, [messages])
-
-  // Callback to handle hover state change with debouncing to prevent flickering
-  // when cursor moves between message content and hover actions toolbar
-  const handleMessageHover = React.useCallback((messageId: string | null) => {
-    // Clear any pending timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-      hoverTimeoutRef.current = null
-    }
-
-    if (messageId !== null) {
-      // Immediately show hover actions when entering a message
-      setHoveredMessageId(messageId)
-    } else {
-      // Delay hiding hover actions to prevent flickering when moving to toolbar
-      // This gives time for the cursor to enter the toolbar before we hide it
-      hoverTimeoutRef.current = setTimeout(() => {
-        setHoveredMessageId(null)
-        hoverTimeoutRef.current = null
-      }, 100)
-    }
-  }, [])
-
-  // Cleanup hover timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
-      }
-    }
-  }, [])
 
   // Callback to scroll to a specific message
   const scrollToMessage = React.useCallback((messageId: string) => {
@@ -1177,7 +1161,7 @@ export function MessageList({
   }
 
   return (
-    <HoveredMessageContext.Provider value={{ hoveredMessageId, setHoveredMessageId }}>
+    <HoverCoordinatorContext.Provider value={hoverCoordinator}>
       <AttachmentUrlContext.Provider value={attachmentUrls}>
         <div className="relative flex-1 min-h-0 overflow-hidden">
         <div
@@ -1254,8 +1238,6 @@ export function MessageList({
                         isGrouped={isGrouped}
                         searchQuery={searchQuery}
                         isHighlighted={highlightedMessageId === message.id}
-                        isHovered={hoveredMessageId === message.id}
-                        onHover={handleMessageHover}
                         isForumPost={isForumPost}
                         canMarkSolution={!!onMarkSolution}
                         onMarkSolution={onMarkSolution}
@@ -1299,6 +1281,6 @@ export function MessageList({
         )}
         </div>
       </AttachmentUrlContext.Provider>
-    </HoveredMessageContext.Provider>
+    </HoverCoordinatorContext.Provider>
   )
 }

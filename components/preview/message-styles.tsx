@@ -48,6 +48,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { replaceMentionsInText } from "./mention"
 import { LinkPreview, type LinkEmbedData } from "./link-preview"
 import type { Message, Attachment } from "./message-list"
+import { useHoverCoordinator } from "./message-list"
 import { sanitizeSchema } from "@/lib/markdown-config"
 import { SolvedBadge } from "@/components/forum/solved-badge"
 
@@ -89,9 +90,6 @@ export interface MessageItemProps {
   isGrouped?: boolean
   searchQuery?: string
   isHighlighted?: boolean
-  // Controlled hover state from parent to prevent duplicate menus
-  isHovered?: boolean
-  onHover?: (messageId: string | null) => void
   // Forum-specific props
   isForumPost?: boolean
   canMarkSolution?: boolean
@@ -579,7 +577,6 @@ function HoverActions({
   handleEditClick,
   handleCopy,
   setIsMenuOpen,
-  onHover,
   position = "right",
   // Forum-specific props
   isForumPost,
@@ -600,7 +597,6 @@ function HoverActions({
   handleEditClick: () => void
   handleCopy: () => void
   setIsMenuOpen: (open: boolean) => void
-  onHover?: (messageId: string | null) => void
   position?: "left" | "right"
   // Forum-specific props
   isForumPost?: boolean
@@ -621,8 +617,6 @@ function HoverActions({
   return (
     <div 
       className={`absolute -top-3 ${position === "left" ? "left-4" : "right-4"} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10`}
-      // Explicitly trigger hover when cursor enters the toolbar to cancel any pending hide
-      onMouseEnter={() => onHover?.(message.id)}
     >
       <Button
         variant="ghost"
@@ -835,7 +829,7 @@ function MessageContextMenuContent({
 // ============================================
 // COMPACT MESSAGE STYLE
 // ============================================
-export function CompactMessageItem({
+function CompactMessageItemInner({
   message,
   currentUserId,
   onDeleteMessage,
@@ -855,8 +849,6 @@ export function CompactMessageItem({
   isGrouped,
   searchQuery,
   isHighlighted,
-  isHovered = false,
-  onHover,
   // Forum-specific props
   isForumPost,
   canMarkSolution,
@@ -865,7 +857,34 @@ export function CompactMessageItem({
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const [isHovered, setIsHovered] = React.useState(false)
   const isOwner = currentUserId === message.user.id
+  
+  // Use hover coordinator to ensure only one message shows hover actions
+  const hoverCoordinator = useHoverCoordinator()
+  
+  // Subscribe to hover changes and update local state only when this message's hover status changes
+  React.useEffect(() => {
+    if (!hoverCoordinator) return
+    
+    const unsubscribe = hoverCoordinator.subscribe(() => {
+      const shouldBeHovered = hoverCoordinator.hoveredIdRef.current === message.id
+      setIsHovered(shouldBeHovered)
+    })
+    
+    return unsubscribe
+  }, [hoverCoordinator, message.id])
+  
+  const handleMouseEnter = React.useCallback(() => {
+    hoverCoordinator?.setHoveredId(message.id)
+  }, [hoverCoordinator, message.id])
+  
+  const handleMouseLeave = React.useCallback(() => {
+    // Only clear if we're still the hovered message
+    if (hoverCoordinator?.hoveredIdRef.current === message.id) {
+      hoverCoordinator.setHoveredId(null)
+    }
+  }, [hoverCoordinator, message.id])
 
   // Don't show hover actions for pending messages (they don't exist on server yet)
   const showHoverActions = (isHovered || isMenuOpen) && !message.isPending
@@ -910,8 +929,8 @@ export function CompactMessageItem({
           <div
             className={`group relative px-4 hover:bg-muted/50 transition-colors ${isHighlighted ? "animate-highlight-message" : ""} ${message.isSolvedAnswer ? "bg-emerald-500/5 border-l-2 border-emerald-500" : ""} ${message.isPending ? "opacity-50" : ""}`}
             style={{ paddingTop: isGrouped ? "2px" : "8px", paddingBottom: "2px" }}
-            onMouseEnter={() => onHover?.(message.id)}
-            onMouseLeave={() => onHover?.(null)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           />
         }
       >
@@ -1050,7 +1069,6 @@ export function CompactMessageItem({
             handleEditClick={handleEditClick}
             handleCopy={handleCopy}
             setIsMenuOpen={setIsMenuOpen}
-            onHover={onHover}
             position="right"
             isForumPost={isForumPost}
             canMarkSolution={canMarkSolution}
@@ -1079,10 +1097,12 @@ export function CompactMessageItem({
   )
 }
 
+export const CompactMessageItem = React.memo(CompactMessageItemInner)
+
 // ============================================
 // BUBBLE MESSAGE STYLE
 // ============================================
-export function BubbleMessageItem({
+function BubbleMessageItemInner({
   message,
   currentUserId,
   onDeleteMessage,
@@ -1102,8 +1122,6 @@ export function BubbleMessageItem({
   isGrouped,
   searchQuery,
   isHighlighted,
-  isHovered = false,
-  onHover,
   // Forum-specific props
   isForumPost,
   canMarkSolution,
@@ -1112,8 +1130,35 @@ export function BubbleMessageItem({
   const [isEditing, setIsEditing] = React.useState(false)
   const [editContent, setEditContent] = React.useState(message.content)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const [isHovered, setIsHovered] = React.useState(false)
   const isOwner = currentUserId === message.user.id
   const isOwn = isOwner
+
+  // Use hover coordinator to ensure only one message shows hover actions
+  const hoverCoordinator = useHoverCoordinator()
+  
+  // Subscribe to hover changes and update local state only when this message's hover status changes
+  React.useEffect(() => {
+    if (!hoverCoordinator) return
+    
+    const unsubscribe = hoverCoordinator.subscribe(() => {
+      const shouldBeHovered = hoverCoordinator.hoveredIdRef.current === message.id
+      setIsHovered(shouldBeHovered)
+    })
+    
+    return unsubscribe
+  }, [hoverCoordinator, message.id])
+  
+  const handleMouseEnter = React.useCallback(() => {
+    hoverCoordinator?.setHoveredId(message.id)
+  }, [hoverCoordinator, message.id])
+  
+  const handleMouseLeave = React.useCallback(() => {
+    // Only clear if we're still the hovered message
+    if (hoverCoordinator?.hoveredIdRef.current === message.id) {
+      hoverCoordinator.setHoveredId(null)
+    }
+  }, [hoverCoordinator, message.id])
 
   // Don't show hover actions for pending messages (they don't exist on server yet)
   const showHoverActions = (isHovered || isMenuOpen) && !message.isPending
@@ -1158,8 +1203,8 @@ export function BubbleMessageItem({
           <div
             className={`group relative ${isHighlighted ? "animate-highlight-message" : ""} ${message.isPending ? "opacity-50" : ""}`}
             style={{ marginTop: isGrouped ? "2px" : "12px" }}
-            onMouseEnter={() => onHover?.(message.id)}
-            onMouseLeave={() => onHover?.(null)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           />
         }
       >
@@ -1302,7 +1347,6 @@ export function BubbleMessageItem({
             handleEditClick={handleEditClick}
             handleCopy={handleCopy}
             setIsMenuOpen={setIsMenuOpen}
-            onHover={onHover}
             position={isOwn ? "left" : "right"}
             isForumPost={isForumPost}
             canMarkSolution={canMarkSolution}
@@ -1330,3 +1374,5 @@ export function BubbleMessageItem({
     </ContextMenu>
   )
 }
+
+export const BubbleMessageItem = React.memo(BubbleMessageItemInner)
