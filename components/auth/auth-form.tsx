@@ -2,7 +2,7 @@
 
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { useTheme } from "@/lib/theme-provider";
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SpinnerGap } from "@phosphor-icons/react";
@@ -116,255 +116,168 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   if (pendingVerification) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/50">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-[40%] -right-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-primary/[0.03] to-transparent blur-3xl" />
-          <div className="absolute -bottom-[40%] -left-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-tr from-primary/[0.03] to-transparent blur-3xl" />
-        </div>
+      <main className="min-h-screen flex items-center justify-center bg-background font-[family-name:var(--font-jetbrains-mono)]">
+        <div className="w-full max-w-xl px-6">
+          <Link href="/home" className="flex items-center gap-4 mb-6">
+            <Image
+              src={isDark ? "/portal-dark.svg" : "/portal.svg"}
+              alt="Portal"
+              width={48}
+              height={48}
+              className="w-10 h-10"
+            />
+          </Link>
 
-        <div className="w-full max-w-[400px] relative">
-          <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-8 shadow-xl shadow-black/[0.03] dark:shadow-black/[0.2]">
-            <div className="text-center mb-8">
-              <Image
-                src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
-                alt="Portal"
-                width={640}
-                height={96}
-                className="h-[50px] w-[190px] mx-auto mb-5"
-              />
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Check your email
-              </h1>
-              <p className="text-muted-foreground text-sm mt-2">
-                We sent a verification code to
-                <br />
-                <span className="text-foreground font-medium">{email}</span>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h1 className="text-xl text-foreground">check your email</h1>
+              <p className="text-sm text-muted-foreground">
+                we sent a verification code to<br />
+                <span className="text-foreground">{email}</span>
               </p>
             </div>
 
-            <form onSubmit={handleVerification} className="space-y-5">
+            <form onSubmit={handleVerification} className="space-y-4">
               <div className="space-y-2">
-                <Label
-                  htmlFor="code"
-                  className="text-xs font-medium text-foreground/70"
-                >
-                  Verification code
-                </Label>
+                <Label htmlFor="code" className="text-sm text-muted-foreground">verification code</Label>
                 <Input
                   id="code"
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="Enter 6-digit code"
-                  className="w-full h-11 px-4 bg-background/50 border-border/60 focus-visible:border-primary/50 transition-colors text-center tracking-widest text-lg"
+                  placeholder="enter 6-digit code"
+                  className="bg-background border-border rounded-none shadow-none"
                   required
                 />
               </div>
 
-              {error && (
-                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
-                  <svg
-                    className="size-4 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                  {error}
-                </div>
-              )}
+              {error && <div className="text-sm text-red-500">{error}</div>}
 
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full h-11 text-sm font-medium transition-all duration-200"
-                disabled={isLoading || !isLoaded}
-              >
-                {isLoading ? (
-                  <SpinnerGap className="size-4 animate-spin" />
-                ) : (
-                  "Verify email"
-                )}
-              </Button>
+              <div className="flex flex-wrap items-center gap-6 text-sm">
+                <button
+                  type="submit"
+                  disabled={isLoading || !isLoaded}
+                  className="hover:opacity-95 active:translate-y-px flex items-center gap-2 bg-foreground text-background px-4 py-2 disabled:opacity-50"
+                >
+                  {isLoading ? <SpinnerGap className="size-4 animate-spin" /> : "verify email"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingVerification(false)}
+                  className="hover:text-foreground active:translate-y-px underline underline-offset-4 text-muted-foreground"
+                >
+                  use different email
+                </button>
+              </div>
             </form>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setPendingVerification(false)}
-            className="mt-6 text-sm text-muted-foreground hover:text-primary w-full text-center transition-colors"
-          >
-            Use a different email
-          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
   const isSignIn = mode === "sign-in";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/50">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[40%] -right-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-primary/[0.03] to-transparent blur-3xl" />
-        <div className="absolute -bottom-[40%] -left-[20%] w-[70%] h-[70%] rounded-full bg-gradient-to-tr from-primary/[0.03] to-transparent blur-3xl" />
-      </div>
+    <main className="min-h-screen flex items-center justify-center bg-background font-[family-name:var(--font-jetbrains-mono)]">
+      <div className="w-full max-w-xl px-6">
+        <Link href="/home" className="flex items-center gap-4 mb-6">
+          <Image
+            src={isDark ? "/portal-dark.svg" : "/portal.svg"}
+            alt="Portal"
+            width={48}
+            height={48}
+            className="w-10 h-10"
+          />
+        </Link>
 
-      <div className="w-full max-w-[400px] relative">
-        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-8 shadow-xl shadow-black/[0.03] dark:shadow-black/[0.2]">
-          <div className="text-center mb-8">
-            <Image
-              src={isDark ? "/portal-dark-full.svg" : "/portal-full.svg"}
-              alt="Portal"
-              width={640}
-              height={96}
-              className="h-[50px] w-[190px] mx-auto mb-5"
-            />
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {isSignIn ? "Welcome back" : "Create your account"}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-2">
-              {isSignIn ? "Sign in to continue to Portal" : "Get started with Portal today"}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-xl text-foreground">{isSignIn ? "welcome back" : "create your account"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {isSignIn ? "sign in to continue to portal" : "get started with portal today"}
             </p>
           </div>
 
-          <div className="space-y-5">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-11 gap-2.5 text-sm font-medium hover:bg-muted/50 transition-all duration-200"
+          <div className="space-y-4">
+            <button
+              type="button"
               onClick={handleGoogleAuth}
               disabled={isGoogleLoading || !isLoaded}
+              className="hover:opacity-95 active:translate-y-px flex items-center gap-2 bg-foreground text-background px-3 py-1.5 text-sm disabled:opacity-50 mb-8"
             >
               {isGoogleLoading ? (
                 <SpinnerGap className="size-4 animate-spin" />
               ) : (
                 <Image
-                  src={
-                    isDark ? "/google-white-icon.svg" : "/google-black-icon.svg"
-                  }
+                  src="/google-white-icon.svg"
                   alt="Google"
                   width={16}
                   height={16}
-                  className="size-4"
                 />
               )}
-              Continue with Google
-            </Button>
+              continue with google
+            </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border/60" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">
-                  or continue with email
-                </span>
-              </div>
-            </div>
+            <div className="text-xs text-muted-foreground uppercase">or continue with email</div>
 
             <form onSubmit={handleEmailAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-xs font-medium text-foreground/70"
-                >
-                  Email address
-                </Label>
+                <Label htmlFor="email" className="text-sm text-muted-foreground">email address</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full h-11 px-4 bg-background/50 border-border/60 focus-visible:border-primary/50 transition-colors"
+                  className="bg-background border-border rounded-none shadow-none"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-xs font-medium text-foreground/70"
-                >
-                  Password
-                </Label>
+                <Label htmlFor="password" className="text-sm text-muted-foreground">password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={isSignIn ? "Enter your password" : "Create a password"}
-                  className="w-full h-11 px-4 bg-background/50 border-border/60 focus-visible:border-primary/50 transition-colors"
+                  placeholder={isSignIn ? "enter your password" : "create a password"}
+                  className="bg-background border-border rounded-none shadow-none"
                   required
                 />
               </div>
 
-              {error && (
-                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
-                  <svg
-                    className="size-4 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                  {error}
-                </div>
-              )}
+              {error && <div className="text-sm text-red-500">{error}</div>}
 
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full h-11 text-sm font-medium transition-all duration-200"
-                disabled={isLoading || !isLoaded}
-              >
-                {isLoading ? (
-                  <SpinnerGap className="size-4 animate-spin" />
+              <div className="flex flex-wrap items-center gap-6 text-sm">
+                <button
+                  type="submit"
+                  disabled={isLoading || !isLoaded || !email || !password}
+                  className="hover:opacity-95 active:translate-y-px flex items-center gap-2 bg-foreground text-background px-4 py-2 disabled:opacity-50"
+                >
+                  {isLoading ? <SpinnerGap className="size-4 animate-spin" /> : "continue"}
+                </button>
+                {isSignIn ? (
+                  <Link
+                    href="/sign-up"
+                    className="hover:text-foreground active:translate-y-px underline underline-offset-4 text-muted-foreground"
+                  >
+                    create account
+                  </Link>
                 ) : (
-                  "Continue"
+                  <Link
+                    href="/sign-in"
+                    className="hover:text-foreground active:translate-y-px underline underline-offset-4 text-muted-foreground"
+                  >
+                    sign in
+                  </Link>
                 )}
-              </Button>
+              </div>
             </form>
           </div>
         </div>
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {isSignIn ? (
-            <>
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/sign-up"
-                className="text-primary hover:underline font-medium transition-colors"
-              >
-                Create one
-              </Link>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <Link
-                href="/sign-in"
-                className="text-primary hover:underline font-medium transition-colors"
-              >
-                Sign in
-              </Link>
-            </>
-          )}
-        </p>
       </div>
-    </div>
+    </main>
   );
 }
