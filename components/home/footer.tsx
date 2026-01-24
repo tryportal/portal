@@ -2,79 +2,65 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Heartbeat, TwitterLogo } from "@phosphor-icons/react";
+import { ShieldCheckIcon, HeartbeatIcon, TwitterLogoIcon, GithubLogoIcon, SunIcon, MoonIcon } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme-provider";
-import { GitHubLogo } from "./icons/github-logo";
 
 export function Footer() {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark")
+  }
+
   return (
-    <footer className="font-[family-name:var(--font-jetbrains-mono)] shrink-0">
+    <footer className="font-jetbrains shrink-0">
       <div className="max-w-xl mx-auto w-full px-6 py-4 space-y-4">
         {/* Top row: Copyright and links */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()}</span>
-          <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
             <Link
-              href="/privacy"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-            >
-              <ShieldCheck size={12} />
-              <span>privacy</span>
-            </Link>
-            <Link
-              href="https://status.tryportal.app"
+              href="https://macis.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+              className="hover:text-foreground transition-colors"
             >
-              <Heartbeat size={12} />
-              <span>status</span>
+              <Image
+                src="/macis-full.svg"
+                alt="Macis"
+                width={411}
+                height={128}
+                className={`h-5 w-auto inline-block opacity-60 hover:opacity-100 transition-opacity ${
+                  isDark ? "invert" : ""
+                }`}
+              />
             </Link>
-            <Link
-              href="https://x.com/portalmessage"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-            >
-              <TwitterLogo size={12} />
-              <span>twitter</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Bottom row: Attribution and source */}
-        <div className="pt-4 border-t border-border">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
+          </span>
+          <div className="flex items-center">
+            {[
+              { href: "/privacy", Icon: ShieldCheckIcon, label: "privacy" },
+              { href: "https://status.tryportal.app", Icon: HeartbeatIcon, label: "status", external: true },
+              { href: "https://x.com/portalmessage", Icon: TwitterLogoIcon, label: "twitter", external: true },
+              { href: "https://github.com/tryportal/portal", Icon: GithubLogoIcon, label: "source", external: true },
+            ].map(({ href, Icon, label, external }) => (
               <Link
-                href="https://macis.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-colors"
+                key={href}
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
+                className="p-2 flex items-center gap-1.5 hover:text-foreground transition-colors"
               >
-                <Image
-                  src="/macis-full.svg"
-                  alt="Macis"
-                  width={411}
-                  height={128}
-                  className={`h-4 w-auto inline-block opacity-60 hover:opacity-100 transition-opacity ${
-                    isDark ? "invert" : ""
-                  }`}
-                />
+                <Icon size={14} />
+                <span className="hidden sm:block">{label}</span>
               </Link>
-            </span>
-            <Link
-              href="https://github.com/tryportal/portal"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            ))}
+            <button
+              onClick={toggleTheme}
+              className="cursor-pointer p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Toggle theme"
             >
-              <GitHubLogo size={14} />
-              <span>source</span>
-            </Link>
+              {isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+            </button>
           </div>
         </div>
       </div>
