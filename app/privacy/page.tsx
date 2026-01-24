@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="pt-32 pb-20 px-6">
+      <div className="pt-32 pb-20 px-6 font-jetbrains">
         <PrivacyContent />
       </div>
       <Footer />

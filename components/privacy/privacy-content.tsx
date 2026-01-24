@@ -3,7 +3,6 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import Link from "next/link"
-import { motion } from "framer-motion"
 
 const privacyContent = `# Privacy Policy
 
@@ -215,10 +214,7 @@ If you are a California resident, you have additional rights under the Californi
 
 export function PrivacyContent() {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+    <div
       className="max-w-3xl mx-auto"
     >
       <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-5xl prose-h1:tracking-tight prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground">
@@ -232,10 +228,10 @@ export function PrivacyContent() {
               <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground mb-6 mt-12 first:mt-0 tracking-tight" {...props} />
             ),
             h3: ({ node, ...props }) => (
-              <h3 className="text-xl font-semibold text-foreground mb-4 mt-8" {...props} />
+              <h3 className="text-lg font-semibold text-foreground mb-4 mt-8" {...props} />
             ),
             p: ({ node, ...props }) => (
-              <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed font-light" {...props} />
+              <p className="text-sm md:text-base text-muted-foreground mb-6 leading-relaxed font-light" {...props} />
             ),
             ul: ({ node, ...props }) => (
               <ul className="list-disc list-inside text-muted-foreground mb-6 space-y-2 ml-4" {...props} />
@@ -244,7 +240,7 @@ export function PrivacyContent() {
               <ol className="list-decimal list-inside text-muted-foreground mb-6 space-y-2 ml-4" {...props} />
             ),
             li: ({ node, ...props }) => (
-              <li className="text-muted-foreground leading-relaxed pl-2" {...props} />
+              <li className="text-sm md:text-base text-muted-foreground leading-relaxed pl-2" {...props} />
             ),
             strong: ({ node, ...props }) => (
               <strong className="font-semibold text-foreground" {...props} />
@@ -266,7 +262,7 @@ export function PrivacyContent() {
           {privacyContent}
         </ReactMarkdown>
       </div>
-    </motion.div>
+    </div>
   )
 }
 

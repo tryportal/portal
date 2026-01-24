@@ -4,10 +4,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
-import { Sun, Moon, ArrowRight } from "@phosphor-icons/react"
+import { SunIcon, MoonIcon, ArrowRightIcon, GithubLogoIcon } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { useTheme } from "@/lib/theme-provider"
-import { GitHubLogo } from "./icons/github-logo"
 
 export function Navbar() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth()
@@ -23,8 +22,8 @@ export function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 font-[family-name:var(--font-jetbrains-mono)]">
-      <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
+    <nav className="px-6 fixed top-0 left-0 right-0 z-50 font-[family-name:var(--font-jetbrains-mono)]">
+      <div className="py-4 mx-auto max-w-3xl flex items-center justify-between">
         <Link href="/home" className="flex items-center gap-3 group">
           <Image
             src={isDark ? "/portal-dark.svg" : "/portal.svg"}
@@ -34,16 +33,15 @@ export function Navbar() {
             className="w-5 h-5"
             priority
           />
-          <span className="text-sm text-foreground tracking-tight">portal</span>
         </Link>
 
-        <div className="flex items-center gap-5 text-xs">
+        <div className="flex items-center gap-3 text-xs">
           <button
             onClick={toggleTheme}
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Toggle theme"
           >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            {isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
           </button>
           
           <Link
@@ -53,7 +51,7 @@ export function Navbar() {
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="GitHub"
           >
-            <GitHubLogo size={16} />
+            <GithubLogoIcon size={16} />
           </Link>
 
           {authLoaded && (
@@ -64,15 +62,15 @@ export function Navbar() {
                   className="flex items-center gap-1.5 text-foreground hover:text-muted-foreground transition-colors"
                 >
                   <span>open</span>
-                  <ArrowRight size={14} />
+                  <ArrowRightIcon size={14} />
                 </Link>
               ) : (
                 <Link
                   href="/sign-up"
-                  className="flex items-center gap-1.5 text-foreground hover:text-muted-foreground transition-colors"
+                  className="flex items-center gap-1.5 bg-foreground text-background px-2 py-1"
                 >
                   <span>enter</span>
-                  <ArrowRight size={14} />
+                  <ArrowRightIcon size={14} />
                 </Link>
               )}
             </>

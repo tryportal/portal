@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/home/navbar";
 import { Hero } from "@/components/home/hero";
 import { Footer } from "@/components/home/footer";
 
@@ -91,8 +90,7 @@ export default function Home() {
         }}
       />
       <main className="h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex flex-col min-h-0 pt-[64px]">
+        <div className="flex-1 flex flex-col min-h-0">
           <Hero />
           <Footer />
         </div>

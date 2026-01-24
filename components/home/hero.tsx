@@ -5,12 +5,10 @@ import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import {
-  Lightning,
-  ChatCircle,
-  ShieldCheck,
-  ArrowRight,
-  Code,
-  Cloud,
+  LightningIcon,
+  ChatCircleIcon,
+  HandHeartIcon,
+  ArrowRightIcon,
 } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/lib/theme-provider";
@@ -39,7 +37,6 @@ export function Hero() {
             className="w-10 h-10"
             priority
           />
-          <div className="h-px flex-1 bg-border" />
         </div>
 
         {/* Main content */}
@@ -49,40 +46,23 @@ export function Hero() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               open-source team chat.
               <br />
-              free forever. self-host or cloud.
+              free forever.
             </p>
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5 px-2 py-1 border border-border rounded">
-              <Code size={12} />
-              open-source
-            </span>
-            <span className="flex items-center gap-1.5 px-2 py-1 border border-border rounded">
-              <Cloud size={12} />
-              self-host
-            </span>
-          </div>
-
-          {/* ASCII-style divider */}
-          <div className="text-muted-foreground/30 text-xs select-none overflow-hidden">
-            ─────────────────────────────────────────
           </div>
 
           {/* Features list */}
           <div className="space-y-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-3">
-              <Lightning size={16} className="text-foreground shrink-0" />
+              <LightningIcon size={16} className="text-foreground shrink-0" />
               <span>real-time messaging</span>
             </div>
             <div className="flex items-center gap-3">
-              <ChatCircle size={16} className="text-foreground shrink-0" />
+              <ChatCircleIcon size={16} className="text-foreground shrink-0" />
               <span>channels and direct messages</span>
             </div>
             <div className="flex items-center gap-3">
-              <ShieldCheck size={16} className="text-foreground shrink-0" />
-              <span>privacy-first by design</span>
+              <HandHeartIcon size={16} className="text-foreground shrink-0" />
+              <span>open source, self-hostable</span>
             </div>
           </div>
 
@@ -93,27 +73,23 @@ export function Hero() {
                 {isSignedIn && workspaceUrl ? (
                   <Link
                     href={workspaceUrl}
-                    className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors"
+                    className="hover:opacity-95 active:translate-y-px flex items-center gap-2 bg-foreground text-background px-4 py-2"
                   >
-                    <span className="underline underline-offset-4">
-                      open workspace
-                    </span>
-                    <ArrowRight size={14} />
+                    open workspace
+                    <ArrowRightIcon size={14} />
                   </Link>
                 ) : (
                   <>
                     <Link
                       href="/sign-up"
-                      className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors"
+                      className="flex hover:opacity-95 active:translate-y-px items-center gap-2 bg-foreground text-background px-4 py-2"
                     >
-                      <span className="underline underline-offset-4">
-                        get started
-                      </span>
-                      <ArrowRight size={14} />
+                      get started
+                      <ArrowRightIcon size={14} />
                     </Link>
                     <Link
                       href="/sign-in"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      className="hover:text-foreground active:translate-y-px hover:font-semibold underline underline-offset-4"
                     >
                       sign in
                     </Link>
