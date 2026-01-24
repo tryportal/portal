@@ -210,7 +210,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <SpinnerGap className="size-4 animate-spin" />
               ) : (
                 <Image
-                  src="/google-white-icon.svg"
+                  src={isDark ? "/google-white-icon.svg" : "/google-black-icon.svg"}
                   alt="Google"
                   width={16}
                   height={16}
