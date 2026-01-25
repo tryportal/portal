@@ -222,6 +222,8 @@ function DateSeparator({ date }: { date: string }) {
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
   const isVideo = isVideoType(attachment.type)
+  const [imageLoaded, setImageLoaded] = React.useState(false)
+  const [videoLoaded, setVideoLoaded] = React.useState(false)
 
   // Get URL from batch-loaded context instead of individual query
   const attachmentUrls = React.useContext(AttachmentUrlContext)
@@ -235,11 +237,30 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         rel="noopener noreferrer"
         className="block max-w-xs rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm"
       >
-        <img
-          src={url}
-          alt={attachment.name}
-          className="max-h-64 w-auto object-contain bg-muted/30"
-        />
+        {/* Fixed aspect ratio container to prevent layout shifts */}
+        <div 
+          className="relative bg-muted/30"
+          style={{ 
+            // Reserve space with a reasonable default aspect ratio (4:3)
+            // This prevents layout shifts when images load
+            minHeight: imageLoaded ? 'auto' : '120px',
+            maxHeight: '256px',
+          }}
+        >
+          <img
+            src={url}
+            alt={attachment.name}
+            className={`max-h-64 w-auto object-contain transition-opacity duration-150 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImageLoaded(true)}
+            loading="lazy"
+          />
+          {/* Loading placeholder */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="size-5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <ImageIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
@@ -252,14 +273,31 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
   if (isVideo && url) {
     return (
       <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
-        <video
-          src={url}
-          controls
-          preload="metadata"
-          className="max-h-80 w-auto bg-black"
+        {/* Fixed aspect ratio container for video to prevent layout shifts */}
+        <div 
+          className="relative bg-black"
+          style={{ 
+            // Reserve space with 16:9 aspect ratio for videos
+            minHeight: videoLoaded ? 'auto' : '180px',
+            maxHeight: '320px',
+          }}
         >
-          Your browser does not support the video tag.
-        </video>
+          <video
+            src={url}
+            controls
+            preload="metadata"
+            className={`max-h-80 w-auto transition-opacity duration-150 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoadedMetadata={() => setVideoLoaded(true)}
+          >
+            Your browser does not support the video tag.
+          </video>
+          {/* Loading placeholder */}
+          {!videoLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="size-5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <VideoCameraIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
@@ -1018,62 +1056,109 @@ export function MessageList({
     }
   }, [])
 
-  // Track scroll position to determine if user has scrolled up
+  // Track scroll position to determine if user has scrolled up - throttled to reduce overhead
   React.useEffect(() => {
     const container = scrollRef.current
     if (!container) return
 
+    let rafId: number | null = null
+    let isThrottled = false
+
     const handleScroll = () => {
-      checkIfNearBottom()
+      // Throttle using requestAnimationFrame to reduce scroll event overhead
+      if (isThrottled) return
+      isThrottled = true
+      
+      rafId = requestAnimationFrame(() => {
+        checkIfNearBottom()
+        isThrottled = false
+      })
     }
 
     container.addEventListener('scroll', handleScroll, { passive: true })
-    return () => container.removeEventListener('scroll', handleScroll)
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+      }
+    }
   }, [checkIfNearBottom])
 
   // ResizeObserver to detect content height changes (e.g., when images/videos load)
-  // and auto-scroll if user is near bottom
+  // and auto-scroll if user is near bottom - with debouncing to prevent flickering
   React.useEffect(() => {
     const content = contentRef.current
     if (!content) return
 
     let lastHeight = content.scrollHeight
+    let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingScroll = false
+
+    // Debounced scroll function to batch multiple height changes
+    const debouncedScrollToBottom = () => {
+      if (scrollDebounceTimer) {
+        clearTimeout(scrollDebounceTimer)
+      }
+      pendingScroll = true
+      scrollDebounceTimer = setTimeout(() => {
+        if (pendingScroll && (isInitialLoad.current || isUserNearBottom.current)) {
+          scrollToBottom()
+        }
+        pendingScroll = false
+      }, 50) // 50ms debounce to batch rapid height changes from multiple images loading
+    }
 
     const resizeObserver = new ResizeObserver(() => {
       const newHeight = content.scrollHeight
-      // Only scroll if height increased (content loaded) and user is near bottom
-      // During initial load, always scroll to handle async image/video loading
-      if (newHeight > lastHeight && (isInitialLoad.current || isUserNearBottom.current)) {
-        scrollToBottom()
+      // Only trigger scroll if height actually increased (content loaded)
+      if (newHeight > lastHeight) {
+        debouncedScrollToBottom()
       }
       lastHeight = newHeight
     })
 
     resizeObserver.observe(content)
 
-    return () => resizeObserver.disconnect()
+    return () => {
+      resizeObserver.disconnect()
+      if (scrollDebounceTimer) {
+        clearTimeout(scrollDebounceTimer)
+      }
+    }
   }, [scrollToBottom])
 
   // ResizeObserver to detect scroll container size changes (e.g., when message input grows/shrinks)
-  // and maintain scroll position at bottom if user was at bottom
+  // and maintain scroll position at bottom if user was at bottom - with debouncing
   React.useEffect(() => {
     const container = scrollRef.current
     if (!container) return
 
     let lastClientHeight = container.clientHeight
+    let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
     const resizeObserver = new ResizeObserver(() => {
       const newClientHeight = container.clientHeight
       // If container shrunk (message input grew) and user was near bottom, scroll to bottom
       if (newClientHeight < lastClientHeight && isUserNearBottom.current) {
-        scrollToBottom()
+        // Debounce to avoid rapid scroll attempts
+        if (scrollDebounceTimer) {
+          clearTimeout(scrollDebounceTimer)
+        }
+        scrollDebounceTimer = setTimeout(() => {
+          scrollToBottom()
+        }, 16) // ~1 frame debounce
       }
       lastClientHeight = newClientHeight
     })
 
     resizeObserver.observe(container)
 
-    return () => resizeObserver.disconnect()
+    return () => {
+      resizeObserver.disconnect()
+      if (scrollDebounceTimer) {
+        clearTimeout(scrollDebounceTimer)
+      }
+    }
   }, [scrollToBottom])
 
   // Derive the latest message ID safely to avoid dependency issues with empty arrays
@@ -1090,20 +1175,11 @@ export function MessageList({
 
       // Always scroll on initial load, when current user sends a message, or when new messages arrive and user is near bottom
       if (isInitialLoad.current || (isNewMessage && (isFromCurrentUser || isUserNearBottom.current))) {
-        // Use requestAnimationFrame to ensure DOM has updated before scrolling
+        // Use single requestAnimationFrame to ensure DOM has updated before scrolling
+        // Additional scroll attempts are handled by the debounced ResizeObserver
         requestAnimationFrame(() => {
           scrollToBottom()
         })
-
-        // Multiple scroll attempts to handle async content on initial load
-        if (isInitialLoad.current) {
-          requestAnimationFrame(() => {
-            scrollToBottom()
-            requestAnimationFrame(() => {
-              scrollToBottom()
-            })
-          })
-        }
       } else if (isNewMessage && !isUserNearBottom.current && !isFromCurrentUser) {
         // User is scrolled up and new message arrived from someone else - increment counter
         setNewMessageCount(prev => prev + 1)
@@ -1120,27 +1196,21 @@ export function MessageList({
       if (!hasInitialScrolled.current) {
         hasInitialScrolled.current = true
         // Mark initial load as complete after a delay to allow images/videos to load
-        // The ResizeObserver will handle scrolling during this period
+        // The debounced ResizeObserver will handle scrolling during this period
         setTimeout(() => {
           isInitialLoad.current = false
-        }, 3000)
+        }, 2000) // Reduced from 3000ms since we have better image loading handling now
       }
     }
   }, [memoizedMessages.length, latestMessageId, scrollToBottom, currentUserId, memoizedMessages])
 
-  // Additional effect for initial load only
+  // Simplified initial load effect - only one scroll attempt needed now
+  // The debounced ResizeObserver handles subsequent scrolls as content loads
   React.useEffect(() => {
     if (memoizedMessages.length > 0 && isInitialLoad.current && scrollRef.current) {
-      // Use timeouts to ensure DOM is fully ready on initial load
-      const timeout1 = setTimeout(scrollToBottom, 50)
-      const timeout2 = setTimeout(scrollToBottom, 200)
-      const timeout3 = setTimeout(scrollToBottom, 500)
-
-      return () => {
-        clearTimeout(timeout1)
-        clearTimeout(timeout2)
-        clearTimeout(timeout3)
-      }
+      // Single delayed scroll for any images that load very quickly
+      const timeout = setTimeout(scrollToBottom, 100)
+      return () => clearTimeout(timeout)
     }
   }, [memoizedMessages.length, scrollToBottom])
 
