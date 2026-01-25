@@ -99,10 +99,12 @@ export interface MessageItemProps {
 // Attachment context for getting URLs
 export const AttachmentUrlContext = React.createContext<Record<string, string | null>>({})
 
-// Attachment rendering component
+// Attachment rendering component with optimized loading to prevent layout shifts
 function AttachmentItem({ attachment }: { attachment: Attachment }) {
   const isImage = isImageType(attachment.type)
   const isVideo = isVideoType(attachment.type)
+  const [imageLoaded, setImageLoaded] = React.useState(false)
+  const [videoLoaded, setVideoLoaded] = React.useState(false)
 
   // Get URL from batch-loaded context instead of individual query
   const attachmentUrls = React.useContext(AttachmentUrlContext)
@@ -116,11 +118,30 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         rel="noopener noreferrer"
         className="block max-w-xs rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm"
       >
-        <img
-          src={url}
-          alt={attachment.name}
-          className="max-h-64 w-auto object-contain bg-muted/30"
-        />
+        {/* Fixed aspect ratio container to prevent layout shifts */}
+        <div 
+          className="relative bg-muted/30"
+          style={{ 
+            // Reserve space with a reasonable default aspect ratio (4:3)
+            // This prevents layout shifts when images load
+            minHeight: imageLoaded ? 'auto' : '120px',
+            maxHeight: '256px',
+          }}
+        >
+          <img
+            src={url}
+            alt={attachment.name}
+            className={`max-h-64 w-auto object-contain transition-opacity duration-150 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImageLoaded(true)}
+            loading="lazy"
+          />
+          {/* Loading placeholder */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <ImageIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
@@ -133,14 +154,31 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
   if (isVideo && url) {
     return (
       <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
-        <video
-          src={url}
-          controls
-          preload="metadata"
-          className="max-h-80 w-auto bg-black"
+        {/* Fixed aspect ratio container for video to prevent layout shifts */}
+        <div 
+          className="relative bg-black"
+          style={{ 
+            // Reserve space with 16:9 aspect ratio for videos
+            minHeight: videoLoaded ? 'auto' : '180px',
+            maxHeight: '320px',
+          }}
         >
-          Your browser does not support the video tag.
-        </video>
+          <video
+            src={url}
+            controls
+            preload="metadata"
+            className={`max-h-80 w-auto transition-opacity duration-150 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoadedMetadata={() => setVideoLoaded(true)}
+          >
+            Your browser does not support the video tag.
+          </video>
+          {/* Loading placeholder */}
+          {!videoLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
           <VideoCameraIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
@@ -861,15 +899,22 @@ function CompactMessageItemInner({
   const isOwner = currentUserId === message.user.id
   
   // Use hover coordinator to ensure only one message shows hover actions
+  // Optimized to avoid unnecessary re-renders using ref comparison
   const hoverCoordinator = useHoverCoordinator()
+  const wasHoveredRef = React.useRef(false)
   
-  // Subscribe to hover changes and update local state only when this message's hover status changes
+  // Subscribe to hover changes and update local state only when THIS message's hover status changes
   React.useEffect(() => {
     if (!hoverCoordinator) return
     
     const unsubscribe = hoverCoordinator.subscribe(() => {
       const shouldBeHovered = hoverCoordinator.hoveredIdRef.current === message.id
-      setIsHovered(shouldBeHovered)
+      // Only update state if the hover status actually changed for THIS message
+      // This prevents re-renders when OTHER messages' hover states change
+      if (shouldBeHovered !== wasHoveredRef.current) {
+        wasHoveredRef.current = shouldBeHovered
+        setIsHovered(shouldBeHovered)
+      }
     })
     
     return unsubscribe
@@ -1135,15 +1180,22 @@ function BubbleMessageItemInner({
   const isOwn = isOwner
 
   // Use hover coordinator to ensure only one message shows hover actions
+  // Optimized to avoid unnecessary re-renders using ref comparison
   const hoverCoordinator = useHoverCoordinator()
+  const wasHoveredRef = React.useRef(false)
   
-  // Subscribe to hover changes and update local state only when this message's hover status changes
+  // Subscribe to hover changes and update local state only when THIS message's hover status changes
   React.useEffect(() => {
     if (!hoverCoordinator) return
     
     const unsubscribe = hoverCoordinator.subscribe(() => {
       const shouldBeHovered = hoverCoordinator.hoveredIdRef.current === message.id
-      setIsHovered(shouldBeHovered)
+      // Only update state if the hover status actually changed for THIS message
+      // This prevents re-renders when OTHER messages' hover states change
+      if (shouldBeHovered !== wasHoveredRef.current) {
+        wasHoveredRef.current = shouldBeHovered
+        setIsHovered(shouldBeHovered)
+      }
     })
     
     return unsubscribe
