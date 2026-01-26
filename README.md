@@ -43,7 +43,7 @@ Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
 
 4. Start Convex (in a separate terminal):
    ```bash
-   bun run dev:convex
+   bunx convex dev
    ```
 
 5. Start the development server:
