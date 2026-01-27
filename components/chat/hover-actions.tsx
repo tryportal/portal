@@ -99,7 +99,7 @@ function HoverActionsInner({
 
   return (
     <div
-      className={`absolute -top-3 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10 ${className ?? ""}`}
+      className={`absolute top-1 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-50 ${className ?? ""}`}
     >
       {/* Reply */}
       <Button
