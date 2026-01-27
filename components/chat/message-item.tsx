@@ -5,7 +5,7 @@ import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { LinkPreview } from "@/components/preview/link-preview"
 
 import { useIsMessageHovered, setHoveredMessageId } from "./hover-coordinator"
-import { useMessageCallbacks, useGetAttachmentUrl } from "./message-list-context"
+import { useMessageCallbacks } from "./message-list-context"
 import { MessageIndicators } from "./message-indicators"
 import {
   MessageAvatar,
@@ -49,6 +49,7 @@ export interface MessageItemProps {
   isAdmin?: boolean
   style?: "compact" | "bubble"
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   // Forum-specific
   isForumPost?: boolean
   canMarkSolution?: boolean
@@ -64,6 +65,7 @@ interface CompactLayoutProps {
   isEditing: boolean
   searchQuery?: string
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   onEditSave: (content: string) => void
   onEditCancel: () => void
   onAvatarClick?: (userId: string) => void
@@ -76,6 +78,7 @@ const CompactLayout = memo(function CompactLayout({
   isEditing,
   searchQuery,
   userNames,
+  attachmentUrls,
   onEditSave,
   onEditCancel,
   onAvatarClick,
@@ -137,6 +140,7 @@ const CompactLayout = memo(function CompactLayout({
             {message.attachments && message.attachments.length > 0 && (
               <MessageAttachments
                 attachments={message.attachments}
+                attachmentUrls={attachmentUrls}
                 className="mt-1.5"
               />
             )}
@@ -165,6 +169,7 @@ interface BubbleLayoutProps {
   isOwn: boolean
   searchQuery?: string
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   onEditSave: (content: string) => void
   onEditCancel: () => void
   onAvatarClick?: (userId: string) => void
@@ -178,6 +183,7 @@ const BubbleLayout = memo(function BubbleLayout({
   isOwn,
   searchQuery,
   userNames,
+  attachmentUrls,
   onEditSave,
   onEditCancel,
   onAvatarClick,
@@ -243,6 +249,7 @@ const BubbleLayout = memo(function BubbleLayout({
             {message.attachments && message.attachments.length > 0 && (
               <MessageAttachments
                 attachments={message.attachments}
+                attachmentUrls={attachmentUrls}
                 className="mt-1.5"
               />
             )}
@@ -284,6 +291,7 @@ function MessageItemInner({
   isAdmin = false,
   style = "compact",
   userNames = {},
+  attachmentUrls = {},
   isForumPost = false,
   canMarkSolution = false,
 }: MessageItemProps) {
@@ -383,6 +391,7 @@ function MessageItemInner({
             isEditing={isEditing}
             searchQuery={searchQuery}
             userNames={userNames}
+            attachmentUrls={attachmentUrls}
             onEditSave={handleEditSave}
             onEditCancel={handleEditCancel}
             onAvatarClick={callbacks.avatarClick}
@@ -396,6 +405,7 @@ function MessageItemInner({
             isOwn={isOwner}
             searchQuery={searchQuery}
             userNames={userNames}
+            attachmentUrls={attachmentUrls}
             onEditSave={handleEditSave}
             onEditCancel={handleEditCancel}
             onAvatarClick={callbacks.avatarClick}
@@ -479,6 +489,11 @@ function areMessagePropsEqual(
   if (prev.message.content !== next.message.content) return false
   if (prev.message.editedAt !== next.message.editedAt) return false
 
+  // Check user info (for lazy-loaded Clerk data)
+  if (prev.message.user.name !== next.message.user.name) return false
+  if (prev.message.user.avatar !== next.message.user.avatar) return false
+  if (prev.message.user.initials !== next.message.user.initials) return false
+
   // Check rendering context
   if (prev.isGrouped !== next.isGrouped) return false
   if (prev.isHighlighted !== next.isHighlighted) return false
@@ -510,6 +525,15 @@ function areMessagePropsEqual(
   if (prev.message.pinned !== next.message.pinned) return false
   if (prev.message.isSolvedAnswer !== next.message.isSolvedAnswer) return false
   if (prev.message.isPending !== next.message.isPending) return false
+
+  // Check attachment URLs - critical for lazy-loaded URLs from Convex
+  if (prevAttachments && prevAttachments.length > 0) {
+    for (const att of prevAttachments) {
+      const prevUrl = prev.attachmentUrls?.[att.storageId]
+      const nextUrl = next.attachmentUrls?.[att.storageId]
+      if (prevUrl !== nextUrl) return false
+    }
+  }
 
   return true
 }

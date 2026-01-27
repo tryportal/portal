@@ -93,6 +93,32 @@ export default function ConversationPage({
   )
   const rawMessages = messagesData?.messages
 
+  // Collect all attachment storage IDs from messages
+  const attachmentStorageIds = React.useMemo(() => {
+    if (!rawMessages) return []
+    const ids: string[] = []
+    rawMessages.forEach((msg) => {
+      msg.attachments?.forEach((att: any) => {
+        if (att.storageId) ids.push(att.storageId)
+      })
+    })
+    return ids
+  }, [rawMessages])
+
+  // Fetch attachment URLs in batch
+  const attachmentUrlsData = useQuery(
+    api.messages.getBatchStorageUrls,
+    attachmentStorageIds.length > 0
+      ? { storageIds: attachmentStorageIds as Id<"_storage">[] }
+      : "skip"
+  )
+
+  // Build attachment URLs map
+  const attachmentUrls = React.useMemo(() => {
+    if (!attachmentUrlsData) return {}
+    return attachmentUrlsData as Record<string, string | null>
+  }, [attachmentUrlsData])
+
   // Server-side search (only if search query is long enough and we have a conversation)
   const serverSearchResults = useQuery(
     api.messages.searchMessages,
@@ -592,6 +618,7 @@ export default function ConversationPage({
         userNames={userNames}
         isAdmin={false}
         searchQuery={searchQuery}
+        attachmentUrls={attachmentUrls}
       />
 
       {/* Message Input with Typing Indicator */}

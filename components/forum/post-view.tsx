@@ -62,6 +62,7 @@ interface PostViewProps {
   generateUploadUrl?: () => Promise<string>
   mentionUsers?: MentionUser[]
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
 }
 
 // Utility functions for attachments
@@ -205,6 +206,7 @@ export function PostView({
   generateUploadUrl,
   mentionUsers = [],
   userNames = {},
+  attachmentUrls = {},
 }: PostViewProps) {
   const [replyingTo, setReplyingTo] = React.useState<ReplyingTo | null>(null)
 
@@ -351,6 +353,7 @@ export function PostView({
           isForumPost={true}
           canMarkSolution={canModify}
           onMarkSolution={canModify ? onMarkSolutionComment : undefined}
+          attachmentUrls={attachmentUrls}
         />
 
         {/* Comment input */}

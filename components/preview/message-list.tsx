@@ -238,11 +238,9 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
         className="block max-w-xs rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm"
       >
         {/* Fixed aspect ratio container to prevent layout shifts */}
-        <div 
+        <div
           className="relative bg-muted/30"
-          style={{ 
-            // Reserve space with a reasonable default aspect ratio (4:3)
-            // This prevents layout shifts when images load
+          style={{
             minHeight: imageLoaded ? 'auto' : '120px',
             maxHeight: '256px',
           }}
@@ -261,10 +259,10 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
           <ImageIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
-          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+          <span className="text-muted-foreground font-medium">{formatFileSize(attachment.size)}</span>
         </div>
       </a>
     )
@@ -274,10 +272,9 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
     return (
       <div className="block max-w-md rounded-md overflow-hidden border border-border hover:border-border/80 transition-all hover:shadow-sm">
         {/* Fixed aspect ratio container for video to prevent layout shifts */}
-        <div 
+        <div
           className="relative bg-black"
-          style={{ 
-            // Reserve space with 16:9 aspect ratio for videos
+          style={{
             minHeight: videoLoaded ? 'auto' : '180px',
             maxHeight: '320px',
           }}
@@ -298,10 +295,10 @@ function AttachmentItem({ attachment }: { attachment: Attachment }) {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
           <VideoCameraIcon className="size-3.5 flex-shrink-0" />
           <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
-          <span className="text-muted-foreground/70 font-medium">{formatFileSize(attachment.size)}</span>
+          <span className="text-muted-foreground font-medium">{formatFileSize(attachment.size)}</span>
           <a
             href={url}
             download={attachment.name}

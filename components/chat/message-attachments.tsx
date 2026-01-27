@@ -2,11 +2,12 @@
 
 import { memo } from "react"
 import { AttachmentItem } from "./attachment-item"
+import { useGetAttachmentUrl } from "./message-list-context"
 import type { Attachment } from "./utils"
 
 /**
  * Message Attachments Grid
- * 
+ *
  * Renders a grid of attachments for a message.
  * Automatically adapts layout based on attachment count and types.
  * Memoized to prevent re-renders when parent message updates.
@@ -18,6 +19,7 @@ import type { Attachment } from "./utils"
 
 interface MessageAttachmentsProps {
   attachments: Attachment[]
+  attachmentUrls?: Record<string, string | null>
   className?: string
 }
 
@@ -53,10 +55,22 @@ function getGridClass(count: number): string {
 
 function MessageAttachmentsInner({
   attachments,
+  attachmentUrls,
   className,
 }: MessageAttachmentsProps) {
+  // Get URL getter from context as fallback
+  const getAttachmentUrl = useGetAttachmentUrl()
+
   if (!attachments || attachments.length === 0) {
     return null
+  }
+
+  // Helper to get URL - prefer prop, fallback to context
+  const getUrl = (storageId: string) => {
+    if (attachmentUrls && storageId in attachmentUrls) {
+      return attachmentUrls[storageId]
+    }
+    return getAttachmentUrl(storageId)
   }
 
   const useCompactGrid = shouldUseCompactGrid(attachments)
@@ -67,7 +81,11 @@ function MessageAttachmentsInner({
         className={`grid gap-2 ${getGridClass(attachments.length)} ${className ?? ""}`}
       >
         {attachments.map((attachment) => (
-          <AttachmentItem key={attachment.storageId} attachment={attachment} />
+          <AttachmentItem
+            key={attachment.storageId}
+            attachment={attachment}
+            url={getUrl(attachment.storageId)}
+          />
         ))}
       </div>
     )
@@ -77,7 +95,11 @@ function MessageAttachmentsInner({
   return (
     <div className={`flex flex-col gap-2 ${className ?? ""}`}>
       {attachments.map((attachment) => (
-        <AttachmentItem key={attachment.storageId} attachment={attachment} />
+        <AttachmentItem
+          key={attachment.storageId}
+          attachment={attachment}
+          url={getUrl(attachment.storageId)}
+        />
       ))}
     </div>
   )
