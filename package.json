@@ -19,6 +19,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@phosphor-icons/react": "^2.1.10",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "agentation": "^1.3.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.31.6",

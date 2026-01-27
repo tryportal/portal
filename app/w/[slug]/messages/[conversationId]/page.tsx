@@ -8,7 +8,8 @@ import { toast } from "sonner"
 import { api } from "@/convex/_generated/api"
 import { useUserDataCache } from "@/components/user-data-cache"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { MessageList, type Message, type Attachment, type Reaction, type LinkEmbed } from "@/components/preview/message-list"
+import { MessageList, type Message, type Attachment, type Reaction } from "@/components/chat"
+import type { LinkEmbedData as LinkEmbed } from "@/components/preview/link-preview"
 import { MessageInput } from "@/components/preview/message-input"
 import { DmHeader } from "@/components/messages/dm-header"
 import { ForwardMessageDialog } from "@/components/preview/forward-message-dialog"
@@ -579,6 +580,7 @@ export default function ConversationPage({
       <MessageList
         messages={allMessages}
         currentUserId={currentUserId}
+        style="bubble"
         onDeleteMessage={handleDeleteMessage}
         onEditMessage={handleEditMessage}
         onReply={handleReply}
@@ -588,11 +590,8 @@ export default function ConversationPage({
         onNameClick={handleNameClick}
         savedMessageIds={new Set()}
         userNames={userNames}
-        channelName={participantName}
-        channelDescription="Direct message"
         isAdmin={false}
         searchQuery={searchQuery}
-        isDirectMessage
       />
 
       {/* Message Input with Typing Indicator */}
