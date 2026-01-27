@@ -11,6 +11,7 @@ import { RootNotificationProvider } from "@/components/notifications/notificatio
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { ClientUpdateProvider } from "@/components/client-update-provider";
 import { Toaster } from "sonner";
+import { Agentation } from "agentation";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -129,6 +130,7 @@ export default function RootLayout({
                         {children}
                         <CookieConsentBanner />
                         <Toaster position="bottom-right" richColors />
+                        {process.env.NODE_ENV === "development" && <Agentation />}
                       </ClientUpdateProvider>
                     </RootNotificationProvider>
                   </ConvexClientProvider>

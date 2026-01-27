@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { PostHeader } from "./post-header"
 import { OPBadge } from "./op-badge"
 import { SolvedBadge } from "./solved-badge"
-import { MessageList, type Message } from "@/components/preview/message-list"
+import { MessageList, type Message } from "@/components/chat"
 import { MessageInput, type ReplyingTo } from "@/components/preview/message-input"
 import type { MentionUser } from "@/components/preview/mention-autocomplete"
 import type { LinkEmbedData } from "@/components/preview/link-preview"
@@ -349,8 +349,7 @@ export function PostView({
           userNames={userNames}
           isAdmin={isAdmin}
           isForumPost={true}
-          postAuthorId={post.authorId}
-          solvedCommentId={post.solvedCommentId}
+          canMarkSolution={canModify}
           onMarkSolution={canModify ? onMarkSolutionComment : undefined}
         />
 

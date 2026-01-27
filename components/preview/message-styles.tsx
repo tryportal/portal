@@ -654,7 +654,7 @@ function HoverActions({
 
   return (
     <div 
-      className={`absolute -top-3 ${position === "left" ? "left-4" : "right-4"} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-10`}
+      className={`absolute top-1 ${position === "left" ? "left-4" : "right-4"} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-50`}
     >
       <Button
         variant="ghost"

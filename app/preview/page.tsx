@@ -8,7 +8,7 @@ import {
   getChannelInfo,
   mockUsers,
 } from "@/components/preview/mock-data"
-import type { Message } from "@/components/preview/message-list"
+import type { Message } from "@/components/chat"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
