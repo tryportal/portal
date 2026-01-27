@@ -109,7 +109,7 @@ export default function ConversationPage({
   const attachmentUrlsData = useQuery(
     api.messages.getBatchStorageUrls,
     attachmentStorageIds.length > 0
-      ? { storageIds: attachmentStorageIds as any }
+      ? { storageIds: attachmentStorageIds as Id<"_storage">[] }
       : "skip"
   )
 

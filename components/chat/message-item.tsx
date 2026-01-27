@@ -489,6 +489,11 @@ function areMessagePropsEqual(
   if (prev.message.content !== next.message.content) return false
   if (prev.message.editedAt !== next.message.editedAt) return false
 
+  // Check user info (for lazy-loaded Clerk data)
+  if (prev.message.user.name !== next.message.user.name) return false
+  if (prev.message.user.avatar !== next.message.user.avatar) return false
+  if (prev.message.user.initials !== next.message.user.initials) return false
+
   // Check rendering context
   if (prev.isGrouped !== next.isGrouped) return false
   if (prev.isHighlighted !== next.isHighlighted) return false
@@ -520,6 +525,15 @@ function areMessagePropsEqual(
   if (prev.message.pinned !== next.message.pinned) return false
   if (prev.message.isSolvedAnswer !== next.message.isSolvedAnswer) return false
   if (prev.message.isPending !== next.message.isPending) return false
+
+  // Check attachment URLs - critical for lazy-loaded URLs from Convex
+  if (prevAttachments && prevAttachments.length > 0) {
+    for (const att of prevAttachments) {
+      const prevUrl = prev.attachmentUrls?.[att.storageId]
+      const nextUrl = next.attachmentUrls?.[att.storageId]
+      if (prevUrl !== nextUrl) return false
+    }
+  }
 
   return true
 }

@@ -75,10 +75,10 @@ const ImageAttachment = memo(function ImageAttachment({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
         <ImageIcon className="size-3.5 shrink-0" />
         <span className="truncate flex-1 font-medium min-w-0">{name}</span>
-        <span className="text-muted-foreground/70 font-medium">
+        <span className="text-muted-foreground font-medium">
           {formatFileSize(size)}
         </span>
       </div>
@@ -131,10 +131,10 @@ const VideoAttachment = memo(function VideoAttachment({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
         <VideoCameraIcon className="size-3.5 shrink-0" />
         <span className="truncate flex-1 font-medium min-w-0">{name}</span>
-        <span className="text-muted-foreground/70 font-medium">
+        <span className="text-muted-foreground font-medium">
           {formatFileSize(size)}
         </span>
         <a
@@ -233,10 +233,10 @@ function AttachmentItemInner({ attachment, url }: AttachmentItemProps) {
               <Spinner className="size-5 text-muted-foreground animate-spin" />
             </div>
           </div>
-          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
             <ImageIcon className="size-3.5 shrink-0" />
             <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
-            <span className="text-muted-foreground/70 font-medium">
+            <span className="text-muted-foreground font-medium">
               {formatFileSize(attachment.size)}
             </span>
           </div>
@@ -258,10 +258,10 @@ function AttachmentItemInner({ attachment, url }: AttachmentItemProps) {
               <Spinner className="size-5 text-muted-foreground animate-spin" />
             </div>
           </div>
-          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-foreground">
             <VideoCameraIcon className="size-3.5 shrink-0" />
             <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
-            <span className="text-muted-foreground/70 font-medium">
+            <span className="text-muted-foreground font-medium">
               {formatFileSize(attachment.size)}
             </span>
           </div>
