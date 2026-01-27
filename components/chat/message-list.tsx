@@ -131,6 +131,7 @@ interface MessageListInnerProps {
   searchQuery?: string
   savedMessageIds: Set<string>
   userNames: Record<string, string>
+  attachmentUrls: Record<string, string | null>
   isAdmin: boolean
   isForumPost: boolean
   canMarkSolution: boolean
@@ -144,6 +145,7 @@ const MessageListInner = memo(function MessageListInner({
   searchQuery,
   savedMessageIds,
   userNames,
+  attachmentUrls,
   isAdmin,
   isForumPost,
   canMarkSolution,
@@ -154,7 +156,7 @@ const MessageListInner = memo(function MessageListInner({
       {messages.map((message, index) => {
         const previousMessage = index > 0 ? messages[index - 1] : undefined
         const isGrouped = shouldGroupMessages(message, previousMessage)
-        
+
         // Check if we need a date separator
         const showDateSeparator =
           message.createdAt &&
@@ -176,6 +178,7 @@ const MessageListInner = memo(function MessageListInner({
               isAdmin={isAdmin}
               style={style}
               userNames={userNames}
+              attachmentUrls={attachmentUrls}
               isForumPost={isForumPost}
               canMarkSolution={canMarkSolution}
             />
@@ -283,14 +286,33 @@ function MessageListComponent({
     ]
   )
 
-  // Auto-scroll to bottom when new messages arrive
+  // Scroll to bottom on initial mount
+  const hasInitialScrolled = useRef(false)
   useEffect(() => {
+    if (messages.length > 0 && !hasInitialScrolled.current) {
+      hasInitialScrolled.current = true
+      // Double RAF ensures the DOM content is fully rendered and measured
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight
+            isAtBottomRef.current = true
+          }
+        })
+      })
+    }
+  }, [messages.length])
+
+  // Auto-scroll to bottom when new messages arrive (after initial load)
+  useEffect(() => {
+    // Skip on initial load (handled above)
+    if (!hasInitialScrolled.current) return
+
     const newMessagesArrived = messages.length > previousMessagesLengthRef.current
     previousMessagesLengthRef.current = messages.length
 
     // If at bottom and new messages arrived, scroll to show them
     if (newMessagesArrived && isAtBottomRef.current) {
-      // Use requestAnimationFrame to ensure DOM has updated
       requestAnimationFrame(() => {
         scrollToBottom(false)
       })
@@ -334,6 +356,7 @@ function MessageListComponent({
                 searchQuery={searchQuery}
                 savedMessageIds={savedMessageIds}
                 userNames={userNames}
+                attachmentUrls={attachmentUrls}
                 isAdmin={isAdmin}
                 isForumPost={isForumPost}
                 canMarkSolution={canMarkSolution}

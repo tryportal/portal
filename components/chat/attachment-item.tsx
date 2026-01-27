@@ -9,13 +9,12 @@ import {
   Spinner,
 } from "@phosphor-icons/react"
 import { formatFileSize, isImageType, isVideoType, type Attachment } from "./utils"
-import { useGetAttachmentUrl } from "./message-list-context"
 
 /**
  * Attachment Item
- * 
+ *
  * Renders a single attachment (image, video, or file).
- * Uses context to get attachment URLs (batch loaded).
+ * URL is passed as prop for proper React re-rendering when URLs load.
  * Optimized with loading states to prevent layout shifts.
  */
 
@@ -25,6 +24,7 @@ import { useGetAttachmentUrl } from "./message-list-context"
 
 interface AttachmentItemProps {
   attachment: Attachment
+  url?: string | null
 }
 
 // =============================================================================
@@ -219,26 +219,62 @@ const FileAttachment = memo(function FileAttachment({
 // MAIN COMPONENT
 // =============================================================================
 
-function AttachmentItemInner({ attachment }: AttachmentItemProps) {
-  const getAttachmentUrl = useGetAttachmentUrl()
-  const url = getAttachmentUrl(attachment.storageId)
+function AttachmentItemInner({ attachment, url }: AttachmentItemProps) {
   const isImage = isImageType(attachment.type)
   const isVideo = isVideoType(attachment.type)
 
-  if (isImage && url) {
+  if (isImage) {
+    if (!url) {
+      // Loading state for image
+      return (
+        <div className="block max-w-xs rounded-md overflow-hidden border border-border">
+          <div className="relative bg-muted/30" style={{ minHeight: "120px", maxHeight: "256px" }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+            <ImageIcon className="size-3.5 shrink-0" />
+            <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
+            <span className="text-muted-foreground/70 font-medium">
+              {formatFileSize(attachment.size)}
+            </span>
+          </div>
+        </div>
+      )
+    }
     return (
       <ImageAttachment url={url} name={attachment.name} size={attachment.size} />
     )
   }
 
-  if (isVideo && url) {
+  if (isVideo) {
+    if (!url) {
+      // Loading state for video
+      return (
+        <div className="block max-w-md rounded-md overflow-hidden border border-border">
+          <div className="relative bg-black" style={{ minHeight: "180px", maxHeight: "320px" }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 text-xs text-muted-foreground">
+            <VideoCameraIcon className="size-3.5 shrink-0" />
+            <span className="truncate flex-1 font-medium min-w-0">{attachment.name}</span>
+            <span className="text-muted-foreground/70 font-medium">
+              {formatFileSize(attachment.size)}
+            </span>
+          </div>
+        </div>
+      )
+    }
     return (
       <VideoAttachment url={url} name={attachment.name} size={attachment.size} />
     )
   }
 
   return (
-    <FileAttachment url={url} name={attachment.name} size={attachment.size} />
+    <FileAttachment url={url ?? null} name={attachment.name} size={attachment.size} />
   )
 }
 

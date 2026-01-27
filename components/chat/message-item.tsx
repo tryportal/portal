@@ -5,7 +5,7 @@ import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { LinkPreview } from "@/components/preview/link-preview"
 
 import { useIsMessageHovered, setHoveredMessageId } from "./hover-coordinator"
-import { useMessageCallbacks, useGetAttachmentUrl } from "./message-list-context"
+import { useMessageCallbacks } from "./message-list-context"
 import { MessageIndicators } from "./message-indicators"
 import {
   MessageAvatar,
@@ -49,6 +49,7 @@ export interface MessageItemProps {
   isAdmin?: boolean
   style?: "compact" | "bubble"
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   // Forum-specific
   isForumPost?: boolean
   canMarkSolution?: boolean
@@ -64,6 +65,7 @@ interface CompactLayoutProps {
   isEditing: boolean
   searchQuery?: string
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   onEditSave: (content: string) => void
   onEditCancel: () => void
   onAvatarClick?: (userId: string) => void
@@ -76,6 +78,7 @@ const CompactLayout = memo(function CompactLayout({
   isEditing,
   searchQuery,
   userNames,
+  attachmentUrls,
   onEditSave,
   onEditCancel,
   onAvatarClick,
@@ -137,6 +140,7 @@ const CompactLayout = memo(function CompactLayout({
             {message.attachments && message.attachments.length > 0 && (
               <MessageAttachments
                 attachments={message.attachments}
+                attachmentUrls={attachmentUrls}
                 className="mt-1.5"
               />
             )}
@@ -165,6 +169,7 @@ interface BubbleLayoutProps {
   isOwn: boolean
   searchQuery?: string
   userNames?: Record<string, string>
+  attachmentUrls?: Record<string, string | null>
   onEditSave: (content: string) => void
   onEditCancel: () => void
   onAvatarClick?: (userId: string) => void
@@ -178,6 +183,7 @@ const BubbleLayout = memo(function BubbleLayout({
   isOwn,
   searchQuery,
   userNames,
+  attachmentUrls,
   onEditSave,
   onEditCancel,
   onAvatarClick,
@@ -243,6 +249,7 @@ const BubbleLayout = memo(function BubbleLayout({
             {message.attachments && message.attachments.length > 0 && (
               <MessageAttachments
                 attachments={message.attachments}
+                attachmentUrls={attachmentUrls}
                 className="mt-1.5"
               />
             )}
@@ -284,6 +291,7 @@ function MessageItemInner({
   isAdmin = false,
   style = "compact",
   userNames = {},
+  attachmentUrls = {},
   isForumPost = false,
   canMarkSolution = false,
 }: MessageItemProps) {
@@ -383,6 +391,7 @@ function MessageItemInner({
             isEditing={isEditing}
             searchQuery={searchQuery}
             userNames={userNames}
+            attachmentUrls={attachmentUrls}
             onEditSave={handleEditSave}
             onEditCancel={handleEditCancel}
             onAvatarClick={callbacks.avatarClick}
@@ -396,6 +405,7 @@ function MessageItemInner({
             isOwn={isOwner}
             searchQuery={searchQuery}
             userNames={userNames}
+            attachmentUrls={attachmentUrls}
             onEditSave={handleEditSave}
             onEditCancel={handleEditCancel}
             onAvatarClick={callbacks.avatarClick}

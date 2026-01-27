@@ -57,6 +57,26 @@ export function ForumInterface({
     selectedPostId ? { postId: selectedPostId, limit: 100 } : "skip"
   )
 
+  // Collect all attachment storage IDs from comments
+  const commentAttachmentStorageIds = React.useMemo(() => {
+    if (!commentsData?.comments) return []
+    const ids: string[] = []
+    commentsData.comments.forEach((comment) => {
+      comment.attachments?.forEach((att: any) => {
+        if (att.storageId) ids.push(att.storageId)
+      })
+    })
+    return ids
+  }, [commentsData?.comments])
+
+  // Fetch attachment URLs for comments in batch
+  const commentAttachmentUrls = useQuery(
+    api.messages.getBatchStorageUrls,
+    commentAttachmentStorageIds.length > 0
+      ? { storageIds: commentAttachmentStorageIds as any }
+      : "skip"
+  ) as Record<string, string | null> | undefined
+
   // Mutations
   const sendComment = useMutation(api.forumPosts.sendComment)
   const deleteComment = useMutation(api.forumPosts.deleteComment)
@@ -464,6 +484,7 @@ export function ForumInterface({
             generateUploadUrl={generateUploadUrl}
             mentionUsers={mentionUsers}
             userNames={userNames}
+            attachmentUrls={commentAttachmentUrls ?? {}}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
