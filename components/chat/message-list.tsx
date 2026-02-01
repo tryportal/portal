@@ -61,7 +61,10 @@ export interface MessageListProps {
 
 const SCROLL_THRESHOLD = 100 // pixels from bottom to consider "at bottom"
 
-function useScrollManagement(containerRef: React.RefObject<HTMLDivElement | null>) {
+function useScrollManagement(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  contentRef: React.RefObject<HTMLDivElement | null>,
+) {
   const [showScrollButton, setShowScrollButton] = useState(false)
   const isAtBottomRef = useRef(true)
   const lastScrollTopRef = useRef(0)
@@ -70,7 +73,7 @@ function useScrollManagement(containerRef: React.RefObject<HTMLDivElement | null
   const checkIfAtBottom = useCallback(() => {
     const container = containerRef.current
     if (!container) return true
-    
+
     const { scrollTop, scrollHeight, clientHeight } = container
     return scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD
   }, [containerRef])
@@ -79,7 +82,7 @@ function useScrollManagement(containerRef: React.RefObject<HTMLDivElement | null
   const scrollToBottom = useCallback((smooth = true) => {
     const container = containerRef.current
     if (!container) return
-    
+
     container.scrollTo({
       top: container.scrollHeight,
       behavior: smooth ? "smooth" : "auto",
@@ -88,12 +91,12 @@ function useScrollManagement(containerRef: React.RefObject<HTMLDivElement | null
     isAtBottomRef.current = true
   }, [containerRef])
 
-  // Handle scroll events
+  // Handle scroll events — detect manual scrolling to unanchor
   const handleScroll = useCallback(() => {
     const atBottom = checkIfAtBottom()
     isAtBottomRef.current = atBottom
     setShowScrollButton(!atBottom)
-    
+
     const container = containerRef.current
     if (container) {
       lastScrollTopRef.current = container.scrollTop
@@ -104,12 +107,41 @@ function useScrollManagement(containerRef: React.RefObject<HTMLDivElement | null
   const scrollToMessage = useCallback((messageId: string) => {
     const container = containerRef.current
     if (!container) return
-    
+
     const messageElement = container.querySelector(`[data-message-id="${messageId}"]`)
     if (messageElement) {
       messageElement.scrollIntoView({ behavior: "smooth", block: "center" })
     }
   }, [containerRef])
+
+  // ResizeObserver: keep scroll anchored to bottom when content grows (e.g. images load)
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    let lastHeight = content.scrollHeight
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    const resizeObserver = new ResizeObserver(() => {
+      const newHeight = content.scrollHeight
+      if (newHeight !== lastHeight) {
+        lastHeight = newHeight
+        // Only auto-scroll if the user is anchored at the bottom
+        if (isAtBottomRef.current) {
+          if (debounceTimer) clearTimeout(debounceTimer)
+          debounceTimer = setTimeout(() => {
+            scrollToBottom(false)
+          }, 30)
+        }
+      }
+    })
+
+    resizeObserver.observe(content)
+    return () => {
+      resizeObserver.disconnect()
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
+  }, [contentRef, scrollToBottom])
 
   return {
     showScrollButton,
@@ -219,8 +251,9 @@ function MessageListComponent({
   className,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const previousMessagesLengthRef = useRef(messages.length)
-  
+
   // Scroll management
   const {
     showScrollButton,
@@ -228,7 +261,7 @@ function MessageListComponent({
     scrollToBottom,
     scrollToMessage,
     handleScroll,
-  } = useScrollManagement(containerRef)
+  } = useScrollManagement(containerRef, contentRef)
 
   // Callbacks for context
   const callbacks = useMemo<MessageListCallbacks>(
@@ -348,7 +381,7 @@ function MessageListComponent({
 
           {/* Messages */}
           {messages.length > 0 && (
-            <div className="py-4">
+            <div ref={contentRef} className="py-4">
               <MessageListInner
                 messages={messages}
                 currentUserId={currentUserId}
