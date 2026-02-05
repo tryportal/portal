@@ -10,6 +10,7 @@ import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { createConvexServerClient } from "@/lib/convex-server";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const maxDuration = 60;
 
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
 
   // 6. Fetch workspace context for system prompt
   const context = await convex.query(api.pearl.getWorkspaceContext, {
-    organizationId: organizationId as any,
+    organizationId: organizationId as Id<"organizations">,
   });
 
   // Build channel context string
@@ -83,6 +84,22 @@ ${channelContext}
 ## DM Conversations the User Has
 ${dmContext}
 
+## Understanding Mentions
+Users can mention people, channels, or inbox in their messages using @ and # symbols:
+
+### User Mentions (@username)
+When a user mentions someone like "@John Doe", determine the intent from context:
+- Questions about what they said (e.g., "what did @John Doe say?", "summarize @John Doe") → Use summarizeDmMessages tool to fetch and summarize their DM conversation
+- Requests to message them (e.g., "tell @John Doe...", "message @John Doe that...", "send @John Doe...") → Use sendMessage tool with targetType "dm"
+
+### Channel Mentions (#channel)
+When a user mentions a channel like "#general", determine the intent from context:
+- Summarize requests (e.g., "summarize #general", "what's happening in #general?") → Use summarizeChannelMessages tool
+- Send requests (e.g., "post to #general...", "send to #general...") → Use sendMessage tool with targetType "channel"
+
+### Inbox Mention (@inbox)
+When the user mentions "@inbox", always summarize their inbox using the summarizeInbox tool.
+
 ## Important Rules
 1. When the user asks to summarize a channel, use the summarizeChannelMessages tool with the correct channel ID from the list above.
 2. When the user asks to summarize a DM, use the summarizeDmMessages tool. This requires consent - the tool will show a confirmation dialog to the user.
@@ -92,7 +109,17 @@ ${dmContext}
 6. If you don't know which channel or person the user is referring to, ask for clarification.
 7. Always use channel/conversation IDs from the lists above - never guess IDs.
 8. When presenting summaries, organize them clearly with key topics, important decisions, and action items.
-9. Keep responses concise but thorough.`;
+9. Keep responses concise but thorough.
+
+## Inbox Summarization Guidelines
+When summarizing the user's inbox, DO NOT just list every message. Instead:
+- Group related messages by topic or conversation thread
+- Highlight what needs the user's attention or action
+- Mention who is trying to reach them and why
+- Call out any urgent or time-sensitive items
+- Provide a brief, digestible overview (e.g., "You have 3 messages from Sarah about the project deadline, and 2 mentions in #engineering about the deployment")
+- Only include specific message content if it's critical context
+- If the inbox is empty, simply say so - don't elaborate unnecessarily`;
 
   // 7. Define tools
   const tools = {
@@ -109,7 +136,7 @@ ${dmContext}
         try {
           const result = await convex.query(
             api.pearl.getChannelMessagesForSummary,
-            { channelId: channelId as any }
+            { channelId: channelId as Id<"channels"> }
           );
           if (!result) {
             return { error: "Could not access channel or no messages found." };
@@ -123,7 +150,7 @@ ${dmContext}
               time: new Date(m.createdAt).toLocaleString(),
             })),
           };
-        } catch (e) {
+        } catch {
           return { error: "Failed to fetch channel messages." };
         }
       },
@@ -132,26 +159,32 @@ ${dmContext}
     // Server-side tool: auto-executes on server
     summarizeInbox: tool({
       description:
-        "Fetch the user's recent inbox mentions and notifications for summarization. Use this when the user asks about their inbox or mentions.",
+        "Fetch the user's recent inbox including unread mentions and direct messages for summarization. Use this when the user asks about their inbox, mentions, or unread messages.",
       inputSchema: z.object({}),
       execute: async () => {
         try {
           const result = await convex.query(api.pearl.getInboxForSummary, {
-            organizationId: organizationId as any,
+            organizationId: organizationId as Id<"organizations">,
           });
-          if (!result || result.length === 0) {
-            return { message: "Your inbox is empty - no recent mentions." };
+          if (!result || (result.totalMentions === 0 && result.totalDMs === 0)) {
+            return { message: "Your inbox is empty - no unread mentions or messages." };
           }
           return {
-            mentionCount: result.length,
-            mentions: result.map((m) => ({
+            totalMentions: result.totalMentions,
+            totalDMs: result.totalDMs,
+            mentions: result.mentions.map((m) => ({
               from: m.author,
               channel: m.channelName,
               content: m.content,
               time: new Date(m.createdAt).toLocaleString(),
             })),
+            directMessages: result.dms.map((dm) => ({
+              from: dm.author,
+              content: dm.content,
+              time: new Date(dm.createdAt).toLocaleString(),
+            })),
           };
-        } catch (e) {
+        } catch {
           return { error: "Failed to fetch inbox." };
         }
       },
@@ -214,7 +247,7 @@ ${dmContext}
 
   // 8. Stream the response
   const result = streamText({
-    model: gateway("openai/gpt-4o-mini"),
+    model: gateway("zai/glm-4.7"),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools,

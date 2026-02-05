@@ -110,6 +110,15 @@ export function PearlChat({ onBack }: PearlChatProps) {
       }
     }
 
+    // Debug log
+    console.log("[Pearl] Mention items:", { 
+      total: items.length, 
+      users: items.filter(i => i.type === "user").length,
+      channels: items.filter(i => i.type === "channel").length,
+      workspaceMembersLoaded: !!workspaceMembers,
+      workspaceContextLoaded: !!workspaceContext
+    });
+
     return items;
   }, [workspaceContext, workspaceMembers]);
 
@@ -247,6 +256,7 @@ export function PearlChat({ onBack }: PearlChatProps) {
           const query = value.slice(startPos + 1, cursorPos);
           // Only show autocomplete if query doesn't contain whitespace
           if (!/\s/.test(query)) {
+            console.log("[Pearl] Mention trigger detected:", { char, query, startPos, cursorPos });
             setMentionVisible(true);
             setMentionQuery(query);
             setMentionType(char as "@" | "#");
@@ -606,7 +616,7 @@ export function PearlChat({ onBack }: PearlChatProps) {
   }
 
   return (
-    <main className="flex flex-1 flex-col h-full min-h-0 bg-background overflow-hidden">
+    <main className="flex flex-1 flex-col h-full min-h-0 bg-background">
       {/* Header */}
       <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 shrink-0">
         <div className="flex items-center gap-3">
@@ -787,7 +797,7 @@ export function PearlChat({ onBack }: PearlChatProps) {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border bg-background px-4 py-3 shrink-0">
+      <div className="border-t border-border bg-background px-4 py-3 shrink-0 overflow-visible">
         {dailyLimit && !dailyLimit.allowed ? (
           <div className="flex items-center justify-center py-3">
             <p className="text-sm text-muted-foreground">

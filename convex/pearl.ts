@@ -287,7 +287,10 @@ export const getConversationMessagesForSummary = query({
 });
 
 /**
- * Get inbox mentions for summarization.
+ * Get inbox data for summarization.
+ * This mirrors the logic in messages.getUnreadMentions and getUnreadDMsGroupedBySender
+ * to ensure consistency with what the user sees in their inbox.
+ * Returns both unread mentions and unread DMs.
  */
 export const getInboxForSummary = query({
   args: {
@@ -309,7 +312,7 @@ export const getInboxForSummary = query({
 
     if (!membership) return null;
 
-    // Get channels in org
+    // ===== PART 1: Get unread mentions =====
     const channels = await ctx.db
       .query("channels")
       .withIndex("by_organization", (q) =>
@@ -317,7 +320,6 @@ export const getInboxForSummary = query({
       )
       .collect();
 
-    // Get muted channels
     const mutedChannels = await ctx.db
       .query("mutedChannels")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -331,19 +333,15 @@ export const getInboxForSummary = query({
 
     const channelNameMap = new Map(channels.map((c) => [c._id as string, c.name]));
 
-    // Build display name variants
-    const displayNameParts = [
-      identity.name,
-      identity.givenName && identity.familyName
-        ? `${identity.givenName} ${identity.familyName}`
-        : undefined,
-      identity.givenName,
-    ]
-      .filter(Boolean)
-      .map((name) => name!.toLowerCase());
+    const mentionReadStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
-    // Get recent messages mentioning the user
-    const allMentions: Array<{
+    const readMessageIds = new Set(mentionReadStatuses.map((rs) => rs.messageId));
+
+    const mentions: Array<{
+      type: "mention";
       author: string;
       content: string;
       channelName: string;
@@ -357,21 +355,21 @@ export const getInboxForSummary = query({
           q.eq("channelId", channelId)
         )
         .order("desc")
-        .take(200);
+        .take(100);
 
       for (const m of messages) {
-        const isMentioned =
-          (Array.isArray(m.mentions) && (m.mentions.includes(userId) || m.mentions.includes("everyone"))) ||
-          m.content.includes(`@${userId}`) ||
-          displayNameParts.some((name) => m.content.toLowerCase().includes(`@${name}`));
+        const hasMention = Array.isArray(m.mentions) && m.mentions.includes(userId);
+        const isUnread = !readMessageIds.has(m._id);
+        const notFromSelf = m.userId !== userId;
 
-        if (isMentioned && m.userId !== userId) {
+        if (hasMention && isUnread && notFromSelf) {
           const user = await ctx.db
             .query("users")
             .withIndex("by_clerk_id", (q) => q.eq("clerkId", m.userId))
             .first();
 
-          allMentions.push({
+          mentions.push({
+            type: "mention",
             author: user
               ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
               : "Unknown",
@@ -383,9 +381,88 @@ export const getInboxForSummary = query({
       }
     }
 
-    // Sort by most recent and take top 50
-    allMentions.sort((a, b) => b.createdAt - a.createdAt);
-    return allMentions.slice(0, 50);
+    // ===== PART 2: Get unread DMs =====
+    const conversationsAsP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const conversationsAsP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
+    const uniqueConversations = Array.from(
+      new Map(allConversations.map((c) => [c._id, c])).values()
+    );
+
+    const dmReadStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const dmReadStatusMap = new Map(
+      dmReadStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
+    );
+
+    const dms: Array<{
+      type: "dm";
+      author: string;
+      content: string;
+      createdAt: number;
+      unreadCount: number;
+    }> = [];
+
+    for (const conv of uniqueConversations) {
+      const lastReadAt = dmReadStatusMap.get(conv._id) ?? 0;
+
+      const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_and_created", (q) =>
+          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+        )
+        .collect();
+
+      const unreadFromOther = unreadMessages.filter((msg) => msg.userId !== userId);
+
+      if (unreadFromOther.length > 0) {
+        const otherParticipantId = conv.participant1Id === userId
+          ? conv.participant2Id
+          : conv.participant1Id;
+
+        const otherUser = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", otherParticipantId))
+          .first();
+
+        const otherUserName = otherUser
+          ? [otherUser.firstName, otherUser.lastName].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown";
+
+        // Add each unread DM message
+        for (const msg of unreadFromOther) {
+          dms.push({
+            type: "dm",
+            author: otherUserName,
+            content: msg.content,
+            createdAt: msg.createdAt,
+            unreadCount: unreadFromOther.length,
+          });
+        }
+      }
+    }
+
+    // Combine and sort by most recent
+    const allItems = [...mentions, ...dms];
+    allItems.sort((a, b) => b.createdAt - a.createdAt);
+
+    return {
+      mentions: mentions.slice(0, 25),
+      dms: dms.slice(0, 25),
+      totalMentions: mentions.length,
+      totalDMs: dms.length,
+    };
   },
 });
 
@@ -548,8 +625,7 @@ export const getWorkspaceMembers = query({
       )
       .collect();
 
-    // Get user data for all members (excluding current user)
-    const otherMembers = members.filter((m) => m.userId !== userId);
+    console.log("[Pearl getWorkspaceMembers] Total members:", members.length, "Current user:", userId);
 
     // Get existing DM conversations for the current user
     const convos1 = await ctx.db
@@ -569,9 +645,9 @@ export const getWorkspaceMembers = query({
       convoMap.set(otherUserId, c._id);
     }
 
-    // Fetch user data and build result
+    // Fetch user data and build result - include ALL members (including self)
     const result = await Promise.all(
-      otherMembers.map(async (m) => {
+      members.map(async (m) => {
         const user = await ctx.db
           .query("users")
           .withIndex("by_clerk_id", (q) => q.eq("clerkId", m.userId))
@@ -584,10 +660,12 @@ export const getWorkspaceMembers = query({
             : "Unknown",
           imageUrl: user?.imageUrl || null,
           conversationId: convoMap.get(m.userId) || null,
+          isCurrentUser: m.userId === userId,
         };
       })
     );
 
+    console.log("[Pearl getWorkspaceMembers] Returning members:", result.length);
     return result;
   },
 });
