@@ -52,13 +52,6 @@ export function PearlChat({ onBack }: PearlChatProps) {
   const sendChannelMessage = useMutation(api.pearl.sendChannelMessageViaPearl);
   const sendDirectMessage = useMutation(api.pearl.sendDirectMessageViaPearl);
   const createForumPost = useMutation(api.pearl.createForumPostViaPearl);
-  const getConversationMessages = useQuery(api.pearl.getConversationMessagesForSummary, 
-    // We use a placeholder - the actual query is made dynamically in tool execution
-    undefined as any
-  );
-
-  // Save message mutations
-  const savePearlMessage = useMutation(api.pearl.savePearlMessage);
 
   // Chat state
   const [input, setInput] = React.useState("");
