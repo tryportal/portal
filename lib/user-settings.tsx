@@ -20,6 +20,7 @@ interface UserSettings {
   sidebarHotkey: HotkeyConfig;
   browserNotifications: BrowserNotificationsSetting;
   messageStyles: MessageStyleSettings;
+  aiEnabled: boolean;
 }
 
 interface UserSettingsContextType {
@@ -27,6 +28,7 @@ interface UserSettingsContextType {
   updateSidebarHotkey: (hotkey: HotkeyConfig) => void;
   updateBrowserNotifications: (setting: BrowserNotificationsSetting) => void;
   updateMessageStyles: (styles: MessageStyleSettings) => void;
+  updateAiEnabled: (enabled: boolean) => void;
   resetToDefaults: () => void;
   formatHotkey: (hotkey: HotkeyConfig) => string;
 }
@@ -48,6 +50,7 @@ const defaultSettings: UserSettings = {
   sidebarHotkey: DEFAULT_SIDEBAR_HOTKEY,
   browserNotifications: "ask",
   messageStyles: DEFAULT_MESSAGE_STYLES,
+  aiEnabled: true,
 };
 
 const UserSettingsContext = React.createContext<UserSettingsContextType | undefined>(undefined);
@@ -114,6 +117,14 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  const updateAiEnabled = React.useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const newSettings = { ...prev, aiEnabled: enabled };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const resetToDefaults = React.useCallback(() => {
     setSettings(defaultSettings);
     saveSettings(defaultSettings);
@@ -142,6 +153,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         updateSidebarHotkey,
         updateBrowserNotifications,
         updateMessageStyles,
+        updateAiEnabled,
         resetToDefaults,
         formatHotkey,
       }}

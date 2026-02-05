@@ -15,7 +15,7 @@ export default function PearlPage() {
   const { settings } = useUserSettings();
 
   // Redirect if AI is disabled
-  if (!settings.aiEnabled) {
+  if (settings.aiEnabled === false) {
     router.push(`/w/${slug}/messages`);
     return null;
   }

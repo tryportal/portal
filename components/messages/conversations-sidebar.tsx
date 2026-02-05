@@ -442,7 +442,7 @@ function PearlSidebarEntry({ slug, conversationId }: { slug: string; conversatio
   const { settings } = useUserSettings();
 
   // Hide Pearl if AI features are disabled
-  if (!(settings as any).aiEnabled && (settings as any).aiEnabled !== undefined) {
+  if (!settings.aiEnabled) {
     return null;
   }
 
