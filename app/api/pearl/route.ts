@@ -214,7 +214,7 @@ ${dmContext}
 
   // 8. Stream the response
   const result = streamText({
-    model: gateway("groq/openai/gpt-oss-120b"),
+    model: gateway("openai/gpt-oss-120"),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools,
