@@ -227,17 +227,17 @@ const BubbleLayout = memo(function BubbleLayout({
               {message.user.name}
             </button>
             {message.viaPearl && (
-              <span className="text-[9px] font-medium text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1 py-0.5 rounded">
-                via Pearl
+              <span className="text-[9px] text-muted-foreground">
+                Sent via Pearl
               </span>
             )}
           </div>
         )}
-        {/* via Pearl badge for own messages */}
+        {/* via Pearl for own messages */}
         {!isGrouped && isOwn && message.viaPearl && (
           <div className="flex justify-end mb-1">
-            <span className="text-[9px] font-medium text-violet-300 bg-violet-500/10 px-1 py-0.5 rounded">
-              via Pearl
+            <span className="text-[9px] text-primary-foreground/70">
+              Sent via Pearl
             </span>
           </div>
         )}
@@ -452,6 +452,7 @@ function MessageItemInner({
             isSaved={isSaved}
             isOwner={isOwner}
             isAdmin={isAdmin}
+            position={style === "bubble" && isOwner ? "left" : "right"}
             onReply={callbacks.reply}
             onForward={callbacks.forward}
             onReaction={callbacks.reaction}

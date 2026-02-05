@@ -206,3 +206,226 @@
   background-color: rgb(245 158 11 / 0.25);
   color: rgb(251 191 36);
 }
+
+/* Pearl avatar styles */
+.pearl-avatar {
+  --pearl-dark: #1a1a1a;
+  --pearl-mid: #3d3d3d;
+  --pearl-light: #5a5a5a;
+  --pearl-highlight: #707070;
+}
+
+.dark .pearl-avatar {
+  --pearl-dark: #2a2a2a;
+  --pearl-mid: #4a4a4a;
+  --pearl-light: #6a6a6a;
+  --pearl-highlight: #8a8a8a;
+}
+
+.pearl-gradient-idle {
+  background: radial-gradient(
+    ellipse 80% 80% at 30% 30%,
+    var(--pearl-highlight) 0%,
+    var(--pearl-light) 25%,
+    var(--pearl-mid) 50%,
+    var(--pearl-dark) 100%
+  );
+}
+
+.pearl-gradient-active {
+  background: radial-gradient(
+    ellipse 80% 80% at 30% 30%,
+    var(--pearl-highlight) 0%,
+    var(--pearl-light) 25%,
+    var(--pearl-mid) 50%,
+    var(--pearl-dark) 100%
+  );
+  animation: pearl-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pearl-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-drift {
+  animation: drift 8s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+/* Pearl markdown styles */
+.pearl-markdown h1 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.pearl-markdown h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.875rem;
+  margin-bottom: 0.375rem;
+  line-height: 1.4;
+}
+
+.pearl-markdown h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.pearl-markdown h4,
+.pearl-markdown h5,
+.pearl-markdown h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.pearl-markdown p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.pearl-markdown p:first-child {
+  margin-top: 0;
+}
+
+.pearl-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.pearl-markdown ul,
+.pearl-markdown ol {
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+  padding-left: 1.5rem;
+}
+
+.pearl-markdown ul {
+  list-style-type: disc;
+}
+
+.pearl-markdown ol {
+  list-style-type: decimal;
+}
+
+.pearl-markdown li {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+
+.pearl-markdown li::marker {
+  color: var(--muted-foreground);
+}
+
+.pearl-markdown code {
+  font-size: 0.8125rem;
+  font-family: var(--font-geist-mono), monospace;
+  background-color: var(--muted);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.pearl-markdown pre {
+  font-size: 0.8125rem;
+  font-family: var(--font-geist-mono), monospace;
+  background-color: var(--muted);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pearl-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.pearl-markdown blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75rem;
+  margin-left: 0;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.pearl-markdown a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pearl-markdown a:hover {
+  opacity: 0.8;
+}
+
+.pearl-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pearl-markdown strong {
+  font-weight: 600;
+}
+
+.pearl-markdown em {
+  font-style: italic;
+}
+
+.pearl-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.pearl-markdown th,
+.pearl-markdown td {
+  border: 1px solid var(--border);
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+}
+
+.pearl-markdown th {
+  background-color: var(--muted);
+  font-weight: 600;
+}

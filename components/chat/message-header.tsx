@@ -133,16 +133,12 @@ function MessageHeaderInner({
           OP
         </span>
       )}
-      {viaPearl && (
-        <span className="text-[10px] font-medium text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
-          via Pearl
-        </span>
-      )}
       <span
-        className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default"
+        className="text-[10px] leading-none text-muted-foreground font-medium cursor-default"
         title={createdAt ? formatFullDateTime(createdAt) : undefined}
       >
-        {timestamp}
+        <span className="tabular-nums">{timestamp}</span>
+        {viaPearl && ". Sent via Pearl"}
       </span>
       {editedAt && (
         <span className="text-[10px] text-muted-foreground/70 font-medium">

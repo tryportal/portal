@@ -1,25 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import type { PersonaState } from "@/components/ai-elements/persona";
 import { cn } from "@/lib/utils";
 
-// Dynamically import Persona to avoid SSR issues with Rive WebGL2
-const Persona = dynamic(
-  () =>
-    import("@/components/ai-elements/persona").then((mod) => ({
-      default: mod.Persona,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 dark:from-zinc-300 dark:to-zinc-500 animate-pulse" />
-    ),
-  }
-);
-
 interface PearlAvatarProps {
-  state?: PersonaState;
+  state?: "idle" | "thinking" | "speaking" | "listening";
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }
@@ -32,18 +16,45 @@ const sizeClasses = {
 };
 
 export function PearlAvatar({ state = "idle", size = "sm", className }: PearlAvatarProps) {
+  const isActive = state === "thinking" || state === "speaking" || state === "listening";
+  
   return (
     <div
       className={cn(
-        "relative rounded-full overflow-hidden flex-shrink-0",
+        "pearl-avatar relative rounded-full overflow-hidden flex-shrink-0",
         sizeClasses[size],
+        isActive && "pearl-avatar-active",
         className
       )}
     >
-      <Persona
-        state={state}
-        variant="obsidian"
-        className="size-full"
+      {/* Outer glow for active states */}
+      {isActive && (
+        <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-foreground/20 via-foreground/10 to-foreground/20 blur-sm animate-pulse" />
+      )}
+      
+      {/* Main gradient orb */}
+      <div
+        className={cn(
+          "relative size-full rounded-full",
+          isActive ? "pearl-gradient-active" : "pearl-gradient-idle"
+        )}
+      />
+      
+      {/* Inner luminosity */}
+      <div 
+        className={cn(
+          "absolute inset-[15%] rounded-full",
+          "bg-gradient-to-br from-white/20 via-transparent to-transparent",
+          isActive && "animate-pulse"
+        )}
+      />
+      
+      {/* Specular highlight */}
+      <div 
+        className={cn(
+          "absolute top-[12%] left-[20%] size-[25%] rounded-full",
+          "bg-white/25 blur-[1px]"
+        )}
       />
     </div>
   );

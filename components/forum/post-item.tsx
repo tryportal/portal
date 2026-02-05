@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { PostStatusBadge } from "./post-status-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PearlAvatar } from "@/components/pearl/pearl-avatar"
 import { ChatCircleIcon, PushPinIcon } from "@phosphor-icons/react"
 import type { Id } from "@/convex/_generated/dataModel"
 
@@ -14,6 +15,7 @@ export interface ForumPost {
   authorId: string
   status: "open" | "closed" | "solved"
   isPinned?: boolean
+  viaPearl?: boolean
   createdAt: number
   lastActivityAt: number
   commentCount: number
@@ -72,10 +74,14 @@ export function PostItem({ post, author, isSelected, onClick }: PostItemProps) {
     >
       <div className="flex items-start gap-3">
         {/* Author avatar */}
-        <Avatar className="size-8 shrink-0">
-          <AvatarImage src={author.avatar} alt={author.name} />
-          <AvatarFallback className="text-xs">{author.initials}</AvatarFallback>
-        </Avatar>
+        {post.viaPearl ? (
+          <PearlAvatar size="sm" className="shrink-0" />
+        ) : (
+          <Avatar className="size-8 shrink-0">
+            <AvatarImage src={author.avatar} alt={author.name} />
+            <AvatarFallback className="text-xs">{author.initials}</AvatarFallback>
+          </Avatar>
+        )}
 
         <div className="flex-1 min-w-0">
           {/* Title row with pins and status */}
@@ -96,7 +102,7 @@ export function PostItem({ post, author, isSelected, onClick }: PostItemProps) {
 
           {/* Meta row */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="truncate">{author.name}</span>
+            <span className="truncate">{post.viaPearl ? "Pearl" : author.name}</span>
             <span className="flex items-center gap-1">
               <ChatCircleIcon className="size-3" />
               {post.commentCount}

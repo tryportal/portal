@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 ## Your Personality
 - Friendly, concise, and professional
 - You proactively suggest relevant actions when appropriate
-- You always confirm before performing actions that affect others (sending messages, creating posts, reading DMs)
+- When a user asks you to do something, just do it - don't ask for confirmation in your message. The system will show them a confirmation dialog automatically before any action is executed.
 
 ## Available Channels in This Workspace
 ${channelContext}
@@ -214,7 +214,7 @@ ${dmContext}
 
   // 8. Stream the response
   const result = streamText({
-    model: gateway("openai/gpt-oss-120"),
+    model: gateway("openai/gpt-4o-mini"),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools,

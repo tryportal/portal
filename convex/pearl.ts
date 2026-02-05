@@ -390,7 +390,72 @@ export const getInboxForSummary = query({
 });
 
 /**
- * Get persisted Pearl chat history.
+ * List all Pearl conversations for a user in a workspace.
+ */
+export const listConversations = query({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    const conversations = await ctx.db
+      .query("pearlConversations")
+      .withIndex("by_user_org_and_last_message", (q) =>
+        q.eq("userId", userId).eq("organizationId", args.organizationId)
+      )
+      .order("desc")
+      .take(50);
+
+    return conversations.map((c) => ({
+      id: c._id,
+      title: c.title || "New chat",
+      createdAt: c.createdAt,
+      lastMessageAt: c.lastMessageAt,
+    }));
+  },
+});
+
+/**
+ * Get messages for a specific Pearl conversation.
+ */
+export const getConversationMessages = query({
+  args: {
+    conversationId: v.id("pearlConversations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Verify conversation belongs to user
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.userId !== userId) return [];
+
+    const messages = await ctx.db
+      .query("pearlMessages")
+      .withIndex("by_conversation_and_created", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("asc")
+      .take(100);
+
+    return messages.map((m) => ({
+      id: m._id,
+      role: m.role,
+      content: m.content,
+      toolInvocations: m.toolInvocations,
+      createdAt: m.createdAt,
+    }));
+  },
+});
+
+/**
+ * Get persisted Pearl chat history (legacy - returns most recent conversation).
  */
 export const getChatHistory = query({
   args: {
@@ -451,9 +516,133 @@ export const checkDailyLimit = query({
   },
 });
 
+/**
+ * Get workspace members for Pearl mention autocomplete.
+ * Returns all members with their user info and DM conversation ID (if exists).
+ */
+export const getWorkspaceMembers = query({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+
+    // Check org membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership) return [];
+
+    // Get all org members
+    const members = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    // Get user data for all members (excluding current user)
+    const otherMembers = members.filter((m) => m.userId !== userId);
+
+    // Get existing DM conversations for the current user
+    const convos1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+
+    const convos2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+
+    // Build a map of otherUserId -> conversationId
+    const convoMap = new Map<string, string>();
+    for (const c of [...convos1, ...convos2]) {
+      const otherUserId = c.participant1Id === userId ? c.participant2Id : c.participant1Id;
+      convoMap.set(otherUserId, c._id);
+    }
+
+    // Fetch user data and build result
+    const result = await Promise.all(
+      otherMembers.map(async (m) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", m.userId))
+          .first();
+
+        return {
+          userId: m.userId,
+          name: user
+            ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+            : "Unknown",
+          imageUrl: user?.imageUrl || null,
+          conversationId: convoMap.get(m.userId) || null,
+        };
+      })
+    );
+
+    return result;
+  },
+});
+
 // ============================================================================
 // Mutations
 // ============================================================================
+
+/**
+ * Create a new Pearl conversation.
+ */
+export const createConversation = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    title: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+    const now = Date.now();
+
+    return await ctx.db.insert("pearlConversations", {
+      userId,
+      organizationId: args.organizationId,
+      title: args.title,
+      createdAt: now,
+      lastMessageAt: now,
+    });
+  },
+});
+
+/**
+ * Update conversation title.
+ */
+export const updateConversationTitle = mutation({
+  args: {
+    conversationId: v.id("pearlConversations"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.userId !== userId) {
+      throw new Error("Conversation not found");
+    }
+
+    await ctx.db.patch(args.conversationId, { title: args.title });
+  },
+});
 
 /**
  * Save a Pearl chat message (user or assistant).
@@ -461,6 +650,7 @@ export const checkDailyLimit = query({
 export const savePearlMessage = mutation({
   args: {
     organizationId: v.id("organizations"),
+    conversationId: v.optional(v.id("pearlConversations")),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     toolInvocations: v.optional(v.string()),
@@ -470,14 +660,24 @@ export const savePearlMessage = mutation({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    const now = Date.now();
+
+    // Update conversation lastMessageAt if conversationId provided
+    if (args.conversationId) {
+      const conversation = await ctx.db.get(args.conversationId);
+      if (conversation && conversation.userId === userId) {
+        await ctx.db.patch(args.conversationId, { lastMessageAt: now });
+      }
+    }
 
     return await ctx.db.insert("pearlMessages", {
       userId,
       organizationId: args.organizationId,
+      conversationId: args.conversationId,
       role: args.role,
       content: args.content,
       toolInvocations: args.toolInvocations,
-      createdAt: Date.now(),
+      createdAt: now,
     });
   },
 });
@@ -671,6 +871,43 @@ export const createForumPostViaPearl = mutation({
 });
 
 /**
+ * Delete a specific Pearl conversation and its messages.
+ */
+export const deleteConversation = mutation({
+  args: {
+    conversationId: v.id("pearlConversations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.userId !== userId) {
+      throw new Error("Conversation not found");
+    }
+
+    // Delete all messages in the conversation
+    const messages = await ctx.db
+      .query("pearlMessages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .collect();
+
+    for (const message of messages) {
+      await ctx.db.delete(message._id);
+    }
+
+    // Delete the conversation
+    await ctx.db.delete(args.conversationId);
+
+    return { deleted: messages.length };
+  },
+});
+
+/**
  * Clear Pearl chat history for a user in a workspace.
  */
 export const clearChatHistory = mutation({
@@ -683,6 +920,19 @@ export const clearChatHistory = mutation({
 
     const userId = identity.subject;
 
+    // Delete all conversations
+    const conversations = await ctx.db
+      .query("pearlConversations")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", userId).eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    for (const conversation of conversations) {
+      await ctx.db.delete(conversation._id);
+    }
+
+    // Delete all messages (including any orphaned ones)
     const messages = await ctx.db
       .query("pearlMessages")
       .withIndex("by_user_and_org", (q) =>
@@ -694,6 +944,6 @@ export const clearChatHistory = mutation({
       await ctx.db.delete(message._id);
     }
 
-    return { deleted: messages.length };
+    return { deleted: messages.length, conversations: conversations.length };
   },
 });

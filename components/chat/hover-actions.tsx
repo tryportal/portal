@@ -41,6 +41,7 @@ interface HoverActionsProps {
   isSaved?: boolean
   isOwner?: boolean
   isAdmin?: boolean
+  position?: "left" | "right"
   onReply: (messageId: string) => void
   onForward: (messageId: string) => void
   onReaction: (messageId: string, emoji: string) => void
@@ -64,6 +65,7 @@ function HoverActionsInner({
   isSaved,
   isOwner,
   isAdmin,
+  position = "right",
   onReply,
   onForward,
   onReaction,
@@ -97,9 +99,11 @@ function HoverActionsInner({
     navigator.clipboard.writeText(messageContent)
   }, [messageContent])
 
+  const positionClass = position === "left" ? "left-4" : "right-4"
+
   return (
     <div
-      className={`absolute top-1 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-50 ${className ?? ""}`}
+      className={`absolute top-1 ${positionClass} flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-md z-50 ${className ?? ""}`}
     >
       {/* Reply */}
       <Button
