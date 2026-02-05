@@ -15,6 +15,7 @@ import type * as getCurrentUser from "../getCurrentUser.js";
 import type * as invitations from "../invitations.js";
 import type * as messages from "../messages.js";
 import type * as organizations from "../organizations.js";
+import type * as pearl from "../pearl.js";
 import type * as sharedChannels from "../sharedChannels.js";
 import type * as users from "../users.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   invitations: typeof invitations;
   messages: typeof messages;
   organizations: typeof organizations;
+  pearl: typeof pearl;
   sharedChannels: typeof sharedChannels;
   users: typeof users;
 }>;

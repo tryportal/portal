@@ -114,6 +114,7 @@ const CompactLayout = memo(function CompactLayout({
             createdAt={message.createdAt}
             editedAt={message.editedAt}
             isOP={message.isOP}
+            viaPearl={message.viaPearl}
             onNameClick={onNameClick}
           />
         )}
@@ -218,12 +219,27 @@ const BubbleLayout = memo(function BubbleLayout({
       >
         {/* Header: Name (not shown for grouped or own messages) */}
         {!isGrouped && !isOwn && (
-          <button
-            onClick={() => onNameClick?.(message.user.id)}
-            className="font-semibold text-xs text-foreground/80 hover:underline mb-1 block"
-          >
-            {message.user.name}
-          </button>
+          <div className="flex items-center gap-1.5 mb-1">
+            <button
+              onClick={() => onNameClick?.(message.user.id)}
+              className="font-semibold text-xs text-foreground/80 hover:underline block"
+            >
+              {message.user.name}
+            </button>
+            {message.viaPearl && (
+              <span className="text-[9px] text-muted-foreground">
+                Sent via Pearl
+              </span>
+            )}
+          </div>
+        )}
+        {/* via Pearl for own messages */}
+        {!isGrouped && isOwn && message.viaPearl && (
+          <div className="flex justify-end mb-1">
+            <span className="text-[9px] text-primary-foreground/70">
+              Sent via Pearl
+            </span>
+          </div>
         )}
 
         {/* Content */}
@@ -436,6 +452,7 @@ function MessageItemInner({
             isSaved={isSaved}
             isOwner={isOwner}
             isAdmin={isAdmin}
+            position={style === "bubble" && isOwner ? "left" : "right"}
             onReply={callbacks.reply}
             onForward={callbacks.forward}
             onReaction={callbacks.reaction}

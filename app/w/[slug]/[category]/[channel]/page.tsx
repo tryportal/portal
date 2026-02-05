@@ -422,6 +422,7 @@ export default function ChannelPage({
           channelName: msg.forwardedFrom.channelName,
           userName: msg.forwardedFrom.userName,
         } : undefined,
+        viaPearl: msg.viaPearl || false,
       };
     });
   }, [filteredMessages, userDataCache, user, messageMap, userNames]);

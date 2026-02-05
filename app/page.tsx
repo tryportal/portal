@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import { useTheme } from "@/lib/theme-provider";
@@ -14,7 +14,6 @@ export default function Page() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const [showLoading, setShowLoading] = useState(false);
 
   // Get user's organizations from Convex - only query if signed in
   const userOrgs = useQuery(
@@ -31,6 +30,9 @@ export default function Page() {
     targetOrg?._id ? { organizationId: targetOrg._id } : "skip"
   );
 
+  // Derive showLoading from auth state - no setState needed
+  const showLoading = authLoaded && isSignedIn;
+
   useEffect(() => {
     if (!authLoaded) return;
 
@@ -39,9 +41,6 @@ export default function Page() {
       router.replace("/home");
       return;
     }
-
-    // User is signed in - now we show loading while we figure out where to send them
-    setShowLoading(true);
 
     // Wait for organizations to load
     if (userOrgs === undefined) return;

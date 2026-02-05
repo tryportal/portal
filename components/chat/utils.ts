@@ -51,6 +51,7 @@ export interface Message {
   isOP?: boolean
   isSolvedAnswer?: boolean
   isPending?: boolean
+  viaPearl?: boolean
 }
 
 export interface GroupedReaction {

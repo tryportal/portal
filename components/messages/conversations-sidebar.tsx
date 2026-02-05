@@ -9,6 +9,7 @@ import {
   PlusIcon,
   MagnifyingGlassIcon,
   ShareNetworkIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { useWorkspaceData } from "@/components/workspace-context"
@@ -21,6 +22,8 @@ import { ClaimHandleDialog } from "@/components/messages/claim-handle-dialog"
 import { ShareDmLinkDialog } from "@/components/messages/share-dm-link-dialog"
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar"
 import { cn } from "@/lib/utils"
+import { useUserSettings } from "@/lib/user-settings"
+import { PearlAvatar } from "@/components/pearl/pearl-avatar"
 
 import { LoadingSpinner } from "@/components/loading-spinner"
 
@@ -301,6 +304,9 @@ export function ConversationsSidebar() {
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
+        {/* Pearl AI Assistant - always at top */}
+        <PearlSidebarEntry slug={slug} conversationId={conversationId} />
+
         {!conversations || isLoadingUserData || !allUserDataLoaded ? (
           <div className="flex items-center justify-center h-full">
             <LoadingSpinner size="sm" text="Loading conversations..." />
@@ -428,3 +434,51 @@ export function ConversationsSidebar() {
   )
 }
 
+// ============================================================================
+// Pearl Sidebar Entry
+// ============================================================================
+
+function PearlSidebarEntry({ slug, conversationId }: { slug: string; conversationId: string | undefined }) {
+  const { settings } = useUserSettings();
+
+  // Hide Pearl if AI features are disabled
+  if (!settings.aiEnabled) {
+    return null;
+  }
+
+  const isActive = conversationId === "pearl";
+
+  return (
+    <div className="px-2 pt-2 pb-1">
+      <Link
+        href={`/w/${slug}/messages/pearl`}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
+          isActive ? "bg-secondary" : "hover:bg-muted"
+        )}
+      >
+        <div className="relative flex-shrink-0">
+          <PearlAvatar state="idle" size="sm" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className={cn(
+              "text-sm truncate min-w-0",
+              isActive ? "font-semibold text-foreground" : "font-medium text-foreground"
+            )}>
+              Pearl
+            </p>
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary flex-shrink-0">
+              <SparkleIcon className="size-2" weight="fill" />
+              AI
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            Your workspace assistant
+          </p>
+        </div>
+      </Link>
+      <div className="mt-1 border-b border-border" />
+    </div>
+  );
+}

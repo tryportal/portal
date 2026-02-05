@@ -32,6 +32,7 @@ import {
   BellIcon,
   GearIcon,
   ChatCircleIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 import { useNotificationContext } from "@/components/notifications/notification-provider";
 import type { BrowserNotificationsSetting, MessageStyle } from "@/lib/user-settings";
@@ -48,13 +49,14 @@ const KEY_OPTIONS = "abcdefghijklmnopqrstuvwxyz".split("").map((key) => ({
   label: key.toUpperCase(),
 }));
 
-type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts";
+type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts" | "ai";
 
 const sections = [
   { id: "account" as const, label: "Account", icon: UserIcon },
   { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
   { id: "notifications" as const, label: "Notifications", icon: BellIcon },
   { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
+  { id: "ai" as const, label: "AI", icon: SparkleIcon },
 ];
 
 // Mini preview components for message style settings
@@ -121,7 +123,7 @@ export default function UserSettingsPage() {
   const { openUserProfile, signOut } = useClerk();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const { settings, updateSidebarHotkey, updateBrowserNotifications, updateMessageStyles, formatHotkey } = useUserSettings();
+  const { settings, updateSidebarHotkey, updateBrowserNotifications, updateMessageStyles, updateAiEnabled, formatHotkey } = useUserSettings();
   const { permission: notificationPermission, isSupported: notificationsSupported, requestPermission } = useNotificationContext();
 
   // Get user organizations to redirect back
@@ -926,6 +928,94 @@ export default function UserSettingsPage() {
             <div className="rounded-lg border border-border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
                 <strong className="font-medium text-foreground">Tip:</strong> Click "Record" and press your preferred key combination to quickly set a shortcut. Press Escape to cancel.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Section */}
+        {activeSection === "ai" && (
+          <div className="space-y-4">
+            {/* AI Features Toggle */}
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <SparkleIcon className="size-4 text-muted-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">AI Features</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Control AI-powered features in Portal
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {(
+                    [
+                      {
+                        value: true,
+                        label: "Enabled",
+                        description: "Pearl AI assistant is available in your Messages tab",
+                      },
+                      {
+                        value: false,
+                        label: "Disabled",
+                        description: "Pearl will be hidden from your Messages. AI features will be turned off.",
+                      },
+                    ] as const
+                  ).map((option) => {
+                    const isSelected = settings.aiEnabled === option.value;
+                    return (
+                      <button
+                        key={String(option.value)}
+                        onClick={() => {
+                          updateAiEnabled(option.value);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background hover:bg-muted/50"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex size-8 items-center justify-center rounded-md",
+                          isSelected ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          <SparkleIcon
+                            className={cn(
+                              "size-4",
+                              isSelected ? "text-primary" : "text-muted-foreground"
+                            )}
+                            weight={isSelected ? "fill" : "regular"}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {option.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {option.description}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="flex size-5 items-center justify-center rounded-full bg-primary">
+                            <CheckIcon className="size-3 text-primary-foreground" weight="bold" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* AI Info */}
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                <strong className="font-medium text-foreground">About Pearl:</strong> Pearl is your AI workspace assistant. It can summarize channels, DMs, your inbox, send messages on your behalf, and create forum posts. You have a daily limit of 10 messages with Pearl.
               </p>
             </div>
           </div>

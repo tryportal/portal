@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { PostStatusBadge } from "./post-status-badge"
 import { OPBadge } from "./op-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PearlAvatar } from "@/components/pearl/pearl-avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ interface PostHeaderProps {
   }
   status: "open" | "closed" | "solved"
   isPinned?: boolean
+  viaPearl?: boolean
   createdAt: number
   canModify: boolean
   isAdmin: boolean
@@ -66,6 +68,7 @@ export function PostHeader({
   author,
   status,
   isPinned,
+  viaPearl,
   createdAt,
   canModify,
   isAdmin,
@@ -107,11 +110,15 @@ export function PostHeader({
 
           {/* Author and metadata row */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Avatar className="size-5">
-              <AvatarImage src={author.avatar} alt={author.name} />
-              <AvatarFallback className="text-[0.5rem]">{author.initials}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm text-muted-foreground">{author.name}</span>
+            {viaPearl ? (
+              <PearlAvatar size="xs" />
+            ) : (
+              <Avatar className="size-5">
+                <AvatarImage src={author.avatar} alt={author.name} />
+                <AvatarFallback className="text-[0.5rem]">{author.initials}</AvatarFallback>
+              </Avatar>
+            )}
+            <span className="text-sm text-muted-foreground">{viaPearl ? "Pearl" : author.name}</span>
             <OPBadge />
             <span className="text-xs text-muted-foreground">
               · {formatDate(createdAt)}

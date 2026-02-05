@@ -104,6 +104,7 @@ interface MessageHeaderProps {
   createdAt?: number
   editedAt?: number
   isOP?: boolean
+  viaPearl?: boolean
   onNameClick?: (userId: string) => void
   className?: string
 }
@@ -115,6 +116,7 @@ function MessageHeaderInner({
   createdAt,
   editedAt,
   isOP,
+  viaPearl,
   onNameClick,
   className,
 }: MessageHeaderProps) {
@@ -132,10 +134,11 @@ function MessageHeaderInner({
         </span>
       )}
       <span
-        className="text-[10px] leading-none text-muted-foreground font-medium tabular-nums cursor-default"
+        className="text-[10px] leading-none text-muted-foreground font-medium cursor-default"
         title={createdAt ? formatFullDateTime(createdAt) : undefined}
       >
-        {timestamp}
+        <span className="tabular-nums">{timestamp}</span>
+        {viaPearl && ". Sent via Pearl"}
       </span>
       {editedAt && (
         <span className="text-[10px] text-muted-foreground/70 font-medium">

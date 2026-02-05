@@ -13,6 +13,7 @@ import type { MentionUser } from "@/components/preview/mention-autocomplete"
 import type { LinkEmbedData } from "@/components/preview/link-preview"
 import type { Id, Doc } from "@/convex/_generated/dataModel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PearlAvatar } from "@/components/pearl/pearl-avatar"
 import { Button } from "@/components/ui/button"
 import { CheckCircleIcon, LockIcon, ImageIcon, VideoCameraIcon, FileIcon, DownloadSimpleIcon, Spinner } from "@phosphor-icons/react"
 import { ResizableVerticalPanel } from "@/components/ui/resizable-vertical-panel"
@@ -258,6 +259,7 @@ export function PostView({
         author={author}
         status={post.status}
         isPinned={post.isPinned}
+        viaPearl={post.viaPearl}
         createdAt={post.createdAt}
         canModify={canModify}
         isAdmin={isAdmin}
@@ -284,13 +286,17 @@ export function PostView({
         {/* Post content */}
         <div className="flex-1 min-h-0 overflow-auto px-4 py-4 border-b border-border bg-muted/30">
           <div className="flex gap-3">
-            <Avatar className="size-10 shrink-0">
-              <AvatarImage src={author.avatar} alt={author.name} />
-              <AvatarFallback>{author.initials}</AvatarFallback>
-            </Avatar>
+            {post.viaPearl ? (
+              <PearlAvatar size="md" className="shrink-0" />
+            ) : (
+              <Avatar className="size-10 shrink-0">
+                <AvatarImage src={author.avatar} alt={author.name} />
+                <AvatarFallback>{author.initials}</AvatarFallback>
+              </Avatar>
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-sm">{author.name}</span>
+                <span className="font-medium text-sm">{post.viaPearl ? "Pearl" : author.name}</span>
                 <OPBadge />
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none">

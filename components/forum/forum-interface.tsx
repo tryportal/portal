@@ -14,6 +14,7 @@ import type { Message, Attachment, Reaction } from "@/components/chat"
 import type { LinkEmbedData as LinkEmbed } from "@/components/preview/link-preview"
 import type { MentionUser } from "@/components/preview/mention-autocomplete"
 import { ResizablePanel } from "@/components/ui/resizable-panel"
+import { useUserDataCache } from "@/components/user-data-cache"
 
 interface ForumInterfaceProps {
   channelId: Id<"channels">
@@ -46,6 +47,9 @@ export function ForumInterface({
   const [createPostOpen, setCreatePostOpen] = React.useState(false)
   const [isMobilePostView, setIsMobilePostView] = React.useState(false)
 
+  // Get fetchUserData from the cache context
+  const { fetchUserData } = useUserDataCache()
+
   // Queries
   const postsData = useQuery(api.forumPosts.getPosts, { channelId })
   const selectedPost = useQuery(
@@ -76,6 +80,20 @@ export function ForumInterface({
       ? { storageIds: commentAttachmentStorageIds as any }
       : "skip"
   ) as Record<string, string | null> | undefined
+
+  // Fetch user data for post authors
+  React.useEffect(() => {
+    if (!postsData?.posts || postsData.posts.length === 0) return
+    const uniqueUserIds = Array.from(new Set(postsData.posts.map(post => post.authorId)))
+    fetchUserData(uniqueUserIds)
+  }, [postsData?.posts, fetchUserData])
+
+  // Fetch user data for comment authors
+  React.useEffect(() => {
+    if (!commentsData?.comments || commentsData.comments.length === 0) return
+    const uniqueUserIds = Array.from(new Set(commentsData.comments.map(comment => comment.userId)))
+    fetchUserData(uniqueUserIds)
+  }, [commentsData?.comments, fetchUserData])
 
   // Mutations
   const sendComment = useMutation(api.forumPosts.sendComment)
@@ -144,6 +162,7 @@ export function ForumInterface({
       authorId: post.authorId,
       status: post.status,
       isPinned: post.isPinned,
+      viaPearl: post.viaPearl,
       commentCount: post.commentCount,
       lastActivityAt: post.lastActivityAt,
       createdAt: post.createdAt,
@@ -199,6 +218,7 @@ export function ForumInterface({
         linkEmbed: comment.linkEmbed,
         editedAt: comment.editedAt,
         reactions: reactions && reactions.length > 0 ? reactions : undefined,
+        viaPearl: comment.viaPearl || false,
       }
     })
   }, [commentsData, userDataCache])

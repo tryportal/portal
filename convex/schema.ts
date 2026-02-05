@@ -152,6 +152,8 @@ export default defineSchema({
     }))), // User reactions
     pinned: v.optional(v.boolean()), // Pin status
     mentions: v.optional(v.array(v.string())), // Array of mentioned user IDs
+    // Pearl AI assistant metadata
+    viaPearl: v.optional(v.boolean()), // True if message was sent by Pearl on behalf of user
     // Forwarding metadata
     forwardedFrom: v.optional(v.object({
       messageId: v.id("messages"), // Original message ID
@@ -264,6 +266,44 @@ export default defineSchema({
     .index("by_channel_and_user", ["channelId", "userId"]),
 
   // ============================================================================
+  // Pearl AI Assistant
+  // ============================================================================
+
+  // Pearl conversation threads
+  pearlConversations: defineTable({
+    userId: v.string(), // Clerk user ID
+    organizationId: v.id("organizations"), // Workspace context
+    title: v.optional(v.string()), // Auto-generated from first message or "New chat"
+    createdAt: v.number(),
+    lastMessageAt: v.number(), // For sorting by recent activity
+  })
+    .index("by_user_and_org", ["userId", "organizationId"])
+    .index("by_user_org_and_last_message", ["userId", "organizationId", "lastMessageAt"]),
+
+  // Persistent chat history with Pearl
+  pearlMessages: defineTable({
+    userId: v.string(), // Clerk user ID
+    organizationId: v.id("organizations"), // Workspace context
+    conversationId: v.optional(v.id("pearlConversations")), // Thread this message belongs to
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(), // Message text
+    toolInvocations: v.optional(v.string()), // JSON-serialized tool calls/results
+    createdAt: v.number(),
+  })
+    .index("by_user_and_org", ["userId", "organizationId"])
+    .index("by_user_org_and_created", ["userId", "organizationId", "createdAt"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_conversation_and_created", ["conversationId", "createdAt"]),
+
+  // Daily rate limit tracking for Pearl
+  pearlUsage: defineTable({
+    userId: v.string(), // Clerk user ID
+    date: v.string(), // Date string "YYYY-MM-DD"
+    messageCount: v.number(), // Messages sent today
+  })
+    .index("by_user_and_date", ["userId", "date"]),
+
+  // ============================================================================
   // Forum Posts - Posts in forum-type channels
   // ============================================================================
 
@@ -294,6 +334,8 @@ export default defineSchema({
       siteName: v.optional(v.string()),
       favicon: v.optional(v.string()),
     })),
+    // Pearl AI assistant metadata
+    viaPearl: v.optional(v.boolean()), // True if forum post was created by Pearl
   })
     .index("by_channel", ["channelId"])
     .index("by_channel_and_status", ["channelId", "status"])
