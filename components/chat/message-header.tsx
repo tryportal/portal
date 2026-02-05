@@ -104,6 +104,7 @@ interface MessageHeaderProps {
   createdAt?: number
   editedAt?: number
   isOP?: boolean
+  viaPearl?: boolean
   onNameClick?: (userId: string) => void
   className?: string
 }
@@ -115,6 +116,7 @@ function MessageHeaderInner({
   createdAt,
   editedAt,
   isOP,
+  viaPearl,
   onNameClick,
   className,
 }: MessageHeaderProps) {
@@ -129,6 +131,11 @@ function MessageHeaderInner({
       {isOP && (
         <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
           OP
+        </span>
+      )}
+      {viaPearl && (
+        <span className="text-[10px] font-medium text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+          via Pearl
         </span>
       )}
       <span

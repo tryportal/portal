@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs"
 import {
   PlusIcon,
   MagnifyingGlassIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react"
 import { api } from "@/convex/_generated/api"
 import { useWorkspaceData } from "@/components/workspace-context"
@@ -16,6 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { NewDmDialog } from "@/components/messages/new-dm-dialog"
 import { cn } from "@/lib/utils"
+import { useUserSettings } from "@/lib/user-settings"
+import { PearlAvatar } from "@/components/pearl/pearl-avatar"
 
 
 function formatFullDateTime(timestamp: number): string {
@@ -163,9 +166,49 @@ export function MobileConversationsList() {
         <div className="flex h-14 items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
-      </div>
-    )
+    </div>
+  )
+}
+
+// ============================================================================
+// Pearl Mobile Entry
+// ============================================================================
+
+function MobilePearlEntry({ slug }: { slug: string }) {
+  const router = useRouter();
+  const { settings } = useUserSettings();
+
+  // Hide Pearl if AI features are disabled
+  if (!(settings as any).aiEnabled && (settings as any).aiEnabled !== undefined) {
+    return null;
   }
+
+  return (
+    <div className="px-2 pt-2 pb-1">
+      <button
+        onClick={() => router.push(`/w/${slug}/messages/pearl`)}
+        className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted active:bg-secondary"
+      >
+        <div className="relative flex-shrink-0">
+          <PearlAvatar state="idle" size="md" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-foreground">Pearl</p>
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary flex-shrink-0">
+              <SparkleIcon className="size-2" weight="fill" />
+              AI
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            Your workspace assistant
+          </p>
+        </div>
+      </button>
+      <div className="mt-1 border-b border-border mx-2" />
+    </div>
+  );
+}
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -198,6 +241,9 @@ export function MobileConversationsList() {
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
+        {/* Pearl AI Assistant - always at top */}
+        <MobilePearlEntry slug={slug} />
+
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
             <p className="text-sm text-muted-foreground mb-3">
