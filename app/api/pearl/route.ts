@@ -247,7 +247,7 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
 
   // 8. Stream the response
   const result = streamText({
-    model: gateway("zai/glm-4.7"),
+    model: gateway("xai/grok-4.1-fast-non-reasoning"),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools,
