@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tryportal/portal)
 
-Team chat, reimagined. Built with Next.js 15, Convex, and Clerk.
+Team chat, reimagined. Built with Next.js 16, Convex, and Clerk.
 
 ## Features
 
