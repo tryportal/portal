@@ -11,6 +11,11 @@ import { auth } from "@clerk/nextjs/server";
 import { createConvexServerClient } from "@/lib/convex-server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { createTracker } from "@databuddy/ai/vercel";
+
+const { track } = createTracker({
+  apiKey: process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID,
+});
 
 export const maxDuration = 60;
 
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
       JSON.stringify({
         error: `Daily message limit reached (${usage.limit}/${usage.limit}). Come back tomorrow!`,
       }),
-      { status: 429, headers: { "Content-Type": "application/json" } }
+      { status: 429, headers: { "Content-Type": "application/json" } },
     );
   }
 
@@ -59,17 +64,22 @@ export async function POST(req: Request) {
   });
 
   // Build channel context string
-  const channelContext = context?.channels
-    ?.map(
-      (ch) =>
-        `- ${ch.name} (ID: ${ch.id}, type: ${ch.type}, category: ${ch.categoryName}${ch.isPrivate ? ", private" : ""})`
-    )
-    .join("\n") || "No channels available";
+  const channelContext =
+    context?.channels
+      ?.map(
+        (ch) =>
+          `- ${ch.name} (ID: ${ch.id}, type: ${ch.type}, category: ${ch.categoryName}${ch.isPrivate ? ", private" : ""})`,
+      )
+      .join("\n") || "No channels available";
 
   // Build DM context string
-  const dmContext = context?.conversations
-    ?.map((c) => `- ${c.otherUserName} (conversation ID: ${c.id}, user ID: ${c.otherUserId})`)
-    .join("\n") || "No DM conversations available";
+  const dmContext =
+    context?.conversations
+      ?.map(
+        (c) =>
+          `- ${c.otherUserName} (conversation ID: ${c.id}, user ID: ${c.otherUserId})`,
+      )
+      .join("\n") || "No DM conversations available";
 
   const systemPrompt = `You are Pearl, a helpful AI assistant for the Portal workspace. You help users manage their workspace communications efficiently.
 
@@ -136,7 +146,7 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
         try {
           const result = await convex.query(
             api.pearl.getChannelMessagesForSummary,
-            { channelId: channelId as Id<"channels"> }
+            { channelId: channelId as Id<"channels"> },
           );
           if (!result) {
             return { error: "Could not access channel or no messages found." };
@@ -166,8 +176,13 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
           const result = await convex.query(api.pearl.getInboxForSummary, {
             organizationId: organizationId as Id<"organizations">,
           });
-          if (!result || (result.totalMentions === 0 && result.totalDMs === 0)) {
-            return { message: "Your inbox is empty - no unread mentions or messages." };
+          if (
+            !result ||
+            (result.totalMentions === 0 && result.totalDMs === 0)
+          ) {
+            return {
+              message: "Your inbox is empty - no unread mentions or messages.",
+            };
           }
           return {
             totalMentions: result.totalMentions,
@@ -200,7 +215,9 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
           .describe("The ID of the DM conversation to summarize"),
         otherUserName: z
           .string()
-          .describe("The name of the other person in the DM (for the consent dialog)"),
+          .describe(
+            "The name of the other person in the DM (for the consent dialog)",
+          ),
       }),
     }),
 
@@ -214,13 +231,15 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
           .describe("Whether to send to a channel or DM"),
         targetId: z
           .string()
-          .describe("The ID of the channel or conversation to send the message to"),
+          .describe(
+            "The ID of the channel or conversation to send the message to",
+          ),
         targetName: z
           .string()
-          .describe("The name of the channel or person (for the consent dialog)"),
-        content: z
-          .string()
-          .describe("The message content to send"),
+          .describe(
+            "The name of the channel or person (for the consent dialog)",
+          ),
+        content: z.string().describe("The message content to send"),
       }),
     }),
 
@@ -235,19 +254,15 @@ When summarizing the user's inbox, DO NOT just list every message. Instead:
         channelName: z
           .string()
           .describe("The name of the forum channel (for the consent dialog)"),
-        title: z
-          .string()
-          .describe("The title of the forum post"),
-        content: z
-          .string()
-          .describe("The content/body of the forum post"),
+        title: z.string().describe("The title of the forum post"),
+        content: z.string().describe("The content/body of the forum post"),
       }),
     }),
   };
 
   // 8. Stream the response
   const result = streamText({
-    model: gateway("xai/grok-4.1-fast-non-reasoning"),
+    model: track(gateway("xai/grok-4.1-fast-non-reasoning")),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools,
