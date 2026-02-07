@@ -1,6 +1,6 @@
 "use client";
 
-import { Databuddy, clear } from "@databuddy/sdk";
+import { Databuddy, clear } from "@databuddy/sdk/react";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 
