@@ -50,7 +50,7 @@ const defaultSettings: UserSettings = {
   sidebarHotkey: DEFAULT_SIDEBAR_HOTKEY,
   browserNotifications: "ask",
   messageStyles: DEFAULT_MESSAGE_STYLES,
-  aiEnabled: true,
+  aiEnabled: false,
 };
 
 const UserSettingsContext = React.createContext<UserSettingsContextType | undefined>(undefined);

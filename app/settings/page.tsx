@@ -49,14 +49,14 @@ const KEY_OPTIONS = "abcdefghijklmnopqrstuvwxyz".split("").map((key) => ({
   label: key.toUpperCase(),
 }));
 
-type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts" | "ai";
+type SettingsSection = "account" | "appearance" | "notifications" | "shortcuts" | "beta";
 
 const sections = [
   { id: "account" as const, label: "Account", icon: UserIcon },
   { id: "appearance" as const, label: "Appearance", icon: PaletteIcon },
   { id: "notifications" as const, label: "Notifications", icon: BellIcon },
   { id: "shortcuts" as const, label: "Shortcuts", icon: KeyboardIcon },
-  { id: "ai" as const, label: "AI", icon: SparkleIcon },
+  { id: "beta" as const, label: "Beta", icon: SparkleIcon },
 ];
 
 // Mini preview components for message style settings
@@ -933,10 +933,10 @@ export default function UserSettingsPage() {
           </div>
         )}
 
-        {/* AI Section */}
-        {activeSection === "ai" && (
+        {/* Beta Section */}
+        {activeSection === "beta" && (
           <div className="space-y-4">
-            {/* AI Features Toggle */}
+            {/* Pearl AI Assistant Toggle */}
             <div className="rounded-lg border border-border bg-card overflow-hidden">
               <div className="p-3 sm:p-4">
                 <div className="flex items-start gap-3 mb-3">
@@ -944,9 +944,14 @@ export default function UserSettingsPage() {
                     <SparkleIcon className="size-4 text-muted-foreground" weight="fill" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-foreground">AI Features</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-foreground">Pearl AI Assistant</h3>
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">
+                        Beta
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Control AI-powered features in Portal
+                      AI-powered assistant for your workspace (off by default)
                     </p>
                   </div>
                 </div>
@@ -1012,10 +1017,10 @@ export default function UserSettingsPage() {
               </div>
             </div>
 
-            {/* AI Info */}
+            {/* Beta Info */}
             <div className="rounded-lg border border-border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
-                <strong className="font-medium text-foreground">About Pearl:</strong> Pearl is your AI workspace assistant. It can summarize channels, DMs, your inbox, send messages on your behalf, and create forum posts. You have a daily limit of 10 messages with Pearl.
+                <strong className="font-medium text-foreground">About Pearl:</strong> Pearl is your AI workspace assistant. It can summarize channels, DMs, your inbox, send messages on your behalf, and create forum posts. You have a daily limit of 10 messages with Pearl. This feature is in beta and is off by default.
               </p>
             </div>
           </div>
