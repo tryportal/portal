@@ -14,7 +14,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 import { JoinWorkspaceDialog } from "@/components/join-workspace-dialog";
 
 export function WorkspaceSwitcher({ slug }: { slug: string }) {
@@ -23,7 +22,6 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
   const currentWorkspace = useQuery(api.organizations.getWorkspaceBySlug, {
     slug,
   });
-  const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
   return (
@@ -83,7 +81,7 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
             })}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+          <DropdownMenuItem onClick={() => router.push("/onboarding")}>
             <Plus size={14} />
             Create workspace
           </DropdownMenuItem>
@@ -94,7 +92,6 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
       <JoinWorkspaceDialog open={joinOpen} onOpenChange={setJoinOpen} />
     </>
   );
