@@ -171,7 +171,7 @@ export function CreateWorkspaceDialog({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="relative flex size-12 items-center justify-center border border-dashed border-border hover:border-foreground/30 transition-colors overflow-hidden"
+                className="relative flex size-12 items-center justify-center border border-dashed border-border hover:border-foreground/30 overflow-hidden"
               >
                 {logoPreviewUrl ? (
                   <img

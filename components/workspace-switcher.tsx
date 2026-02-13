@@ -28,7 +28,7 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 border-l border-border px-3 text-xs transition-colors hover:bg-muted cursor-pointer outline-none">
+        <DropdownMenuTrigger className="flex items-center gap-2 border-l border-border px-3 text-xs hover:bg-muted cursor-pointer outline-none">
           {currentWorkspace?.logoUrl ? (
             <img
               src={currentWorkspace.logoUrl}

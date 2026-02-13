@@ -21,13 +21,13 @@ export default function SettingsLayout({
         <div className="flex h-14 items-stretch">
           <Link
             href="/"
-            className="flex w-14 items-center justify-center border-r border-border transition-colors hover:bg-muted"
+            className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
           >
             <Image src="/portal.svg" alt="Portal" width={24} height={24} />
           </Link>
           <Link
             href={backHref}
-            className="flex items-center gap-2 border-r border-border px-4 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex items-center gap-2 border-r border-border px-4 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft size={14} />
             Back

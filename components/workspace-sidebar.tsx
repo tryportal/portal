@@ -105,7 +105,7 @@ export function WorkspaceSidebar({
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs transition-colors ${
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
                   isActive
                     ? "bg-primary text-primary-foreground font-medium"
                     : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
@@ -130,7 +130,7 @@ export function WorkspaceSidebar({
             </span>
             {isAdmin && (
               <DropdownMenu>
-                <DropdownMenuTrigger className="text-muted-foreground transition-colors hover:text-sidebar-foreground cursor-pointer outline-none">
+                <DropdownMenuTrigger className="text-muted-foreground hover:text-sidebar-foreground cursor-pointer outline-none">
                   <Plus size={14} />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="bottom" sideOffset={4} align="end">
@@ -163,7 +163,7 @@ export function WorkspaceSidebar({
               <div key={category._id} className="mt-1">
                 <button
                   onClick={() => toggleCategory(category._id)}
-                  className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-sidebar-foreground"
+                  className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
                 >
                   {isCollapsed ? (
                     <CaretRight size={12} weight="bold" />
@@ -185,7 +185,7 @@ export function WorkspaceSidebar({
                         <Link
                           key={channel._id}
                           href={channelHref}
-                          className={`flex items-center gap-2 py-1 pl-6 pr-2.5 text-xs transition-colors ${
+                          className={`flex items-center gap-2 py-1 pl-6 pr-2.5 text-xs ${
                             isChannelActive
                               ? "bg-primary text-primary-foreground font-medium"
                               : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"

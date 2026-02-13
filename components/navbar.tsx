@@ -27,7 +27,7 @@ export function Navbar() {
       <div className="flex h-14 items-stretch">
         <Link
           href="/"
-          className="flex w-14 items-center justify-center border-r border-border transition-colors hover:bg-muted"
+          className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
@@ -38,7 +38,7 @@ export function Navbar() {
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center border-r border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
+                className={`flex items-center border-r border-border px-5 text-xs hover:bg-muted hover:text-foreground ${
                   isActive
                     ? "font-bold text-foreground"
                     : "text-muted-foreground"
@@ -54,13 +54,13 @@ export function Navbar() {
           <SignedOut>
             <Link
               href="/sign-in"
-              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               Sign in
             </Link>
             <Link
               href="/get-started"
-              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               Get started
             </Link>
@@ -68,7 +68,7 @@ export function Navbar() {
           <SignedIn>
             <Link
               href={dashboardHref}
-              className={`flex items-center border-l border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
+              className={`flex items-center border-l border-border px-5 text-xs hover:bg-muted hover:text-foreground ${
                 pathname.startsWith("/w")
                   ? "font-bold text-foreground"
                   : "text-muted-foreground"

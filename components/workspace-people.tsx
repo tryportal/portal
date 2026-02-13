@@ -186,7 +186,7 @@ function MemberRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-3 border border-border bg-card px-4 py-3 hover:bg-muted/50">
         {/* Avatar */}
         <div className="flex-shrink-0">
           {member.imageUrl ? (
@@ -228,7 +228,7 @@ function MemberRow({
         {canManage && (
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="text-muted-foreground transition-colors hover:text-foreground cursor-pointer outline-none"
+              className="text-muted-foreground hover:text-foreground cursor-pointer outline-none"
               disabled={isUpdating}
             >
               <DotsThree size={18} weight="bold" />

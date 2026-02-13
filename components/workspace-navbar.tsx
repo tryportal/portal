@@ -28,7 +28,7 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
       <div className="flex h-14 items-stretch">
         <Link
           href="/"
-          className="flex w-14 items-center justify-center border-r border-border transition-colors hover:bg-muted"
+          className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
@@ -45,7 +45,7 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex w-14 items-center justify-center border-r border-border transition-colors hover:bg-muted ${
+                className={`flex w-14 items-center justify-center border-r border-border hover:bg-muted ${
                   isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
               >

@@ -168,7 +168,7 @@ export function CreateDetailsStep({ onNext, onBack }: CreateDetailsStepProps) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="relative flex size-16 items-center justify-center border border-dashed border-border hover:border-foreground/30 transition-colors overflow-hidden"
+              className="relative flex size-16 items-center justify-center border border-dashed border-border hover:border-foreground/30 overflow-hidden"
             >
               {logoPreviewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

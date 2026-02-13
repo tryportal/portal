@@ -88,7 +88,7 @@ export default function SettingsPage() {
                     });
                   }
                 }}
-                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted ${
+                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs hover:bg-muted ${
                   isDefault
                     ? "border-foreground bg-muted font-bold"
                     : "border-border"

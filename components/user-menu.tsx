@@ -20,7 +20,7 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-14 items-center justify-center border-l border-border transition-colors hover:bg-muted cursor-pointer outline-none">
+      <DropdownMenuTrigger className="flex w-14 items-center justify-center border-l border-border hover:bg-muted cursor-pointer outline-none">
         <img
           src={user.imageUrl}
           alt={user.fullName ?? "Profile"}

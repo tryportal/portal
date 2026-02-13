@@ -247,7 +247,7 @@ function MentionItem({
   return (
     <Link
       href={href}
-      className="group flex gap-3 border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
+      className="group flex gap-3 border border-border bg-card px-3 py-2.5 hover:bg-muted"
     >
       {/* Avatar */}
       <div className="flex-shrink-0">
@@ -319,7 +319,7 @@ function SavedItem({
   return (
     <Link
       href={href}
-      className="group flex gap-3 border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
+      className="group flex gap-3 border border-border bg-card px-3 py-2.5 hover:bg-muted"
     >
       <div className="flex-shrink-0">
         {saved.sender?.imageUrl ? (
@@ -377,7 +377,7 @@ function CategoryGroup({
     <div>
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
       >
         {collapsed ? (
           <CaretRight size={12} weight="bold" />
@@ -396,7 +396,7 @@ function CategoryGroup({
               <Link
                 key={channel._id}
                 href={`${base}/channels/${channel.name}`}
-                className="group flex items-center gap-2.5 border border-border bg-card px-3 py-2 transition-colors hover:bg-muted"
+                className="group flex items-center gap-2.5 border border-border bg-card px-3 py-2 hover:bg-muted"
               >
                 <Icon
                   size={14}
