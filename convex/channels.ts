@@ -234,3 +234,64 @@ export const deleteChannel = mutation({
     await ctx.db.delete(args.channelId);
   },
 });
+
+export const reorderCategories = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    categoryIds: v.array(v.id("channelCategories")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Update order for each category
+    for (let i = 0; i < args.categoryIds.length; i++) {
+      await ctx.db.patch(args.categoryIds[i], { order: i });
+    }
+  },
+});
+
+export const reorderChannels = mutation({
+  args: {
+    categoryId: v.id("channelCategories"),
+    channelIds: v.array(v.id("channels")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Get category to find organization
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Update order and category for each channel
+    for (let i = 0; i < args.channelIds.length; i++) {
+      await ctx.db.patch(args.channelIds[i], {
+        categoryId: args.categoryId,
+        order: i,
+      });
+    }
+  },
+});

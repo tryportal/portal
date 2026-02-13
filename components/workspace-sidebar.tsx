@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -19,6 +19,7 @@ import {
   DotsThree,
   PencilSimple,
   Trash,
+  DotsSixVertical,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,24 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
 const SIDEBAR_WIDTH = 224;
@@ -94,6 +113,193 @@ export function WorkspaceSidebar({
 
   const updateChannel = useMutation(api.channels.updateChannel);
   const deleteChannel = useMutation(api.channels.deleteChannel);
+  const reorderCategories = useMutation(api.channels.reorderCategories);
+  const reorderChannels = useMutation(api.channels.reorderChannels);
+
+  // DnD state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeType, setActiveType] = useState<"category" | "channel" | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const categoryIds = useMemo(
+    () => data?.map((c) => c._id) ?? [],
+    [data]
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const id = active.id as string;
+    if (data?.some((c) => c._id === id)) {
+      setActiveType("category");
+    } else {
+      setActiveType("channel");
+    }
+    setActiveId(id);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    if (activeType !== "channel") return;
+    const { active, over } = event;
+    if (!over || !data) return;
+
+    const activeChannelId = active.id as string;
+    const overId = over.id as string;
+
+    // Find which category the active channel is in
+    let activeCategoryIdx = -1;
+    let activeChannelIdx = -1;
+    for (let ci = 0; ci < data.length; ci++) {
+      const chIdx = data[ci].channels.findIndex((ch) => ch._id === activeChannelId);
+      if (chIdx !== -1) {
+        activeCategoryIdx = ci;
+        activeChannelIdx = chIdx;
+        break;
+      }
+    }
+    if (activeCategoryIdx === -1) return;
+
+    // Find where we're hovering over
+    let overCategoryIdx = -1;
+    let overChannelIdx = -1;
+    // Check if over a category (for dropping into empty category)
+    overCategoryIdx = data.findIndex((c) => c._id === overId);
+    if (overCategoryIdx === -1) {
+      // Over a channel
+      for (let ci = 0; ci < data.length; ci++) {
+        const chIdx = data[ci].channels.findIndex((ch) => ch._id === overId);
+        if (chIdx !== -1) {
+          overCategoryIdx = ci;
+          overChannelIdx = chIdx;
+          break;
+        }
+      }
+    }
+
+    // No need to do anything during dragOver - we handle everything in dragEnd
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setActiveType(null);
+
+    if (!over || !data) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    if (activeId === overId) return;
+
+    if (activeType === "category") {
+      // Reorder categories
+      const oldIndex = data.findIndex((c) => c._id === activeId);
+      const newIndex = data.findIndex((c) => c._id === overId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = arrayMove(data, oldIndex, newIndex);
+      reorderCategories({
+        organizationId,
+        categoryIds: newOrder.map((c) => c._id) as Id<"channelCategories">[],
+      });
+    } else if (activeType === "channel") {
+      // Find source category and channel index
+      let sourceCatIdx = -1;
+      let sourceChIdx = -1;
+      for (let ci = 0; ci < data.length; ci++) {
+        const chIdx = data[ci].channels.findIndex((ch) => ch._id === activeId);
+        if (chIdx !== -1) {
+          sourceCatIdx = ci;
+          sourceChIdx = chIdx;
+          break;
+        }
+      }
+      if (sourceCatIdx === -1) return;
+
+      // Find target - could be a channel or a category (droppable zone)
+      let targetCatIdx = -1;
+      let targetChIdx = -1;
+
+      // Check if dropping on a category directly (for cross-category moves or empty categories)
+      targetCatIdx = data.findIndex((c) => c._id === overId);
+      if (targetCatIdx !== -1) {
+        // Dropping onto a category - put channel at the end of that category
+        const targetCategory = data[targetCatIdx];
+        const channelToMove = data[sourceCatIdx].channels[sourceChIdx];
+
+        // Build new channel list for target category
+        const newChannels = targetCategory.channels
+          .filter((ch) => ch._id !== activeId)
+          .concat(channelToMove);
+
+        reorderChannels({
+          categoryId: targetCategory._id as Id<"channelCategories">,
+          channelIds: newChannels.map((ch) => ch._id) as Id<"channels">[],
+        });
+
+        // If source category is different, also reorder source to remove the channel
+        if (sourceCatIdx !== targetCatIdx) {
+          const sourceCategory = data[sourceCatIdx];
+          const remainingChannels = sourceCategory.channels.filter(
+            (ch) => ch._id !== activeId
+          );
+          reorderChannels({
+            categoryId: sourceCategory._id as Id<"channelCategories">,
+            channelIds: remainingChannels.map((ch) => ch._id) as Id<"channels">[],
+          });
+        }
+        return;
+      }
+
+      // Dropping on another channel
+      for (let ci = 0; ci < data.length; ci++) {
+        const chIdx = data[ci].channels.findIndex((ch) => ch._id === overId);
+        if (chIdx !== -1) {
+          targetCatIdx = ci;
+          targetChIdx = chIdx;
+          break;
+        }
+      }
+      if (targetCatIdx === -1) return;
+
+      if (sourceCatIdx === targetCatIdx) {
+        // Same category - just reorder
+        const category = data[sourceCatIdx];
+        const newChannels = arrayMove(
+          category.channels,
+          sourceChIdx,
+          targetChIdx
+        );
+        reorderChannels({
+          categoryId: category._id as Id<"channelCategories">,
+          channelIds: newChannels.map((ch) => ch._id) as Id<"channels">[],
+        });
+      } else {
+        // Cross-category move
+        const sourceCategory = data[sourceCatIdx];
+        const targetCategory = data[targetCatIdx];
+        const channelToMove = sourceCategory.channels[sourceChIdx];
+
+        // Remove from source
+        const newSourceChannels = sourceCategory.channels.filter(
+          (ch) => ch._id !== activeId
+        );
+        // Insert into target at the right position
+        const newTargetChannels = [...targetCategory.channels];
+        newTargetChannels.splice(targetChIdx, 0, channelToMove);
+
+        reorderChannels({
+          categoryId: sourceCategory._id as Id<"channelCategories">,
+          channelIds: newSourceChannels.map((ch) => ch._id) as Id<"channels">[],
+        });
+        reorderChannels({
+          categoryId: targetCategory._id as Id<"channelCategories">,
+          channelIds: newTargetChannels.map((ch) => ch._id) as Id<"channels">[],
+        });
+      }
+    }
+  };
 
   const toggleCategory = (id: string) => {
     setCollapsedCategories((prev) => {
@@ -106,6 +312,19 @@ export function WorkspaceSidebar({
       return next;
     });
   };
+
+  // Find active item for drag overlay
+  const activeItem = useMemo(() => {
+    if (!activeId || !data) return null;
+    if (activeType === "category") {
+      return data.find((c) => c._id === activeId) ?? null;
+    }
+    for (const cat of data) {
+      const ch = cat.channels.find((c) => c._id === activeId);
+      if (ch) return ch;
+    }
+    return null;
+  }, [activeId, activeType, data]);
 
   const navItems = [
     { label: "Overview", icon: House, href: "" },
@@ -185,95 +404,100 @@ export function WorkspaceSidebar({
             </div>
           )}
 
-          {data?.map((category) => {
-            const isCollapsed = collapsedCategories.has(category._id);
+          {isAdmin ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={categoryIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {data?.map((category) => (
+                  <SortableCategory
+                    key={category._id}
+                    category={category}
+                    isCollapsed={collapsedCategories.has(category._id)}
+                    onToggle={() => toggleCategory(category._id)}
+                    base={base}
+                    pathname={pathname}
+                    isAdmin={isAdmin}
+                    onEdit={(ch) => setEditingChannel(ch)}
+                    onDelete={(ch) => setDeletingChannel(ch)}
+                    isDraggingChannel={activeType === "channel"}
+                  />
+                ))}
+              </SortableContext>
 
-            return (
-              <div key={category._id} className="mt-1">
-                <button
-                  onClick={() => toggleCategory(category._id)}
-                  className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
-                >
-                  {isCollapsed ? (
-                    <CaretRight size={12} weight="bold" />
+              <DragOverlay dropAnimation={null}>
+                {activeId && activeItem ? (
+                  activeType === "category" ? (
+                    <div className="rounded bg-sidebar border border-border shadow-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground opacity-90">
+                      {"name" in activeItem && "channels" in activeItem
+                        ? (activeItem as { name: string }).name
+                        : ""}
+                    </div>
                   ) : (
-                    <CaretDown size={12} weight="bold" />
-                  )}
-                  <span className="truncate">{category.name}</span>
-                </button>
-
-                {!isCollapsed && (
-                  <div className="flex flex-col gap-px">
-                    {category.channels.map((channel) => {
-                      const channelHref = `${base}/channels/${channel.name}`;
-                      const isChannelActive = pathname === channelHref;
-                      const IconComponent =
-                        channel.channelType === "forum" ? ChatCircle : Hash;
-
-                      return (
-                        <div
-                          key={channel._id}
-                          className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
-                            isChannelActive
-                              ? "bg-primary text-primary-foreground font-medium"
-                              : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
-                          }`}
-                        >
-                          <Link
-                            href={channelHref}
-                            className="flex min-w-0 flex-1 items-center gap-2.5"
+                    <div className="flex items-center gap-2.5 rounded bg-sidebar border border-border shadow-lg px-2.5 py-1.5 text-xs text-sidebar-foreground/60 opacity-90">
+                      <Hash size={14} />
+                      <span>{"name" in activeItem ? (activeItem as { name: string }).name : ""}</span>
+                    </div>
+                  )
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          ) : (
+            // Non-admin: render without drag-and-drop
+            data?.map((category) => {
+              const isCollapsed = collapsedCategories.has(category._id);
+              return (
+                <div key={category._id} className="mt-1">
+                  <button
+                    onClick={() => toggleCategory(category._id)}
+                    className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
+                  >
+                    {isCollapsed ? (
+                      <CaretRight size={12} weight="bold" />
+                    ) : (
+                      <CaretDown size={12} weight="bold" />
+                    )}
+                    <span className="truncate">{category.name}</span>
+                  </button>
+                  {!isCollapsed && (
+                    <div className="flex flex-col gap-px">
+                      {category.channels.map((channel) => {
+                        const channelHref = `${base}/channels/${channel.name}`;
+                        const isChannelActive = pathname === channelHref;
+                        const IconComponent =
+                          channel.channelType === "forum" ? ChatCircle : Hash;
+                        return (
+                          <div
+                            key={channel._id}
+                            className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
+                              isChannelActive
+                                ? "bg-primary text-primary-foreground font-medium"
+                                : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+                            }`}
                           >
-                            <IconComponent size={14} className="flex-shrink-0" />
-                            <span className="truncate">{channel.name}</span>
-                          </Link>
-                          {isAdmin && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                className={`flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
-                                  isChannelActive
-                                    ? "text-primary-foreground/70 hover:text-primary-foreground"
-                                    : "text-muted-foreground hover:text-sidebar-foreground"
-                                }`}
-                              >
-                                <DotsThree size={16} weight="bold" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent side="right" sideOffset={4} align="start">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setEditingChannel({
-                                      id: channel._id,
-                                      name: channel.name,
-                                      description: channel.description,
-                                    })
-                                  }
-                                >
-                                  <PencilSimple size={14} />
-                                  Edit channel
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() =>
-                                    setDeletingChannel({
-                                      id: channel._id,
-                                      name: channel.name,
-                                    })
-                                  }
-                                >
-                                  <Trash size={14} />
-                                  Delete channel
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                            <Link
+                              href={channelHref}
+                              className="flex min-w-0 flex-1 items-center gap-2.5"
+                            >
+                              <IconComponent size={14} className="flex-shrink-0" />
+                              <span className="truncate">{channel.name}</span>
+                            </Link>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
 
           {data && data.length === 0 && (
             <div className="px-2.5 py-3 text-center">
@@ -338,6 +562,223 @@ export function WorkspaceSidebar({
         }}
       />
     </>
+  );
+}
+
+// --- Sortable components for drag-and-drop ---
+
+interface ChannelItem {
+  _id: Id<"channels">;
+  name: string;
+  description?: string;
+  channelType?: "chat" | "forum";
+}
+
+interface CategoryItem {
+  _id: Id<"channelCategories">;
+  name: string;
+  channels: ChannelItem[];
+}
+
+function SortableCategory({
+  category,
+  isCollapsed,
+  onToggle,
+  base,
+  pathname,
+  isAdmin,
+  onEdit,
+  onDelete,
+  isDraggingChannel,
+}: {
+  category: CategoryItem;
+  isCollapsed: boolean;
+  onToggle: () => void;
+  base: string;
+  pathname: string;
+  isAdmin: boolean;
+  onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
+  onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+  isDraggingChannel: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: category._id,
+    data: { type: "category" },
+    // Disable category sorting when dragging a channel
+    disabled: isDraggingChannel,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const channelIds = useMemo(
+    () => category.channels.map((ch) => ch._id),
+    [category.channels]
+  );
+
+  return (
+    <div ref={setNodeRef} style={style} className="mt-1">
+      <div className="group/cat flex w-full items-center gap-0.5">
+        <button
+          className="flex-shrink-0 cursor-grab touch-none p-0.5 text-muted-foreground/40 opacity-0 transition-opacity group-hover/cat:opacity-100 hover:text-muted-foreground"
+          {...attributes}
+          {...listeners}
+        >
+          <DotsSixVertical size={10} weight="bold" />
+        </button>
+        <button
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
+        >
+          {isCollapsed ? (
+            <CaretRight size={12} weight="bold" />
+          ) : (
+            <CaretDown size={12} weight="bold" />
+          )}
+          <span className="truncate">{category.name}</span>
+        </button>
+      </div>
+
+      {!isCollapsed && (
+        <SortableContext
+          items={channelIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col gap-px">
+            {category.channels.map((channel) => (
+              <SortableChannel
+                key={channel._id}
+                channel={channel}
+                base={base}
+                pathname={pathname}
+                isAdmin={isAdmin}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      )}
+    </div>
+  );
+}
+
+function SortableChannel({
+  channel,
+  base,
+  pathname,
+  isAdmin,
+  onEdit,
+  onDelete,
+}: {
+  channel: ChannelItem;
+  base: string;
+  pathname: string;
+  isAdmin: boolean;
+  onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
+  onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: channel._id,
+    data: { type: "channel" },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const channelHref = `${base}/channels/${channel.name}`;
+  const isChannelActive = pathname === channelHref;
+  const IconComponent = channel.channelType === "forum" ? ChatCircle : Hash;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-0.5 text-xs ${
+        isChannelActive
+          ? "bg-primary text-primary-foreground font-medium"
+          : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+      }`}
+    >
+      <button
+        className={`flex-shrink-0 cursor-grab touch-none p-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${
+          isChannelActive
+            ? "text-primary-foreground/40 hover:text-primary-foreground/70"
+            : "text-muted-foreground/40 hover:text-muted-foreground"
+        }`}
+        {...attributes}
+        {...listeners}
+      >
+        <DotsSixVertical size={10} weight="bold" />
+      </button>
+      <Link
+        href={channelHref}
+        className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pr-2.5"
+      >
+        <IconComponent size={14} className="flex-shrink-0" />
+        <span className="truncate">{channel.name}</span>
+      </Link>
+      {isAdmin && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={`mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
+              isChannelActive
+                ? "text-primary-foreground/70 hover:text-primary-foreground"
+                : "text-muted-foreground hover:text-sidebar-foreground"
+            }`}
+          >
+            <DotsThree size={16} weight="bold" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" sideOffset={4} align="start">
+            <DropdownMenuItem
+              onClick={() =>
+                onEdit({
+                  id: channel._id,
+                  name: channel.name,
+                  description: channel.description,
+                })
+              }
+            >
+              <PencilSimple size={14} />
+              Edit channel
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() =>
+                onDelete({
+                  id: channel._id,
+                  name: channel.name,
+                })
+              }
+            >
+              <Trash size={14} />
+              Delete channel
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   );
 }
 
