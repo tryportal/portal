@@ -257,6 +257,133 @@ export const generateUploadUrl = mutation({
   },
 });
 
+export const getWorkspaceMembers = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    // Verify caller is a member
+    const callerMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!callerMembership) return [];
+
+    const members = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    // Get the org to check who the creator is
+    const org = await ctx.db.get(args.organizationId);
+
+    const results = await Promise.all(
+      members.map(async (member) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", member.userId))
+          .unique();
+
+        return {
+          _id: member._id,
+          userId: member.userId,
+          role: member.role,
+          joinedAt: member.joinedAt,
+          isCreator: org?.createdBy === member.userId,
+          firstName: user?.firstName ?? null,
+          lastName: user?.lastName ?? null,
+          email: user?.email ?? null,
+          imageUrl: user?.imageUrl ?? null,
+        };
+      })
+    );
+
+    // Sort: admins first, then by joinedAt
+    return results.sort((a, b) => {
+      if (a.role === "admin" && b.role !== "admin") return -1;
+      if (a.role !== "admin" && b.role === "admin") return 1;
+      return a.joinedAt - b.joinedAt;
+    });
+  },
+});
+
+export const updateMemberRole = mutation({
+  args: {
+    memberId: v.id("organizationMembers"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const targetMember = await ctx.db.get(args.memberId);
+    if (!targetMember) throw new Error("Member not found");
+
+    // Verify caller is admin of the same organization
+    const callerMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", targetMember.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+    if (!callerMembership || callerMembership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Can't change the workspace creator's role
+    const org = await ctx.db.get(targetMember.organizationId);
+    if (org?.createdBy === targetMember.userId) {
+      throw new Error("Cannot change the workspace creator's role");
+    }
+
+    await ctx.db.patch(args.memberId, { role: args.role });
+  },
+});
+
+export const removeMember = mutation({
+  args: { memberId: v.id("organizationMembers") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const targetMember = await ctx.db.get(args.memberId);
+    if (!targetMember) throw new Error("Member not found");
+
+    // Verify caller is admin of the same organization
+    const callerMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", targetMember.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+    if (!callerMembership || callerMembership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Can't remove the workspace creator
+    const org = await ctx.db.get(targetMember.organizationId);
+    if (org?.createdBy === targetMember.userId) {
+      throw new Error("Cannot remove the workspace creator");
+    }
+
+    // Can't remove yourself
+    if (targetMember.userId === identity.subject) {
+      throw new Error("Cannot remove yourself");
+    }
+
+    await ctx.db.delete(args.memberId);
+  },
+});
+
 export const updateWorkspacePublic = mutation({
   args: {
     organizationId: v.id("organizations"),
