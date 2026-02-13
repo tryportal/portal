@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import Link from "next/link";
+import { LightRays } from "@/components/ui/light-rays";
 import { ChoiceStep } from "@/components/onboarding/choice-step";
 import { JoinStep } from "@/components/onboarding/join-step";
 import {
@@ -68,8 +69,9 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden w-1/2 flex-col justify-between border-r border-border bg-foreground p-10 text-background lg:flex">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-r border-border bg-foreground p-10 text-background lg:flex">
+        <LightRays mouseInfluence={0} />
+        <Link href="/" className="relative z-10 flex items-center gap-3">
           <Image
             src="/portal.svg"
             alt="Portal"
@@ -79,8 +81,8 @@ export default function OnboardingPage() {
           />
           <span className="text-sm font-medium">Portal</span>
         </Link>
-        <div className="max-w-md">{leftPanelContent()}</div>
-        <p className="text-xs text-background/40">
+        <div className="relative z-10 max-w-md">{leftPanelContent()}</div>
+        <p className="relative z-10 text-xs text-background/40">
           &copy; {new Date().getFullYear()} Portal. All rights reserved.
         </p>
       </div>

@@ -13,6 +13,7 @@ import {
 import { ArrowLeft } from "@phosphor-icons/react";
 import Image from "next/image";
 import Link from "next/link";
+import { LightRays } from "@/components/ui/light-rays";
 
 function OTPInput() {
   return (
@@ -35,8 +36,9 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden w-1/2 flex-col justify-between border-r border-border bg-foreground p-10 text-background lg:flex">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-r border-border bg-foreground p-10 text-background lg:flex">
+        <LightRays mouseInfluence={0} />
+        <Link href="/" className="relative z-10 flex items-center gap-3">
           <Image
             src="/portal.svg"
             alt="Portal"
@@ -46,8 +48,8 @@ export default function SignInPage() {
           />
           <span className="text-sm font-medium">Portal</span>
         </Link>
-        <div className="max-w-md" />
-        <p className="text-xs text-background/40">
+        <div className="relative z-10 max-w-md" />
+        <p className="relative z-10 text-xs text-background/40">
           &copy; {new Date().getFullYear()} Portal. All rights reserved.
         </p>
       </div>
@@ -118,6 +120,7 @@ export default function SignInPage() {
                 </h1>
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   We&apos;ve sent a verification to{" "}
+                  {/* @ts-expect-error - Clerk types don't include className but it works */}
                   <SignIn.SafeIdentifier className="font-medium text-foreground" />
                 </p>
               </div>
