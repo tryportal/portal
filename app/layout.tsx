@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Portal",
   description: "Team messaging for everyone",
+  icons: {
+    icon: "/portal-icon.svg",
+  },
 };
 
 export default function RootLayout({
