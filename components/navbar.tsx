@@ -2,8 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/docs", label: "Docs" },
+];
 
 export function Navbar() {
+  const pathname = usePathname();
+
   return (
     <header className="border-b border-border">
       <div className="flex h-14 items-stretch">
@@ -14,30 +24,23 @@ export function Navbar() {
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
         <nav className="hidden items-stretch md:flex">
-          <Link
-            href="/"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Home
-          </Link>
-          <Link
-            href="/features"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Features
-          </Link>
-          <Link
-            href="/pricing"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="/docs"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Docs
-          </Link>
+          {navLinks.map(({ href, label }) => {
+            const isActive =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center border-r border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
+                  isActive
+                    ? "font-bold text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="flex flex-1" />
         <div className="flex items-stretch">
