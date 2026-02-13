@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { WorkspaceNavbar } from "@/components/workspace-navbar";
+import { SetLastWorkspace } from "@/components/set-last-workspace";
 
 export default async function WorkspaceLayout({
   children,
@@ -10,11 +10,9 @@ export default async function WorkspaceLayout({
 }) {
   const { slug } = await params;
 
-  const cookieStore = await cookies();
-  cookieStore.set("last-workspace", slug, { path: "/" });
-
   return (
     <div className="min-h-screen">
+      <SetLastWorkspace slug={slug} />
       <WorkspaceNavbar slug={slug} />
       {children}
     </div>
