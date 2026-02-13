@@ -50,10 +50,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/get-started"
-            className={buttonVariants({
-              size: "sm",
-              className: "my-auto ml-2 mr-4",
-            })}
+            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Get started
           </Link>
