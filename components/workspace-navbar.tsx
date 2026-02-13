@@ -7,9 +7,15 @@ import { UserButton } from "@clerk/nextjs";
 import { House, ChatCircle, Tray } from "@phosphor-icons/react";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
-const navItems = [
+interface NavItem {
+  icon: typeof House;
+  href: string;
+  global?: boolean;
+}
+
+const navItems: NavItem[] = [
   { icon: House, href: "" },
-  { icon: ChatCircle, href: "/chat" },
+  { icon: ChatCircle, href: "/chat", global: true },
   { icon: Tray, href: "/inbox" },
 ];
 
@@ -27,12 +33,13 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
         <nav className="flex items-stretch">
-          {navItems.map(({ icon: Icon, href }) => {
-            const fullHref = base + href;
-            const isActive =
-              href === ""
+          {navItems.map(({ icon: Icon, href, global }) => {
+            const fullHref = global ? href : base + href;
+            const isActive = global
+              ? pathname.startsWith(href)
+              : href === ""
                 ? pathname === base || pathname === base + "/"
-                : pathname.startsWith(fullHref);
+                : pathname.startsWith(base + href);
 
             return (
               <Link
