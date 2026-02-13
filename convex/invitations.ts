@@ -119,6 +119,128 @@ export const revokeInviteLink = mutation({
   },
 });
 
+// Get invite details by token (public - no auth required for viewing)
+export const getInviteByToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const invite = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+
+    if (!invite) return null;
+
+    const org = await ctx.db.get(invite.organizationId);
+    if (!org) return null;
+
+    const logoUrl = org.logoId ? await ctx.storage.getUrl(org.logoId) : null;
+
+    const memberCount = (
+      await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization", (q) =>
+          q.eq("organizationId", invite.organizationId)
+        )
+        .collect()
+    ).length;
+
+    // Check if the current user is already a member
+    const identity = await ctx.auth.getUserIdentity();
+    let alreadyMember = false;
+    if (identity) {
+      const membership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q
+            .eq("organizationId", invite.organizationId)
+            .eq("userId", identity.subject)
+        )
+        .unique();
+      alreadyMember = !!membership;
+    }
+
+    return {
+      _id: invite._id,
+      status: invite.status,
+      expiresAt: invite.expiresAt,
+      isExpired: invite.expiresAt < Date.now(),
+      role: invite.role,
+      workspace: {
+        _id: org._id,
+        name: org.name,
+        slug: org.slug,
+        description: org.description,
+        logoUrl,
+        memberCount,
+      },
+      alreadyMember,
+    };
+  },
+});
+
+// Accept an invite token and join the workspace
+export const acceptInvite = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const invite = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+
+    if (!invite) throw new Error("Invalid invite link");
+    if (invite.status === "revoked") throw new Error("This invite has been revoked");
+    if (invite.status === "accepted" && !invite.isLinkInvite)
+      throw new Error("This invite has already been used");
+    if (invite.expiresAt < Date.now()) throw new Error("This invite has expired");
+
+    const org = await ctx.db.get(invite.organizationId);
+    if (!org) throw new Error("Workspace no longer exists");
+
+    // Check if already a member
+    const existingMembership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", invite.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+
+    if (existingMembership) {
+      return { slug: org.slug, alreadyMember: true };
+    }
+
+    // Add as member
+    await ctx.db.insert("organizationMembers", {
+      organizationId: invite.organizationId,
+      userId: identity.subject,
+      role: invite.role,
+      joinedAt: Date.now(),
+    });
+
+    // Mark email invites as accepted (link invites stay pending for reuse)
+    if (!invite.isLinkInvite) {
+      await ctx.db.patch(invite._id, { status: "accepted" });
+    }
+
+    // Set as primary workspace if user doesn't have one
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (user && !user.primaryWorkspaceId) {
+      await ctx.db.patch(user._id, {
+        primaryWorkspaceId: invite.organizationId,
+      });
+    }
+
+    return { slug: org.slug, alreadyMember: false };
+  },
+});
+
 export const createInviteLink = mutation({
   args: {
     organizationId: v.id("organizations"),
