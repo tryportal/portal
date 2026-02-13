@@ -123,6 +123,22 @@ export function WorkspaceSidebar({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Channels
             </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-muted-foreground transition-colors hover:text-sidebar-foreground cursor-pointer outline-none">
+                <Plus size={14} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" sideOffset={4} align="end">
+                <DropdownMenuItem onClick={() => setDialogMode("channel")}>
+                  <Hash size={14} />
+                  Channel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setDialogMode("category")}>
+                  <FolderSimple size={14} />
+                  Category
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {data === undefined && (
@@ -188,30 +204,6 @@ export function WorkspaceSidebar({
           )}
         </div>
 
-        {/* Create New Button */}
-        <div className="border-t border-border p-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center justify-center gap-2 border border-border bg-background px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted cursor-pointer outline-none">
-              <Plus size={14} />
-              Create new
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="top"
-              sideOffset={4}
-              className="w-[calc(var(--anchor-width))]"
-            >
-              <DropdownMenuItem onClick={() => setDialogMode("channel")}>
-                <Hash size={14} />
-                Channel
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setDialogMode("category")}>
-                <FolderSimple size={14} />
-                Category
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
 
       </aside>
 
