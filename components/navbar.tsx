@@ -74,7 +74,7 @@ export function Navbar() {
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: "size-7 rounded-none",
+                    avatarBox: "size-6 rounded-none",
                   },
                 }}
               />
