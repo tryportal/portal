@@ -41,12 +41,15 @@ const SIDEBAR_WIDTH = 224;
 interface WorkspaceSidebarProps {
   slug: string;
   organizationId: Id<"organizations">;
+  role?: string;
 }
 
 export function WorkspaceSidebar({
   slug,
   organizationId,
+  role,
 }: WorkspaceSidebarProps) {
+  const isAdmin = role === "admin";
   const pathname = usePathname();
   const base = `/w/${slug}`;
 
@@ -78,7 +81,9 @@ export function WorkspaceSidebar({
   const navItems = [
     { label: "Overview", icon: House, href: "" },
     { label: "People", icon: Users, href: "/people" },
-    { label: "Options", icon: GearSix, href: "/options" },
+    ...(isAdmin
+      ? [{ label: "Options", icon: GearSix, href: "/options" }]
+      : []),
   ];
 
   return (
@@ -123,22 +128,24 @@ export function WorkspaceSidebar({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Channels
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="text-muted-foreground transition-colors hover:text-sidebar-foreground cursor-pointer outline-none">
-                <Plus size={14} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" sideOffset={4} align="end">
-                <DropdownMenuItem onClick={() => setDialogMode("channel")}>
-                  <Hash size={14} />
-                  Channel
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setDialogMode("category")}>
-                  <FolderSimple size={14} />
-                  Category
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="text-muted-foreground transition-colors hover:text-sidebar-foreground cursor-pointer outline-none">
+                  <Plus size={14} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="bottom" sideOffset={4} align="end">
+                  <DropdownMenuItem onClick={() => setDialogMode("channel")}>
+                    <Hash size={14} />
+                    Channel
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setDialogMode("category")}>
+                    <FolderSimple size={14} />
+                    Category
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {data === undefined && (

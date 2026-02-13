@@ -34,7 +34,7 @@ export default function PeoplePage({
 
   return (
     <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
-      <WorkspaceSidebar slug={slug} organizationId={workspace._id} />
+      <WorkspaceSidebar slug={slug} organizationId={workspace._id} role={workspace.role} />
       <main className="flex flex-1">
         <WorkspacePeople organizationId={workspace._id} workspace={workspace} />
       </main>
