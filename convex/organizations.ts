@@ -96,6 +96,39 @@ export const getWorkspaceBySlug = query({
   },
 });
 
+export const getUserWorkspaces = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const memberships = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+
+    const workspaces = await Promise.all(
+      memberships.map(async (membership) => {
+        const org = await ctx.db.get(membership.organizationId);
+        if (!org) return null;
+
+        const logoUrl = org.logoId
+          ? await ctx.storage.getUrl(org.logoId)
+          : null;
+
+        return {
+          _id: org._id,
+          name: org.name,
+          slug: org.slug,
+          logoUrl,
+          role: membership.role,
+        };
+      })
+    );
+
+    return workspaces.filter(Boolean);
+  },
+});
+
 export const getUserFirstWorkspace = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
