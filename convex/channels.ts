@@ -126,3 +126,111 @@ export const createChannel = mutation({
     });
   },
 });
+
+export const updateChannel = mutation({
+  args: {
+    channelId: v.id("channels"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name.trim().toLowerCase().replace(/\s+/g, "-");
+    if (args.description !== undefined) updates.description = args.description;
+
+    await ctx.db.patch(args.channelId, updates);
+  },
+});
+
+export const deleteChannel = mutation({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Cascade delete all related data
+    const channelMembers = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of channelMembers) await ctx.db.delete(m._id);
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of messages) await ctx.db.delete(m._id);
+
+    const typing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const t of typing) await ctx.db.delete(t._id);
+
+    const muted = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of muted) await ctx.db.delete(m._id);
+
+    const readStatus = await ctx.db
+      .query("channelReadStatus")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const r of readStatus) await ctx.db.delete(r._id);
+
+    const sharedInvites = await ctx.db
+      .query("sharedChannelInvitations")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const i of sharedInvites) await ctx.db.delete(i._id);
+
+    const sharedMembers = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of sharedMembers) await ctx.db.delete(m._id);
+
+    const forumPosts = await ctx.db
+      .query("forumPosts")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const p of forumPosts) await ctx.db.delete(p._id);
+
+    // Delete the channel itself
+    await ctx.db.delete(args.channelId);
+  },
+});

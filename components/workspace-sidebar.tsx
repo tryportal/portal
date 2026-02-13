@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -16,6 +16,9 @@ import {
   Plus,
   FolderSimple,
   ChatCircle,
+  DotsThree,
+  PencilSimple,
+  Trash,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -34,6 +37,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 // Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
 const SIDEBAR_WIDTH = 224;
@@ -51,6 +65,7 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
+  const router = useRouter();
   const base = `/w/${slug}`;
 
   const data = useQuery(api.channels.getChannelsAndCategories, {
@@ -65,6 +80,20 @@ export function WorkspaceSidebar({
   const [dialogMode, setDialogMode] = useState<"channel" | "category" | null>(
     null
   );
+
+  // Channel edit/delete state
+  const [editingChannel, setEditingChannel] = useState<{
+    id: Id<"channels">;
+    name: string;
+    description?: string;
+  } | null>(null);
+  const [deletingChannel, setDeletingChannel] = useState<{
+    id: Id<"channels">;
+    name: string;
+  } | null>(null);
+
+  const updateChannel = useMutation(api.channels.updateChannel);
+  const deleteChannel = useMutation(api.channels.deleteChannel);
 
   const toggleCategory = (id: string) => {
     setCollapsedCategories((prev) => {
@@ -182,18 +211,62 @@ export function WorkspaceSidebar({
                         channel.channelType === "forum" ? ChatCircle : Hash;
 
                       return (
-                        <Link
+                        <div
                           key={channel._id}
-                          href={channelHref}
-                          className={`flex items-center gap-2 py-1 pl-6 pr-2.5 text-xs ${
+                          className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
                             isChannelActive
                               ? "bg-primary text-primary-foreground font-medium"
                               : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
                           }`}
                         >
-                          <IconComponent size={14} />
-                          <span className="truncate">{channel.name}</span>
-                        </Link>
+                          <Link
+                            href={channelHref}
+                            className="flex min-w-0 flex-1 items-center gap-2.5"
+                          >
+                            <IconComponent size={14} className="flex-shrink-0" />
+                            <span className="truncate">{channel.name}</span>
+                          </Link>
+                          {isAdmin && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                className={`flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
+                                  isChannelActive
+                                    ? "text-primary-foreground/70 hover:text-primary-foreground"
+                                    : "text-muted-foreground hover:text-sidebar-foreground"
+                                }`}
+                              >
+                                <DotsThree size={16} weight="bold" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent side="right" sideOffset={4} align="start">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setEditingChannel({
+                                      id: channel._id,
+                                      name: channel.name,
+                                      description: channel.description,
+                                    })
+                                  }
+                                >
+                                  <PencilSimple size={14} />
+                                  Edit channel
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() =>
+                                    setDeletingChannel({
+                                      id: channel._id,
+                                      name: channel.name,
+                                    })
+                                  }
+                                >
+                                  <Trash size={14} />
+                                  Delete channel
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -227,6 +300,42 @@ export function WorkspaceSidebar({
         open={dialogMode === "category"}
         onOpenChange={(open) => !open && setDialogMode(null)}
         organizationId={organizationId}
+      />
+
+      {/* Edit Channel Dialog */}
+      <EditChannelDialog
+        channel={editingChannel}
+        onOpenChange={(open) => !open && setEditingChannel(null)}
+        onSave={async (name, description) => {
+          if (!editingChannel) return;
+          const oldName = editingChannel.name;
+          await updateChannel({
+            channelId: editingChannel.id,
+            name,
+            description,
+          });
+          setEditingChannel(null);
+          // If viewing the renamed channel, redirect to the new URL
+          if (pathname === `${base}/channels/${oldName}`) {
+            const newName = name.trim().toLowerCase().replace(/\s+/g, "-");
+            router.push(`${base}/channels/${newName}`);
+          }
+        }}
+      />
+
+      {/* Delete Channel Dialog */}
+      <DeleteChannelDialog
+        channel={deletingChannel}
+        onOpenChange={(open) => !open && setDeletingChannel(null)}
+        onConfirm={async () => {
+          if (!deletingChannel) return;
+          const wasActive = pathname === `${base}/channels/${deletingChannel.name}`;
+          await deleteChannel({ channelId: deletingChannel.id });
+          setDeletingChannel(null);
+          if (wasActive) {
+            router.push(base);
+          }
+        }}
       />
     </>
   );
@@ -445,5 +554,178 @@ function CreateCategoryDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditChannelDialog({
+  channel,
+  onOpenChange,
+  onSave,
+}: {
+  channel: { id: Id<"channels">; name: string; description?: string } | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (name: string, description: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync state when channel changes
+  useEffect(() => {
+    if (channel) {
+      setName(channel.name);
+      setDescription(channel.description ?? "");
+    }
+  }, [channel]);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onSave(name, description);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={!!channel}
+      onOpenChange={onOpenChange}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit channel</DialogTitle>
+          <DialogDescription>
+            Update the name or description of this channel.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">Name</label>
+            <div className="flex h-8 items-center border border-border bg-background text-xs">
+              <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
+                #
+              </span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. design, marketing"
+                className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSubmit();
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">
+              Description{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What's this channel about?"
+              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!name.trim() || isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteChannelDialog({
+  channel,
+  onOpenChange,
+  onConfirm,
+}: {
+  channel: { id: Id<"channels">; name: string } | null;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Reset when dialog opens/closes
+  useEffect(() => {
+    if (!channel) {
+      setConfirmText("");
+      setIsDeleting(false);
+    }
+  }, [channel]);
+
+  const handleDelete = async () => {
+    if (confirmText !== channel?.name) return;
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={!!channel} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete channel</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete{" "}
+            <strong className="text-foreground">#{channel?.name}</strong> and all
+            of its messages. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="grid gap-1.5">
+          <label className="text-xs font-medium">
+            Type <span className="font-mono text-destructive">{channel?.name}</span> to confirm
+          </label>
+          <Input
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={channel?.name}
+            autoComplete="off"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleDelete();
+            }}
+          />
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onOpenChange(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={confirmText !== channel?.name || isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? "Deleting..." : "Delete channel"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
