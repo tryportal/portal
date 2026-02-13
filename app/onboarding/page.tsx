@@ -23,12 +23,6 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("choice");
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
 
-  // Auto-skip if user already has memberships
-  if (memberships && memberships.length > 0) {
-    router.replace("/dashboard");
-    return null;
-  }
-
   // Loading state while checking memberships
   if (memberships === undefined) {
     return (
@@ -109,7 +103,10 @@ export default function OnboardingPage() {
           )}
 
           {step === "join" && (
-            <JoinStep onBack={() => setStep("choice")} />
+            <JoinStep
+              onBack={() => setStep("choice")}
+              onJoined={() => router.push("/")}
+            />
           )}
 
           {step === "create-details" && (
@@ -134,7 +131,7 @@ export default function OnboardingPage() {
           {step === "create-done" && workspaceData && (
             <CreateDoneStep
               workspaceName={workspaceData.name}
-              onFinish={() => router.push("/dashboard")}
+              onFinish={() => router.push("/")}
             />
           )}
         </div>

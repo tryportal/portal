@@ -6,14 +6,13 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { Facehash } from "facehash";
-import { useRouter } from "next/navigation";
 
 interface JoinStepProps {
   onBack: () => void;
+  onJoined: () => void;
 }
 
-export function JoinStep({ onBack }: JoinStepProps) {
-  const router = useRouter();
+export function JoinStep({ onBack, onJoined }: JoinStepProps) {
   const workspaces = useQuery(api.organizations.listPublicWorkspaces);
   const joinWorkspace = useMutation(api.organizations.joinWorkspace);
   const [joiningId, setJoiningId] = useState<string | null>(null);
@@ -23,7 +22,7 @@ export function JoinStep({ onBack }: JoinStepProps) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await joinWorkspace({ organizationId: orgId as any });
-      router.replace("/dashboard");
+      onJoined();
     } catch (error) {
       console.error("Failed to join workspace:", error);
       setJoiningId(null);

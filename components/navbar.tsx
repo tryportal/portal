@@ -61,9 +61,9 @@ export function Navbar() {
           </SignedOut>
           <SignedIn>
             <Link
-              href="/dashboard"
+              href="/onboarding"
               className={`flex items-center border-l border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
-                pathname.startsWith("/dashboard")
+                pathname.startsWith("/onboarding")
                   ? "font-bold text-foreground"
                   : "text-muted-foreground"
               }`}
