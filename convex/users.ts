@@ -15,9 +15,9 @@ export const syncUser = mutation({
     const userData = {
       clerkId,
       email: identity.email ?? "",
-      firstName: identity.given_name ?? undefined,
-      lastName: identity.family_name ?? undefined,
-      imageUrl: identity.picture ?? undefined,
+      firstName: identity.givenName ?? identity.name ?? undefined,
+      lastName: identity.familyName ?? undefined,
+      imageUrl: identity.pictureUrl ?? undefined,
       updatedAt: Date.now(),
     };
 
