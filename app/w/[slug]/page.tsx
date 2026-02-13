@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
+import { WorkspaceOverview } from "@/components/workspace-overview";
 
 export default function WorkspacePage({
   params,
@@ -34,15 +35,12 @@ export default function WorkspacePage({
   return (
     <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
       <WorkspaceSidebar slug={slug} organizationId={workspace._id} />
-      <main className="flex flex-1 items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-medium tracking-tight">
-            {workspace.name}
-          </h1>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            /{workspace.slug}
-          </p>
-        </div>
+      <main className="flex flex-1">
+        <WorkspaceOverview
+          slug={slug}
+          organizationId={workspace._id}
+          workspace={workspace}
+        />
       </main>
     </div>
   );

@@ -12,6 +12,7 @@ import type * as channels from "../channels.js";
 import type * as emails from "../emails.js";
 import type * as invitations from "../invitations.js";
 import type * as organizations from "../organizations.js";
+import type * as overview from "../overview.js";
 import type * as users from "../users.js";
 
 import type {
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   invitations: typeof invitations;
   organizations: typeof organizations;
+  overview: typeof overview;
   users: typeof users;
 }>;
 
