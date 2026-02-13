@@ -9,20 +9,20 @@ import { Facehash } from "facehash";
 
 interface JoinStepProps {
   onBack: () => void;
-  onJoined: () => void;
+  onJoinedSlug: (slug: string) => void;
 }
 
-export function JoinStep({ onBack, onJoined }: JoinStepProps) {
+export function JoinStep({ onBack, onJoinedSlug }: JoinStepProps) {
   const workspaces = useQuery(api.organizations.listPublicWorkspaces);
   const joinWorkspace = useMutation(api.organizations.joinWorkspace);
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  const handleJoin = async (orgId: string) => {
+  const handleJoin = async (orgId: string, slug: string) => {
     setJoiningId(orgId);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await joinWorkspace({ organizationId: orgId as any });
-      onJoined();
+      onJoinedSlug(slug);
     } catch (error) {
       console.error("Failed to join workspace:", error);
       setJoiningId(null);
@@ -88,7 +88,7 @@ export function JoinStep({ onBack, onJoined }: JoinStepProps) {
               </div>
               <Button
                 size="sm"
-                onClick={() => handleJoin(workspace._id)}
+                onClick={() => handleJoin(workspace._id, workspace.slug)}
                 disabled={joiningId !== null}
               >
                 {joiningId === workspace._id ? "Joining..." : "Join"}

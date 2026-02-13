@@ -62,6 +62,70 @@ export const getUserMemberships = query({
   },
 });
 
+export const getWorkspaceBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const org = await ctx.db
+      .query("organizations")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!org) return null;
+
+    // Verify user is a member
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", org._id).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return null;
+
+    const logoUrl = org.logoId ? await ctx.storage.getUrl(org.logoId) : null;
+
+    return {
+      _id: org._id,
+      name: org.name,
+      slug: org.slug,
+      description: org.description,
+      logoUrl,
+      role: membership.role,
+    };
+  },
+});
+
+export const getUserFirstWorkspace = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    // Check if user has a primary workspace
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (user?.primaryWorkspaceId) {
+      const org = await ctx.db.get(user.primaryWorkspaceId);
+      if (org) return { slug: org.slug };
+    }
+
+    // Otherwise, get the first membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first();
+    if (!membership) return null;
+
+    const org = await ctx.db.get(membership.organizationId);
+    if (!org) return null;
+
+    return { slug: org.slug };
+  },
+});
+
 export const createWorkspace = mutation({
   args: {
     name: v.string(),

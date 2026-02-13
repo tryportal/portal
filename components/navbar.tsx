@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -14,6 +16,10 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
+  const dashboardHref = firstWorkspace
+    ? `/w/${firstWorkspace.slug}`
+    : "/onboarding";
 
   return (
     <header className="border-b border-border">
@@ -61,9 +67,9 @@ export function Navbar() {
           </SignedOut>
           <SignedIn>
             <Link
-              href="/onboarding"
+              href={dashboardHref}
               className={`flex items-center border-l border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
-                pathname.startsWith("/onboarding")
+                pathname.startsWith("/w")
                   ? "font-bold text-foreground"
                   : "text-muted-foreground"
               }`}

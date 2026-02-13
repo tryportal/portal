@@ -105,7 +105,7 @@ export default function OnboardingPage() {
           {step === "join" && (
             <JoinStep
               onBack={() => setStep("choice")}
-              onJoined={() => router.push("/")}
+              onJoinedSlug={(slug) => router.push(`/w/${slug}`)}
             />
           )}
 
@@ -131,7 +131,7 @@ export default function OnboardingPage() {
           {step === "create-done" && workspaceData && (
             <CreateDoneStep
               workspaceName={workspaceData.name}
-              onFinish={() => router.push("/")}
+              onFinish={() => router.push(`/w/${workspaceData.slug}`)}
             />
           )}
         </div>
