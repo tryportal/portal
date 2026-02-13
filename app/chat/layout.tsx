@@ -1,23 +1,22 @@
-"use client";
-
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { WorkspaceNavbar } from "@/components/workspace-navbar";
 
-export default function ChatLayout({
+export default async function ChatLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
+  const cookieStore = await cookies();
+  const slug = cookieStore.get("last-workspace")?.value;
+
+  if (!slug) {
+    redirect("/onboarding");
+  }
 
   return (
     <div className="min-h-screen">
-      {firstWorkspace?.slug ? (
-        <WorkspaceNavbar slug={firstWorkspace.slug} />
-      ) : (
-        <header className="h-14 border-b border-border" />
-      )}
+      <WorkspaceNavbar slug={slug} />
       {children}
     </div>
   );
