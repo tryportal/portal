@@ -2,10 +2,10 @@
 
 import { use } from "react";
 import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 import { WorkspacePeople } from "@/components/workspace-people";
+import { WorkspaceNotFound } from "@/components/workspace-not-found";
 
 export default function PeoplePage({
   params,
@@ -13,7 +13,6 @@ export default function PeoplePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
-  const router = useRouter();
   const workspace = useQuery(api.organizations.getWorkspaceBySlug, { slug });
 
   if (workspace === undefined) {
@@ -28,8 +27,7 @@ export default function PeoplePage({
   }
 
   if (workspace === null) {
-    router.push("/onboarding");
-    return null;
+    return <WorkspaceNotFound slug={slug} />;
   }
 
   return (

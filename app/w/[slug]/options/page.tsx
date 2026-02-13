@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 import { WorkspaceOptions } from "@/components/workspace-options";
+import { WorkspaceNotFound } from "@/components/workspace-not-found";
 
 export default function OptionsPage({
   params,
@@ -28,8 +29,7 @@ export default function OptionsPage({
   }
 
   if (workspace === null) {
-    router.push("/onboarding");
-    return null;
+    return <WorkspaceNotFound slug={slug} />;
   }
 
   // Redirect non-admins back to workspace
