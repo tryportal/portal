@@ -10,7 +10,7 @@ import {
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field";
-import { GoogleLogo, ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -77,7 +77,7 @@ export default function GetStartedPage() {
               <FieldGroup>
                 <Clerk.Connection name="google" asChild>
                   <Button variant="outline" size="lg" className="w-full gap-2">
-                    <GoogleLogo weight="bold" className="size-4" />
+                    <Image src="/google-black-icon.svg" alt="Google" width={16} height={16} />
                     Continue with Google
                   </Button>
                 </Clerk.Connection>
