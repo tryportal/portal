@@ -105,7 +105,7 @@ export function WorkspaceSidebar({
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-2 px-2.5 py-1.5 text-xs ${
+                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
                   isActive
                     ? "border-white/50 bg-primary text-primary-foreground font-medium"
                     : "border-transparent text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"

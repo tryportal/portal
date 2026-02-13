@@ -93,7 +93,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
               <button
                 key={id}
                 onClick={() => setActiveSection(id)}
-                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-2 px-2.5 py-1.5 text-left text-xs ${
+                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-left text-xs ${
                   isActive
                     ? isDanger
                       ? "border-destructive/30 bg-destructive/10 font-medium text-destructive"
