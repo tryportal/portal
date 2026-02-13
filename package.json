@@ -11,8 +11,10 @@
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@phosphor-icons/react": "^2.1.10",
+    "agentation": "^2.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "^1.31.7",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
