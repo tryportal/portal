@@ -4,6 +4,7 @@ import { use } from "react";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
+import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 
 export default function WorkspacePage({
   params,
@@ -16,7 +17,10 @@ export default function WorkspacePage({
 
   if (workspace === undefined) {
     return (
-      <div className="flex flex-1 items-center justify-center" style={{ minHeight: "calc(100vh - 57px)" }}>
+      <div
+        className="flex flex-1 items-center justify-center"
+        style={{ height: "calc(100vh - 57px)" }}
+      >
         <p className="text-xs text-muted-foreground">Loading...</p>
       </div>
     );
@@ -28,15 +32,18 @@ export default function WorkspacePage({
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center" style={{ minHeight: "calc(100vh - 57px)" }}>
-      <div className="text-center">
-        <h1 className="text-xl font-medium tracking-tight">
-          {workspace.name}
-        </h1>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          /{workspace.slug}
-        </p>
-      </div>
+    <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
+      <WorkspaceSidebar slug={slug} organizationId={workspace._id} />
+      <main className="flex flex-1 items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-medium tracking-tight">
+            {workspace.name}
+          </h1>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            /{workspace.slug}
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
