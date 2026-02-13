@@ -19,7 +19,6 @@ import {
   DotsThree,
   PencilSimple,
   Trash,
-  DotsSixVertical,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -628,26 +627,19 @@ function SortableCategory({
 
   return (
     <div ref={setNodeRef} style={style} className="mt-1">
-      <div className="group/cat flex w-full items-center gap-0.5">
-        <button
-          className="flex-shrink-0 cursor-grab touch-none p-0.5 text-muted-foreground/40 opacity-0 transition-opacity group-hover/cat:opacity-100 hover:text-muted-foreground"
-          {...attributes}
-          {...listeners}
-        >
-          <DotsSixVertical size={10} weight="bold" />
-        </button>
-        <button
-          onClick={onToggle}
-          className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
-        >
-          {isCollapsed ? (
-            <CaretRight size={12} weight="bold" />
-          ) : (
-            <CaretDown size={12} weight="bold" />
-          )}
-          <span className="truncate">{category.name}</span>
-        </button>
-      </div>
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground cursor-grab active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        {isCollapsed ? (
+          <CaretRight size={12} weight="bold" />
+        ) : (
+          <CaretDown size={12} weight="bold" />
+        )}
+        <span className="truncate">{category.name}</span>
+      </button>
 
       {!isCollapsed && (
         <SortableContext
@@ -714,26 +706,21 @@ function SortableChannel({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-0.5 text-xs ${
+      className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs cursor-grab active:cursor-grabbing ${
         isChannelActive
           ? "bg-primary text-primary-foreground font-medium"
           : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
       }`}
+      {...attributes}
+      {...listeners}
     >
-      <button
-        className={`flex-shrink-0 cursor-grab touch-none p-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${
-          isChannelActive
-            ? "text-primary-foreground/40 hover:text-primary-foreground/70"
-            : "text-muted-foreground/40 hover:text-muted-foreground"
-        }`}
-        {...attributes}
-        {...listeners}
-      >
-        <DotsSixVertical size={10} weight="bold" />
-      </button>
       <Link
         href={channelHref}
-        className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pr-2.5"
+        className="flex min-w-0 flex-1 items-center gap-2.5"
+        onClick={(e) => {
+          // Prevent navigation when drag ends on same spot
+          if (isDragging) e.preventDefault();
+        }}
       >
         <IconComponent size={14} className="flex-shrink-0" />
         <span className="truncate">{channel.name}</span>
