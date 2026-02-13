@@ -7,49 +7,53 @@ import { buttonVariants } from "@/components/ui/button";
 export function Navbar() {
   return (
     <header className="border-b border-border">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/portal.svg" alt="Portal" width={24} height={24} />
-            <span className="text-sm font-semibold">Portal</span>
+      <div className="flex h-14 items-stretch">
+        <Link
+          href="/"
+          className="flex items-center justify-center border-r border-border px-5"
+        >
+          <Image src="/portal.svg" alt="Portal" width={24} height={24} />
+        </Link>
+        <nav className="hidden items-stretch md:flex">
+          <Link
+            href="/features"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Features
           </Link>
-          <nav className="hidden items-center gap-6 md:flex">
-            <Link
-              href="/features"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Features
-            </Link>
-            <Link
-              href="/channels"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Channels
-            </Link>
-            <Link
-              href="/pricing"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/docs"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Docs
-            </Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-2">
+          <Link
+            href="/channels"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Channels
+          </Link>
+          <Link
+            href="/pricing"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/docs"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Docs
+          </Link>
+        </nav>
+        <div className="flex flex-1" />
+        <div className="flex items-stretch">
           <Link
             href="/sign-in"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
+            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Sign in
           </Link>
           <Link
             href="/get-started"
-            className={buttonVariants({ size: "sm" })}
+            className={buttonVariants({
+              size: "sm",
+              className: "my-auto ml-2 mr-4",
+            })}
           >
             Get started
           </Link>
