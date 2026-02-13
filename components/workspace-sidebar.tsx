@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -35,10 +35,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-// Default width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
-const DEFAULT_WIDTH = 224;
-const MIN_WIDTH = 168;
-const MAX_WIDTH = 400;
+// Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
+const SIDEBAR_WIDTH = 224;
 
 interface WorkspaceSidebarProps {
   slug: string;
@@ -59,34 +57,6 @@ export function WorkspaceSidebar({
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
     new Set()
   );
-
-  // Resizable sidebar state
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const isResizing = useRef(false);
-
-  const startResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, e.clientX));
-      setWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      isResizing.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  }, []);
 
   // Dialog state
   const [dialogMode, setDialogMode] = useState<"channel" | "category" | null>(
@@ -114,8 +84,8 @@ export function WorkspaceSidebar({
   return (
     <>
       <aside
-        className="relative flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground"
-        style={{ width, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
+        className="flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground"
+        style={{ width: SIDEBAR_WIDTH }}
       >
         {/* Navigation */}
         <nav className="flex flex-col gap-px p-2">
@@ -243,11 +213,6 @@ export function WorkspaceSidebar({
           </DropdownMenu>
         </div>
 
-        {/* Resize handle */}
-        <div
-          onMouseDown={startResize}
-          className="absolute top-0 right-0 bottom-0 w-1 translate-x-1/2 cursor-col-resize hover:bg-ring/40 active:bg-ring/60 transition-colors z-10"
-        />
       </aside>
 
       {/* Create Channel Dialog */}
