@@ -20,7 +20,7 @@ export function Navbar() {
       <div className="flex h-14 items-stretch">
         <Link
           href="/"
-          className="flex items-center justify-center border-r border-border px-5 transition-colors hover:bg-muted"
+          className="flex w-14 items-center justify-center border-r border-border transition-colors hover:bg-muted"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
@@ -70,7 +70,7 @@ export function Navbar() {
             >
               Dashboard
             </Link>
-            <div className="flex items-center border-l border-border px-3">
+            <div className="flex w-14 items-center justify-center border-l border-border">
               <UserButton
                 appearance={{
                   elements: {
