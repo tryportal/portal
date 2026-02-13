@@ -84,7 +84,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
         style={{ width: 224 }}
         aria-label="Settings navigation"
       >
-        <div className="flex flex-col gap-px p-2">
+        <div className="flex flex-col gap-px pl-2 pt-2 pb-2">
           {visibleSections.map(({ id, label, icon: Icon }) => {
             const isActive = activeSection === id;
             const isDanger = id === "danger";
@@ -93,7 +93,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
               <button
                 key={id}
                 onClick={() => setActiveSection(id)}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 text-left text-xs ${
+                className={`flex items-center gap-2.5 rounded-l-md px-2.5 py-1.5 text-left text-xs ${
                   isActive
                     ? isDanger
                       ? "bg-destructive/10 font-medium text-destructive"
