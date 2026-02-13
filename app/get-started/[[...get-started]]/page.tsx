@@ -46,19 +46,7 @@ export default function GetStartedPage() {
           />
           <span className="text-sm font-medium">Portal</span>
         </Link>
-        <div className="max-w-md">
-          <blockquote className="text-lg/relaxed font-light tracking-tight">
-            &ldquo;We onboarded our entire team in under a day. Portal just
-            works &mdash; no configuration headaches, no learning curve.&rdquo;
-          </blockquote>
-          <div className="mt-4 text-xs text-background/60">
-            <span className="text-background/80 font-medium">
-              Marcus Rivera
-            </span>
-            <span className="mx-2">/</span>
-            CTO, Wavelength Labs
-          </div>
-        </div>
+        <div className="max-w-md" />
         <p className="text-xs text-background/40">
           &copy; {new Date().getFullYear()} Portal. All rights reserved.
         </p>

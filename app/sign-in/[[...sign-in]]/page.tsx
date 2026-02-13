@@ -46,17 +46,7 @@ export default function SignInPage() {
           />
           <span className="text-sm font-medium">Portal</span>
         </Link>
-        <div className="max-w-md">
-          <blockquote className="text-lg/relaxed font-light tracking-tight">
-            &ldquo;Portal has completely transformed how we manage our
-            workflows. The simplicity is unmatched.&rdquo;
-          </blockquote>
-          <div className="mt-4 text-xs text-background/60">
-            <span className="text-background/80 font-medium">Sofia Chen</span>
-            <span className="mx-2">/</span>
-            Head of Engineering, Acme Corp
-          </div>
-        </div>
+        <div className="max-w-md" />
         <p className="text-xs text-background/40">
           &copy; {new Date().getFullYear()} Portal. All rights reserved.
         </p>
