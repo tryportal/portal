@@ -8,7 +8,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 const navLinks = [
-  { href: "/", label: "Home" },
+  { href: "/home", label: "Home" },
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
@@ -32,8 +32,7 @@ export function Navbar() {
         </Link>
         <nav className="hidden items-stretch md:flex">
           {navLinks.map(({ href, label }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const isActive = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={href}
