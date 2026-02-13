@@ -10,32 +10,32 @@ export function Navbar() {
       <div className="flex h-14 items-stretch">
         <Link
           href="/"
-          className="flex items-center justify-center border-r border-border px-5"
+          className="flex items-center justify-center border-r border-border px-5 transition-colors hover:bg-muted"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
         </Link>
         <nav className="hidden items-stretch md:flex">
           <Link
             href="/features"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Features
           </Link>
           <Link
             href="/channels"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Channels
           </Link>
           <Link
             href="/pricing"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Pricing
           </Link>
           <Link
             href="/docs"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Docs
           </Link>
@@ -44,7 +44,7 @@ export function Navbar() {
         <div className="flex items-stretch">
           <Link
             href="/sign-in"
-            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Sign in
           </Link>
