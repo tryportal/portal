@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CaretUpDown, Plus, SignIn, Check } from "@phosphor-icons/react";
+import { Facehash } from "facehash";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,9 +36,12 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
               className="size-5 object-cover"
             />
           ) : (
-            <div className="flex size-5 items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground">
-              {currentWorkspace?.name?.charAt(0) ?? "?"}
-            </div>
+            <Facehash
+              name={currentWorkspace?.slug ?? slug}
+              size={20}
+              interactive={false}
+              showInitial={false}
+            />
           )}
           <span className="max-w-24 truncate">
             {currentWorkspace?.name ?? "Workspace"}
@@ -64,9 +68,12 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
                       className="size-4 object-cover"
                     />
                   ) : (
-                    <div className="flex size-4 items-center justify-center bg-muted text-[8px] font-medium text-muted-foreground">
-                      {ws!.name.charAt(0)}
-                    </div>
+                    <Facehash
+                      name={ws!.slug}
+                      size={16}
+                      interactive={false}
+                      showInitial={false}
+                    />
                   )}
                   <span className="truncate">{ws!.name}</span>
                   {isCurrent && (
