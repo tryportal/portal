@@ -9,7 +9,6 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -26,7 +25,6 @@ import {
   Globe,
   Lock,
   Warning,
-  GearSix,
   Image as ImageIcon,
   PencilSimple,
   Link as LinkIcon,
@@ -48,131 +46,143 @@ interface WorkspaceOptionsProps {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Section definitions
+// ---------------------------------------------------------------------------
+
+type SectionId = "logo" | "details" | "url" | "visibility" | "transfer" | "danger";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType<any>; creatorOnly?: boolean }[] = [
+  { id: "logo", label: "Logo", icon: ImageIcon },
+  { id: "details", label: "Details", icon: PencilSimple },
+  { id: "url", label: "URL", icon: LinkIcon },
+  { id: "visibility", label: "Visibility", icon: Eye },
+  { id: "transfer", label: "Transfer", icon: UserSwitch, creatorOnly: true },
+  { id: "danger", label: "Danger Zone", icon: Warning, creatorOnly: true },
+];
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
 export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
   const { user } = useUser();
   const isCreator = user?.id === workspace.createdBy;
+  const [activeSection, setActiveSection] = useState<SectionId>("logo");
+
+  const visibleSections = SECTIONS.filter(
+    (s) => !s.creatorOnly || isCreator
+  );
+
+  // If the active section becomes hidden (e.g. not creator), reset
+  useEffect(() => {
+    if (!visibleSections.some((s) => s.id === activeSection)) {
+      setActiveSection("logo");
+    }
+  }, [isCreator, activeSection, visibleSections]);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <GearSix size={24} className="text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-medium tracking-tight">Options</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Manage workspace settings
-            </p>
-          </div>
+    <div className="flex h-full flex-1">
+      {/* Sidebar nav */}
+      <nav
+        className="flex w-48 flex-shrink-0 flex-col border-r border-border bg-sidebar"
+        aria-label="Settings navigation"
+      >
+        <div className="px-4 pt-6 pb-3">
+          <h1 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Options
+          </h1>
         </div>
 
-        <div className="mt-6">
-          <Separator />
+        <div className="flex flex-col gap-px px-2">
+          {visibleSections.map(({ id, label, icon: Icon }) => {
+            const isActive = activeSection === id;
+            const isDanger = id === "danger";
+
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveSection(id)}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 text-left text-xs ${
+                  isActive
+                    ? isDanger
+                      ? "bg-destructive/10 font-medium text-destructive"
+                      : "bg-primary text-primary-foreground font-medium"
+                    : isDanger
+                      ? "text-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+                      : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
+                }`}
+              >
+                <Icon
+                  size={16}
+                  weight={isActive ? "fill" : "regular"}
+                  aria-hidden="true"
+                />
+                {label}
+              </button>
+            );
+          })}
         </div>
+      </nav>
 
-        {/* Logo */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2">
-            <ImageIcon size={14} className="text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Workspace Logo
-            </span>
-          </div>
-          <div className="mt-3">
-            <LogoSection workspace={workspace} />
-          </div>
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-xl px-8 py-8">
+          {activeSection === "logo" && <LogoPanel workspace={workspace} />}
+          {activeSection === "details" && <DetailsPanel workspace={workspace} />}
+          {activeSection === "url" && <SlugPanel workspace={workspace} />}
+          {activeSection === "visibility" && <VisibilityPanel workspace={workspace} />}
+          {activeSection === "transfer" && isCreator && <TransferPanel workspace={workspace} />}
+          {activeSection === "danger" && isCreator && <DeletePanel workspace={workspace} />}
         </div>
-
-        <div className="mt-6">
-          <Separator />
-        </div>
-
-        {/* Details */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2">
-            <PencilSimple size={14} className="text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Workspace Details
-            </span>
-          </div>
-          <div className="mt-3">
-            <DetailsSection workspace={workspace} />
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <Separator />
-        </div>
-
-        {/* URL */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2">
-            <LinkIcon size={14} className="text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Workspace URL
-            </span>
-          </div>
-          <div className="mt-3">
-            <SlugSection workspace={workspace} />
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <Separator />
-        </div>
-
-        {/* Visibility */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2">
-            <Eye size={14} className="text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Visibility
-            </span>
-          </div>
-          <div className="mt-3">
-            <VisibilitySection workspace={workspace} />
-          </div>
-        </div>
-
-        {isCreator && (
-          <>
-            <div className="mt-6">
-              <Separator />
-            </div>
-
-            {/* Transfer Ownership */}
-            <div className="mt-6">
-              <div className="flex items-center gap-2">
-                <UserSwitch size={14} className="text-muted-foreground" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Transfer Ownership
-                </span>
-              </div>
-              <div className="mt-3">
-                <TransferOwnershipSection workspace={workspace} />
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <Separator />
-            </div>
-
-            {/* Delete */}
-            <div className="mt-8">
-              <DeleteWorkspaceSection workspace={workspace} />
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 1. Logo
+// Panel header helper
 // ---------------------------------------------------------------------------
 
-function LogoSection({
+function PanelHeader({
+  icon: Icon,
+  title,
+  description,
+  variant = "default",
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: React.ComponentType<any>;
+  title: string;
+  description: string;
+  variant?: "default" | "danger";
+}) {
+  const isDanger = variant === "danger";
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2">
+        <Icon
+          size={14}
+          className={isDanger ? "text-destructive" : "text-muted-foreground"}
+          weight="regular"
+          aria-hidden="true"
+        />
+        <h2
+          className={`text-sm font-bold ${isDanger ? "text-destructive" : ""}`}
+        >
+          {title}
+        </h2>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 1. Logo Panel
+// ---------------------------------------------------------------------------
+
+function LogoPanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -228,67 +238,73 @@ function LogoSection({
   }, [updateWorkspace, workspace._id]);
 
   return (
-    <div className="flex items-center gap-4 border border-border bg-card px-4 py-3">
-      <button
-        type="button"
-        aria-label="Upload workspace logo"
-        onClick={() => fileInputRef.current?.click()}
-        className="relative flex size-14 flex-shrink-0 items-center justify-center border border-dashed border-border hover:border-foreground/30 overflow-hidden"
-      >
-        {currentLogo ? (
-          <img
-            src={currentLogo}
-            alt={`${workspace.name} logo`}
-            className="size-full object-cover"
-          />
-        ) : (
-          <Facehash
-            name={workspace.slug}
-            size={56}
-            interactive={false}
-            showInitial={false}
-          />
-        )}
-        {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-            <p className="text-[10px] text-muted-foreground">{"\u2026"}</p>
-          </div>
-        )}
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleUpload}
-        aria-hidden="true"
+    <div>
+      <PanelHeader
+        icon={ImageIcon}
+        title="Workspace Logo"
+        description="Upload an image to represent this workspace"
       />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">
-          Upload an image to represent this workspace. Square images work best.
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Upload logo"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <UploadSimple size={14} aria-hidden="true" />
-            {uploading ? "Uploading\u2026" : "Upload"}
-          </Button>
-          {currentLogo && workspace.logoUrl && (
+
+      <div className="flex items-center gap-4 border border-border bg-card px-4 py-4">
+        <button
+          type="button"
+          aria-label="Upload workspace logo"
+          onClick={() => fileInputRef.current?.click()}
+          className="relative flex size-16 flex-shrink-0 items-center justify-center overflow-hidden hover:opacity-80"
+        >
+          {currentLogo ? (
+            <img
+              src={currentLogo}
+              alt={`${workspace.name} logo`}
+              className="size-full object-cover"
+            />
+          ) : (
+            <Facehash
+              name={workspace.slug}
+              size={64}
+              interactive={false}
+              showInitial={false}
+            />
+          )}
+          {uploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+              <p className="text-[10px] text-muted-foreground">{"\u2026"}</p>
+            </div>
+          )}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleUpload}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">
+            Square images work best. Accepted formats: PNG, JPG, GIF, SVG.
+          </p>
+          <div className="mt-3 flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              aria-label="Remove logo"
-              onClick={handleRemoveLogo}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
             >
-              <Trash size={14} aria-hidden="true" />
-              Remove
+              <UploadSimple size={14} aria-hidden="true" />
+              {uploading ? "Uploading\u2026" : "Upload"}
             </Button>
-          )}
+            {currentLogo && workspace.logoUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveLogo}
+              >
+                <Trash size={14} aria-hidden="true" />
+                Remove
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -296,10 +312,10 @@ function LogoSection({
 }
 
 // ---------------------------------------------------------------------------
-// 2. Details
+// 2. Details Panel
 // ---------------------------------------------------------------------------
 
-function DetailsSection({
+function DetailsPanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -340,57 +356,65 @@ function DetailsSection({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid gap-1.5">
-        <label htmlFor="workspace-name" className="text-xs font-medium">
-          Name
-        </label>
-        <Input
-          id="workspace-name"
-          name="workspace-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Workspace name\u2026"
-          autoComplete="off"
-        />
-      </div>
+    <div>
+      <PanelHeader
+        icon={PencilSimple}
+        title="Workspace Details"
+        description="Update the name and description of this workspace"
+      />
 
-      <div className="grid gap-1.5">
-        <label htmlFor="workspace-description" className="text-xs font-medium">
-          Description
-        </label>
-        <Textarea
-          id="workspace-description"
-          name="workspace-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="What is this workspace about\u2026"
-          className="min-h-20"
-          autoComplete="off"
-        />
-        <p className="text-[11px] text-muted-foreground">
-          A brief description visible to workspace members
-        </p>
-      </div>
+      <div className="flex flex-col gap-4">
+        <div className="grid gap-1.5">
+          <label htmlFor="workspace-name" className="text-xs font-medium">
+            Name
+          </label>
+          <Input
+            id="workspace-name"
+            name="workspace-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Workspace name\u2026"
+            autoComplete="off"
+          />
+        </div>
 
-      <div>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!hasChanges || !name.trim() || saving}
-        >
-          {saving ? "Saving\u2026" : saved ? "Saved" : "Save Changes"}
-        </Button>
+        <div className="grid gap-1.5">
+          <label htmlFor="workspace-description" className="text-xs font-medium">
+            Description
+          </label>
+          <Textarea
+            id="workspace-description"
+            name="workspace-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this workspace about\u2026"
+            className="min-h-20"
+            autoComplete="off"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            A brief description visible to workspace members
+          </p>
+        </div>
+
+        <div>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || !name.trim() || saving}
+          >
+            {saving ? "Saving\u2026" : saved ? "Saved" : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 3. Slug / URL
+// 3. Slug / URL Panel
 // ---------------------------------------------------------------------------
 
-function SlugSection({
+function SlugPanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -454,62 +478,70 @@ function SlugSection({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid gap-1.5">
-        <label htmlFor="workspace-slug" className="text-xs font-medium">
-          URL
-        </label>
-        <div className="flex items-center">
-          <span className="flex h-8 items-center border border-r-0 border-input bg-muted px-2.5 font-mono text-xs text-muted-foreground">
-            /w/
-          </span>
-          <Input
-            id="workspace-slug"
-            name="workspace-slug"
-            placeholder="my-workspace"
-            value={slug}
-            onChange={handleSlugChange}
-            className="border-l-0 font-mono"
-            spellCheck={false}
-            autoComplete="off"
-          />
+    <div>
+      <PanelHeader
+        icon={LinkIcon}
+        title="Workspace URL"
+        description="Change the URL slug used to access this workspace"
+      />
+
+      <div className="flex flex-col gap-4">
+        <div className="grid gap-1.5">
+          <label htmlFor="workspace-slug" className="text-xs font-medium">
+            URL
+          </label>
+          <div className="flex items-center">
+            <span className="flex h-8 items-center border border-r-0 border-input bg-muted px-2.5 font-mono text-xs text-muted-foreground">
+              /w/
+            </span>
+            <Input
+              id="workspace-slug"
+              name="workspace-slug"
+              placeholder="my-workspace"
+              value={slug}
+              onChange={handleSlugChange}
+              className="border-l-0 font-mono"
+              spellCheck={false}
+              autoComplete="off"
+            />
+          </div>
+          {hasChanges && debouncedSlug.length > 0 && slugAvailability && (
+            <p className="text-[11px]">
+              {slugAvailability.available ? (
+                <span className="text-green-600">Available</span>
+              ) : (
+                <span className="text-destructive">Already taken</span>
+              )}
+            </p>
+          )}
+          {hasChanges && (
+            <p className="text-[11px] text-muted-foreground">
+              Changing the URL will break any existing links to this workspace
+            </p>
+          )}
         </div>
-        {hasChanges && debouncedSlug.length > 0 && slugAvailability && (
-          <p className="text-[11px]">
-            {slugAvailability.available ? (
-              <span className="text-green-600">Available</span>
-            ) : (
-              <span className="text-destructive">Already taken</span>
-            )}
-          </p>
-        )}
-        {hasChanges && (
-          <p className="text-[11px] text-muted-foreground">
-            Changing the URL will break any existing links to this workspace
-          </p>
-        )}
-      </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!hasChanges || !slug.trim() || !isAvailable || saving}
-        >
-          {saving ? "Updating\u2026" : "Update URL"}
-        </Button>
+        <div>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || !slug.trim() || !isAvailable || saving}
+          >
+            {saving ? "Updating\u2026" : "Update URL"}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 4. Visibility
+// 4. Visibility Panel
 // ---------------------------------------------------------------------------
 
-function VisibilitySection({
+function VisibilityPanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -535,61 +567,69 @@ function VisibilitySection({
   };
 
   return (
-    <div className="flex flex-col gap-px">
-      <button
-        onClick={() => handleToggle(false)}
-        disabled={updating}
-        className={`flex items-center gap-3 border bg-card px-4 py-3 text-left text-xs hover:bg-muted/50 ${
-          !workspace.isPublic
-            ? "border-foreground font-bold"
-            : "border-border"
-        }`}
-      >
-        <Lock
-          size={16}
-          weight={!workspace.isPublic ? "fill" : "regular"}
-          className="flex-shrink-0"
-          aria-hidden="true"
-        />
-        <div className="min-w-0 flex-1">
-          <span className="block">Private</span>
-          <span className="block font-normal text-muted-foreground">
-            Only invited members can access this workspace
-          </span>
-        </div>
-      </button>
+    <div>
+      <PanelHeader
+        icon={Eye}
+        title="Workspace Visibility"
+        description="Control who can discover and join this workspace"
+      />
 
-      <button
-        onClick={() => handleToggle(true)}
-        disabled={updating}
-        className={`flex items-center gap-3 border bg-card px-4 py-3 text-left text-xs hover:bg-muted/50 ${
-          workspace.isPublic
-            ? "border-foreground font-bold"
-            : "border-border"
-        }`}
-      >
-        <Globe
-          size={16}
-          weight={workspace.isPublic ? "fill" : "regular"}
-          className="flex-shrink-0"
-          aria-hidden="true"
-        />
-        <div className="min-w-0 flex-1">
-          <span className="block">Public</span>
-          <span className="block font-normal text-muted-foreground">
-            Anyone can find and join this workspace
-          </span>
-        </div>
-      </button>
+      <div className="flex flex-col gap-px">
+        <button
+          onClick={() => handleToggle(false)}
+          disabled={updating}
+          className={`flex items-center gap-3 border bg-card px-4 py-3 text-left text-xs hover:bg-muted/50 ${
+            !workspace.isPublic
+              ? "border-foreground font-bold"
+              : "border-border"
+          }`}
+        >
+          <Lock
+            size={16}
+            weight={!workspace.isPublic ? "fill" : "regular"}
+            className="flex-shrink-0"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <span className="block">Private</span>
+            <span className="block font-normal text-muted-foreground">
+              Only invited members can access this workspace
+            </span>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleToggle(true)}
+          disabled={updating}
+          className={`flex items-center gap-3 border bg-card px-4 py-3 text-left text-xs hover:bg-muted/50 ${
+            workspace.isPublic
+              ? "border-foreground font-bold"
+              : "border-border"
+          }`}
+        >
+          <Globe
+            size={16}
+            weight={workspace.isPublic ? "fill" : "regular"}
+            className="flex-shrink-0"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <span className="block">Public</span>
+            <span className="block font-normal text-muted-foreground">
+              Anyone can find and join this workspace
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 5. Transfer Ownership
+// 5. Transfer Ownership Panel
 // ---------------------------------------------------------------------------
 
-function TransferOwnershipSection({
+function TransferPanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -635,48 +675,53 @@ function TransferOwnershipSection({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-muted-foreground">
-        Transfer this workspace to another member. You will lose creator
-        privileges.
-      </p>
+    <div>
+      <PanelHeader
+        icon={UserSwitch}
+        title="Transfer Ownership"
+        description="Transfer this workspace to another member. You will lose creator privileges."
+      />
 
-      <div className="grid gap-1.5">
-        <label htmlFor="transfer-member" className="text-xs font-medium">
-          New owner
-        </label>
-        <select
-          id="transfer-member"
-          name="transfer-member"
-          value={selectedUserId}
-          onChange={(e) => setSelectedUserId(e.target.value)}
-          className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
-        >
-          <option value="">Select a member</option>
-          {eligibleMembers?.map((member) => {
-            const displayName =
-              [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-              member.email ||
-              member.userId;
-            return (
-              <option key={member.userId} value={member.userId}>
-                {displayName}{" "}
-                {member.role === "admin" ? "(Admin)" : "(Member)"}
-              </option>
-            );
-          })}
-        </select>
-      </div>
+      <div className="flex flex-col gap-4">
+        <div className="grid gap-1.5">
+          <label htmlFor="transfer-member" className="text-xs font-medium">
+            New owner
+          </label>
+          <select
+            id="transfer-member"
+            name="transfer-member"
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+            className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
+          >
+            <option value="">Select a member</option>
+            {eligibleMembers?.map((member) => {
+              const displayName =
+                [member.firstName, member.lastName]
+                  .filter(Boolean)
+                  .join(" ") ||
+                member.email ||
+                member.userId;
+              return (
+                <option key={member.userId} value={member.userId}>
+                  {displayName}{" "}
+                  {member.role === "admin" ? "(Admin)" : "(Member)"}
+                </option>
+              );
+            })}
+          </select>
+        </div>
 
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setTransferOpen(true)}
-          disabled={!selectedUserId}
-        >
-          Transfer Ownership
-        </Button>
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTransferOpen(true)}
+            disabled={!selectedUserId}
+          >
+            Transfer Ownership
+          </Button>
+        </div>
       </div>
 
       <AlertDialog open={transferOpen} onOpenChange={setTransferOpen}>
@@ -706,10 +751,10 @@ function TransferOwnershipSection({
 }
 
 // ---------------------------------------------------------------------------
-// 6. Delete Workspace
+// 6. Delete Workspace Panel
 // ---------------------------------------------------------------------------
 
-function DeleteWorkspaceSection({
+function DeletePanel({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -743,34 +788,32 @@ function DeleteWorkspaceSection({
   };
 
   return (
-    <div className="border border-destructive/20 p-4">
-      <div className="flex items-center gap-2">
-        <Warning
-          size={14}
-          className="text-destructive"
-          weight="fill"
-          aria-hidden="true"
-        />
-        <span className="text-xs font-semibold uppercase tracking-wider text-destructive">
-          Danger Zone
-        </span>
+    <div>
+      <PanelHeader
+        icon={Warning}
+        title="Danger Zone"
+        description="Irreversible and destructive actions"
+        variant="danger"
+      />
+
+      <div className="border border-destructive/20 p-4">
+        <h3 className="text-xs font-medium">Delete Workspace</h3>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Permanently delete{" "}
+          <strong className="text-foreground">{workspace.name}</strong> and all
+          of its data including channels, messages, and members. This action
+          cannot be undone.
+        </p>
+
+        <Button
+          variant="destructive"
+          size="sm"
+          className="mt-3"
+          onClick={() => setDeleteOpen(true)}
+        >
+          Delete Workspace
+        </Button>
       </div>
-
-      <p className="mt-2 text-xs text-muted-foreground">
-        Permanently delete{" "}
-        <strong className="text-foreground">{workspace.name}</strong> and all of
-        its data including channels, messages, and members. This action cannot be
-        undone.
-      </p>
-
-      <Button
-        variant="destructive"
-        size="sm"
-        className="mt-3"
-        onClick={() => setDeleteOpen(true)}
-      >
-        Delete Workspace
-      </Button>
 
       <AlertDialog
         open={deleteOpen}
