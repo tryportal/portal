@@ -26,7 +26,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -384,11 +383,9 @@ function CreateChannelDialog({
         </div>
 
         <DialogFooter>
-          <DialogClose>
-            <Button variant="outline" size="sm">
-              Cancel
-            </Button>
-          </DialogClose>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             size="sm"
             onClick={handleSubmit}
@@ -471,11 +468,9 @@ function CreateCategoryDialog({
         </div>
 
         <DialogFooter>
-          <DialogClose>
-            <Button variant="outline" size="sm">
-              Cancel
-            </Button>
-          </DialogClose>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             size="sm"
             onClick={handleSubmit}
