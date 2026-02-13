@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "@clerk/elements": "^0.24.7",
+    "@clerk/nextjs": "^6.37.3",
     "@phosphor-icons/react": "^2.1.10",
     "agentation": "^2.2.1",
     "class-variance-authority": "^0.7.1",

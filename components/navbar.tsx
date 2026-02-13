@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -44,18 +45,41 @@ export function Navbar() {
         </nav>
         <div className="flex flex-1" />
         <div className="flex items-stretch">
-          <Link
-            href="/sign-in"
-            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/get-started"
-            className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Get started
-          </Link>
+          <SignedOut>
+            <Link
+              href="/sign-in"
+              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/get-started"
+              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Get started
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className={`flex items-center border-l border-border px-5 text-xs transition-colors hover:bg-muted hover:text-foreground ${
+                pathname.startsWith("/dashboard")
+                  ? "font-bold text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              Dashboard
+            </Link>
+            <div className="flex items-center border-l border-border px-3">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "size-7 rounded-none",
+                  },
+                }}
+              />
+            </div>
+          </SignedIn>
         </div>
       </div>
     </header>

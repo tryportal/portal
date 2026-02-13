@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Agentation } from "agentation";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { AuthSync } from "@/components/auth-sync";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,13 +30,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ConvexClientProvider>{children}</ConvexClientProvider>
-        {process.env.NODE_ENV === "development" && <Agentation />}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ConvexClientProvider>
+            <AuthSync />
+            {children}
+          </ConvexClientProvider>
+          {process.env.NODE_ENV === "development" && <Agentation />}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
