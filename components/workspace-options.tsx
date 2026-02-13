@@ -80,16 +80,11 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
     <div className="flex h-full flex-1">
       {/* Sidebar nav */}
       <nav
-        className="flex w-48 flex-shrink-0 flex-col border-r border-border bg-sidebar"
+        className="flex flex-shrink-0 flex-col border-r border-border bg-sidebar"
+        style={{ width: 224 }}
         aria-label="Settings navigation"
       >
-        <div className="px-4 pt-2 pb-1.5">
-          <h1 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Options
-          </h1>
-        </div>
-
-        <div className="flex flex-col gap-px px-2">
+        <div className="flex flex-col gap-px p-2">
           {visibleSections.map(({ id, label, icon: Icon }) => {
             const isActive = activeSection === id;
             const isDanger = id === "danger";
