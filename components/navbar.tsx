@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
 
 export function Navbar() {
   return (
@@ -16,16 +15,16 @@ export function Navbar() {
         </Link>
         <nav className="hidden items-stretch md:flex">
           <Link
+            href="/"
+            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Home
+          </Link>
+          <Link
             href="/features"
             className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Features
-          </Link>
-          <Link
-            href="/channels"
-            className="flex items-center border-r border-border px-5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Channels
           </Link>
           <Link
             href="/pricing"
