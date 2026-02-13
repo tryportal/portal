@@ -54,7 +54,7 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
               return (
                 <DropdownMenuItem
                   key={ws!._id}
-                  onSelect={() => {
+                  onClick={() => {
                     if (!isCurrent) router.push(`/w/${ws!.slug}`);
                   }}
                   className={isCurrent ? "font-bold" : ""}
@@ -83,11 +83,11 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
             })}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
+          <DropdownMenuItem onClick={() => setCreateOpen(true)}>
             <Plus size={14} />
             Create workspace
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setJoinOpen(true)}>
+          <DropdownMenuItem onClick={() => setJoinOpen(true)}>
             <SignIn size={14} />
             Join workspace
           </DropdownMenuItem>
