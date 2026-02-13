@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -20,12 +20,26 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+
+// Default width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
+const DEFAULT_WIDTH = 224;
+const MIN_WIDTH = 168;
+const MAX_WIDTH = 400;
 
 interface WorkspaceSidebarProps {
   slug: string;
@@ -47,6 +61,39 @@ export function WorkspaceSidebar({
     new Set()
   );
 
+  // Resizable sidebar state
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const isResizing = useRef(false);
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, e.clientX));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, []);
+
+  // Dialog state
+  const [dialogMode, setDialogMode] = useState<"channel" | "category" | null>(
+    null
+  );
+
   const toggleCategory = (id: string) => {
     setCollapsedCategories((prev) => {
       const next = new Set(prev);
@@ -66,231 +113,378 @@ export function WorkspaceSidebar({
   ];
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-      {/* Navigation */}
-      <nav className="flex flex-col gap-px p-2">
-        {navItems.map(({ label, icon: Icon, href }) => {
-          const fullHref = base + href;
-          const isActive = href === ""
-            ? pathname === base || pathname === base + "/"
-            : pathname.startsWith(base + href);
+    <>
+      <aside
+        className="relative flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground"
+        style={{ width, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
+      >
+        {/* Navigation */}
+        <nav className="flex flex-col gap-px p-2">
+          {navItems.map(({ label, icon: Icon, href }) => {
+            const fullHref = base + href;
+            const isActive =
+              href === ""
+                ? pathname === base || pathname === base + "/"
+                : pathname.startsWith(base + href);
 
-          return (
-            <Link
-              key={href}
-              href={fullHref}
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
-              }`}
-            >
-              <Icon size={16} weight={isActive ? "fill" : "regular"} />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+            return (
+              <Link
+                key={href}
+                href={fullHref}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
+                }`}
+              >
+                <Icon size={16} weight={isActive ? "fill" : "regular"} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div className="px-2 py-1">
-        <Separator />
-      </div>
-
-      {/* Channels & Categories */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        <div className="flex items-center justify-between px-2.5 py-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Channels
-          </span>
+        <div className="px-2 py-1">
+          <Separator />
         </div>
 
-        {data === undefined && (
-          <div className="px-2.5 py-1.5">
-            <span className="text-[11px] text-muted-foreground">Loading...</span>
+        {/* Channels & Categories */}
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          <div className="flex items-center justify-between px-2.5 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Channels
+            </span>
           </div>
-        )}
 
-        {data?.map((category) => {
-          const isCollapsed = collapsedCategories.has(category._id);
-
-          return (
-            <div key={category._id} className="mt-1">
-              <button
-                onClick={() => toggleCategory(category._id)}
-                className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-sidebar-foreground"
-              >
-                {isCollapsed ? (
-                  <CaretRight size={12} weight="bold" />
-                ) : (
-                  <CaretDown size={12} weight="bold" />
-                )}
-                {category.name}
-              </button>
-
-              {!isCollapsed && (
-                <div className="flex flex-col gap-px">
-                  {category.channels.map((channel) => {
-                    const channelHref = `${base}/channels/${channel.name}`;
-                    const isChannelActive = pathname === channelHref;
-                    const IconComponent =
-                      channel.channelType === "forum" ? ChatCircle : Hash;
-
-                    return (
-                      <Link
-                        key={channel._id}
-                        href={channelHref}
-                        className={`flex items-center gap-2 py-1 pl-6 pr-2.5 text-xs transition-colors ${
-                          isChannelActive
-                            ? "bg-primary text-primary-foreground font-medium"
-                            : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
-                        }`}
-                      >
-                        <IconComponent size={14} />
-                        <span className="truncate">{channel.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
+          {data === undefined && (
+            <div className="px-2.5 py-1.5">
+              <span className="text-[11px] text-muted-foreground">
+                Loading...
+              </span>
             </div>
-          );
-        })}
+          )}
 
-        {data && data.length === 0 && (
-          <div className="px-2.5 py-3 text-center">
-            <p className="text-[11px] text-muted-foreground">
-              No channels yet
-            </p>
-          </div>
-        )}
-      </div>
+          {data?.map((category) => {
+            const isCollapsed = collapsedCategories.has(category._id);
 
-      {/* Create New Button */}
-      <div className="border-t border-border p-2">
-        <CreateNewMenu
-          slug={slug}
-          organizationId={organizationId}
-          categories={data ?? []}
+            return (
+              <div key={category._id} className="mt-1">
+                <button
+                  onClick={() => toggleCategory(category._id)}
+                  className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-sidebar-foreground"
+                >
+                  {isCollapsed ? (
+                    <CaretRight size={12} weight="bold" />
+                  ) : (
+                    <CaretDown size={12} weight="bold" />
+                  )}
+                  <span className="truncate">{category.name}</span>
+                </button>
+
+                {!isCollapsed && (
+                  <div className="flex flex-col gap-px">
+                    {category.channels.map((channel) => {
+                      const channelHref = `${base}/channels/${channel.name}`;
+                      const isChannelActive = pathname === channelHref;
+                      const IconComponent =
+                        channel.channelType === "forum" ? ChatCircle : Hash;
+
+                      return (
+                        <Link
+                          key={channel._id}
+                          href={channelHref}
+                          className={`flex items-center gap-2 py-1 pl-6 pr-2.5 text-xs transition-colors ${
+                            isChannelActive
+                              ? "bg-primary text-primary-foreground font-medium"
+                              : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+                          }`}
+                        >
+                          <IconComponent size={14} />
+                          <span className="truncate">{channel.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {data && data.length === 0 && (
+            <div className="px-2.5 py-3 text-center">
+              <p className="text-[11px] text-muted-foreground">
+                No channels yet
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Create New Button */}
+        <div className="border-t border-border p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex w-full items-center justify-center gap-2 border border-border bg-background px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted cursor-pointer outline-none">
+              <Plus size={14} />
+              Create new
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              sideOffset={4}
+              className="w-[calc(var(--anchor-width))]"
+            >
+              <DropdownMenuItem onClick={() => setDialogMode("channel")}>
+                <Hash size={14} />
+                Channel
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setDialogMode("category")}>
+                <FolderSimple size={14} />
+                Category
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Resize handle */}
+        <div
+          onMouseDown={startResize}
+          className="absolute top-0 right-0 bottom-0 w-1 translate-x-1/2 cursor-col-resize hover:bg-ring/40 active:bg-ring/60 transition-colors z-10"
         />
-      </div>
-    </aside>
+      </aside>
+
+      {/* Create Channel Dialog */}
+      <CreateChannelDialog
+        open={dialogMode === "channel"}
+        onOpenChange={(open) => !open && setDialogMode(null)}
+        organizationId={organizationId}
+        categories={data ?? []}
+      />
+
+      {/* Create Category Dialog */}
+      <CreateCategoryDialog
+        open={dialogMode === "category"}
+        onOpenChange={(open) => !open && setDialogMode(null)}
+        organizationId={organizationId}
+      />
+    </>
   );
 }
 
-function CreateNewMenu({
-  slug,
+function CreateChannelDialog({
+  open,
+  onOpenChange,
   organizationId,
   categories,
 }: {
-  slug: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   organizationId: Id<"organizations">;
   categories: { _id: Id<"channelCategories">; name: string }[];
 }) {
-  const [mode, setMode] = useState<"idle" | "channel" | "category">("idle");
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createCategory = useMutation(api.channels.createCategory);
   const createChannel = useMutation(api.channels.createChannel);
 
   const reset = () => {
-    setMode("idle");
     setName("");
+    setDescription("");
     setSelectedCategory("");
+    setIsSubmitting(false);
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !selectedCategory) return;
+    setIsSubmitting(true);
 
-    if (mode === "category") {
-      await createCategory({
-        organizationId,
-        name: name.trim(),
-      });
-    } else if (mode === "channel" && selectedCategory) {
+    try {
       await createChannel({
         organizationId,
         categoryId: selectedCategory as Id<"channelCategories">,
         name: name.trim().toLowerCase().replace(/\s+/g, "-"),
+        description: description.trim() || undefined,
       });
+      reset();
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    reset();
   };
 
-  if (mode !== "idle") {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-muted-foreground">
-            New {mode}
-          </span>
-          <button
-            onClick={reset}
-            className="text-[11px] text-muted-foreground hover:text-foreground"
-          >
-            Cancel
-          </button>
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) reset();
+        onOpenChange(open);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create channel</DialogTitle>
+          <DialogDescription>
+            Channels are where conversations happen. Create one for a topic or
+            project.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">Name</label>
+            <div className="flex h-8 items-center border border-border bg-background text-xs">
+              <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
+                #
+              </span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. design, marketing"
+                className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSubmit();
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
+            >
+              <option value="">Select a category</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">
+              Description{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What's this channel about?"
+              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+            />
+          </div>
         </div>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={mode === "category" ? "Category name" : "channel-name"}
-          className="h-7 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") reset();
-          }}
-        />
-        {mode === "channel" && (
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="h-7 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
+
+        <DialogFooter>
+          <DialogClose>
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!name.trim() || !selectedCategory || isSubmitting}
           >
-            <option value="">Select category</option>
-            {categories.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        )}
-        <Button
-          size="sm"
-          onClick={handleSubmit}
-          disabled={
-            !name.trim() || (mode === "channel" && !selectedCategory)
-          }
-          className="w-full"
-        >
-          Create {mode}
-        </Button>
-      </div>
-    );
-  }
+            {isSubmitting ? "Creating..." : "Create channel"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CreateCategoryDialog({
+  open,
+  onOpenChange,
+  organizationId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  organizationId: Id<"organizations">;
+}) {
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createCategory = useMutation(api.channels.createCategory);
+
+  const reset = () => {
+    setName("");
+    setIsSubmitting(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setIsSubmitting(true);
+
+    try {
+      await createCategory({
+        organizationId,
+        name: name.trim(),
+      });
+      reset();
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className="flex w-full items-center justify-center gap-2 border border-border bg-background px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted cursor-pointer outline-none"
-      >
-        <Plus size={14} />
-        Create new
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" sideOffset={4} className="w-[calc(var(--anchor-width))]">
-        <DropdownMenuItem onClick={() => setMode("channel")}>
-          <Hash size={14} />
-          Channel
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setMode("category")}>
-          <FolderSimple size={14} />
-          Category
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) reset();
+        onOpenChange(open);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create category</DialogTitle>
+          <DialogDescription>
+            Categories help organize your channels into groups.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Engineering, General"
+              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit();
+              }}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose>
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!name.trim() || isSubmitting}
+          >
+            {isSubmitting ? "Creating..." : "Create category"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
