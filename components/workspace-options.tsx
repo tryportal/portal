@@ -9,6 +9,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -25,11 +26,8 @@ import {
   Globe,
   Lock,
   Warning,
-  Image as ImageIcon,
   PencilSimple,
-  Link as LinkIcon,
   Eye,
-  UserSwitch,
 } from "@phosphor-icons/react";
 import { Facehash } from "facehash";
 
@@ -50,15 +48,12 @@ interface WorkspaceOptionsProps {
 // Section definitions
 // ---------------------------------------------------------------------------
 
-type SectionId = "logo" | "details" | "url" | "visibility" | "transfer" | "danger";
+type SectionId = "details" | "visibility" | "danger";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType<any>; creatorOnly?: boolean }[] = [
-  { id: "logo", label: "Logo", icon: ImageIcon },
   { id: "details", label: "Details", icon: PencilSimple },
-  { id: "url", label: "URL", icon: LinkIcon },
   { id: "visibility", label: "Visibility", icon: Eye },
-  { id: "transfer", label: "Transfer", icon: UserSwitch, creatorOnly: true },
   { id: "danger", label: "Danger Zone", icon: Warning, creatorOnly: true },
 ];
 
@@ -69,16 +64,15 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType<any>; 
 export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
   const { user } = useUser();
   const isCreator = user?.id === workspace.createdBy;
-  const [activeSection, setActiveSection] = useState<SectionId>("logo");
+  const [activeSection, setActiveSection] = useState<SectionId>("details");
 
   const visibleSections = SECTIONS.filter(
     (s) => !s.creatorOnly || isCreator
   );
 
-  // If the active section becomes hidden (e.g. not creator), reset
   useEffect(() => {
     if (!visibleSections.some((s) => s.id === activeSection)) {
-      setActiveSection("logo");
+      setActiveSection("details");
     }
   }, [isCreator, activeSection, visibleSections]);
 
@@ -89,7 +83,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
         className="flex w-48 flex-shrink-0 flex-col border-r border-border bg-sidebar"
         aria-label="Settings navigation"
       >
-        <div className="px-4 pt-6 pb-3">
+        <div className="px-4 pt-2 pb-1.5">
           <h1 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Options
           </h1>
@@ -128,13 +122,10 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-xl px-8 py-8">
-          {activeSection === "logo" && <LogoPanel workspace={workspace} />}
+        <div className="mx-auto w-full max-w-xl px-8 py-4">
           {activeSection === "details" && <DetailsPanel workspace={workspace} />}
-          {activeSection === "url" && <SlugPanel workspace={workspace} />}
           {activeSection === "visibility" && <VisibilityPanel workspace={workspace} />}
-          {activeSection === "transfer" && isCreator && <TransferPanel workspace={workspace} />}
-          {activeSection === "danger" && isCreator && <DeletePanel workspace={workspace} />}
+          {activeSection === "danger" && isCreator && <DangerPanel workspace={workspace} />}
         </div>
       </div>
     </div>
@@ -179,10 +170,38 @@ function PanelHeader({
 }
 
 // ---------------------------------------------------------------------------
-// 1. Logo Panel
+// 1. Details Panel (Logo + Name/Description + URL)
 // ---------------------------------------------------------------------------
 
-function LogoPanel({
+function DetailsPanel({
+  workspace,
+}: {
+  workspace: WorkspaceOptionsProps["workspace"];
+}) {
+  return (
+    <div>
+      <PanelHeader
+        icon={PencilSimple}
+        title="Workspace Details"
+        description="Manage your workspace logo, name, description, and URL"
+      />
+
+      <LogoSection workspace={workspace} />
+
+      <Separator className="my-6" />
+
+      <InfoSection workspace={workspace} />
+
+      <Separator className="my-6" />
+
+      <SlugSection workspace={workspace} />
+    </div>
+  );
+}
+
+// -- Logo sub-section --
+
+function LogoSection({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -239,13 +258,8 @@ function LogoPanel({
 
   return (
     <div>
-      <PanelHeader
-        icon={ImageIcon}
-        title="Workspace Logo"
-        description="Upload an image to represent this workspace"
-      />
-
-      <div className="flex items-center gap-4 border border-border bg-card px-4 py-4">
+      <h3 className="text-xs font-medium">Logo</h3>
+      <div className="mt-2 flex items-center gap-4 border border-border bg-card px-4 py-4">
         <button
           type="button"
           aria-label="Upload workspace logo"
@@ -311,11 +325,9 @@ function LogoPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// 2. Details Panel
-// ---------------------------------------------------------------------------
+// -- Name & Description sub-section --
 
-function DetailsPanel({
+function InfoSection({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -356,65 +368,55 @@ function DetailsPanel({
   };
 
   return (
-    <div>
-      <PanelHeader
-        icon={PencilSimple}
-        title="Workspace Details"
-        description="Update the name and description of this workspace"
-      />
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-1.5">
+        <label htmlFor="workspace-name" className="text-xs font-medium">
+          Name
+        </label>
+        <Input
+          id="workspace-name"
+          name="workspace-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Workspace name\u2026"
+          autoComplete="off"
+        />
+      </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="grid gap-1.5">
-          <label htmlFor="workspace-name" className="text-xs font-medium">
-            Name
-          </label>
-          <Input
-            id="workspace-name"
-            name="workspace-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Workspace name\u2026"
-            autoComplete="off"
-          />
-        </div>
+      <div className="grid gap-1.5">
+        <label htmlFor="workspace-description" className="text-xs font-medium">
+          Description
+        </label>
+        <Textarea
+          id="workspace-description"
+          name="workspace-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What is this workspace about\u2026"
+          className="min-h-20"
+          autoComplete="off"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          A brief description visible to workspace members
+        </p>
+      </div>
 
-        <div className="grid gap-1.5">
-          <label htmlFor="workspace-description" className="text-xs font-medium">
-            Description
-          </label>
-          <Textarea
-            id="workspace-description"
-            name="workspace-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What is this workspace about\u2026"
-            className="min-h-20"
-            autoComplete="off"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            A brief description visible to workspace members
-          </p>
-        </div>
-
-        <div>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || !name.trim() || saving}
-          >
-            {saving ? "Saving\u2026" : saved ? "Saved" : "Save Changes"}
-          </Button>
-        </div>
+      <div>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!hasChanges || !name.trim() || saving}
+        >
+          {saving ? "Saving\u2026" : saved ? "Saved" : "Save Changes"}
+        </Button>
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// 3. Slug / URL Panel
-// ---------------------------------------------------------------------------
+// -- Slug / URL sub-section --
 
-function SlugPanel({
+function SlugSection({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -478,67 +480,59 @@ function SlugPanel({
   };
 
   return (
-    <div>
-      <PanelHeader
-        icon={LinkIcon}
-        title="Workspace URL"
-        description="Change the URL slug used to access this workspace"
-      />
-
-      <div className="flex flex-col gap-4">
-        <div className="grid gap-1.5">
-          <label htmlFor="workspace-slug" className="text-xs font-medium">
-            URL
-          </label>
-          <div className="flex items-center">
-            <span className="flex h-8 items-center border border-r-0 border-input bg-muted px-2.5 font-mono text-xs text-muted-foreground">
-              /w/
-            </span>
-            <Input
-              id="workspace-slug"
-              name="workspace-slug"
-              placeholder="my-workspace"
-              value={slug}
-              onChange={handleSlugChange}
-              className="border-l-0 font-mono"
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </div>
-          {hasChanges && debouncedSlug.length > 0 && slugAvailability && (
-            <p className="text-[11px]">
-              {slugAvailability.available ? (
-                <span className="text-green-600">Available</span>
-              ) : (
-                <span className="text-destructive">Already taken</span>
-              )}
-            </p>
-          )}
-          {hasChanges && (
-            <p className="text-[11px] text-muted-foreground">
-              Changing the URL will break any existing links to this workspace
-            </p>
-          )}
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-1.5">
+        <label htmlFor="workspace-slug" className="text-xs font-medium">
+          URL
+        </label>
+        <div className="flex items-center">
+          <span className="flex h-8 items-center border border-r-0 border-input bg-muted px-2.5 font-mono text-xs text-muted-foreground">
+            /w/
+          </span>
+          <Input
+            id="workspace-slug"
+            name="workspace-slug"
+            placeholder="my-workspace"
+            value={slug}
+            onChange={handleSlugChange}
+            className="border-l-0 font-mono"
+            spellCheck={false}
+            autoComplete="off"
+          />
         </div>
+        {hasChanges && debouncedSlug.length > 0 && slugAvailability && (
+          <p className="text-[11px]">
+            {slugAvailability.available ? (
+              <span className="text-green-600">Available</span>
+            ) : (
+              <span className="text-destructive">Already taken</span>
+            )}
+          </p>
+        )}
+        {hasChanges && (
+          <p className="text-[11px] text-muted-foreground">
+            Changing the URL will break any existing links to this workspace
+          </p>
+        )}
+      </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <div>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || !slug.trim() || !isAvailable || saving}
-          >
-            {saving ? "Updating\u2026" : "Update URL"}
-          </Button>
-        </div>
+      <div>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!hasChanges || !slug.trim() || !isAvailable || saving}
+        >
+          {saving ? "Updating\u2026" : "Update URL"}
+        </Button>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 4. Visibility Panel
+// 2. Visibility Panel
 // ---------------------------------------------------------------------------
 
 function VisibilityPanel({
@@ -626,10 +620,35 @@ function VisibilityPanel({
 }
 
 // ---------------------------------------------------------------------------
-// 5. Transfer Ownership Panel
+// 3. Danger Panel (Transfer Ownership + Delete Workspace)
 // ---------------------------------------------------------------------------
 
-function TransferPanel({
+function DangerPanel({
+  workspace,
+}: {
+  workspace: WorkspaceOptionsProps["workspace"];
+}) {
+  return (
+    <div>
+      <PanelHeader
+        icon={Warning}
+        title="Danger Zone"
+        description="Irreversible and destructive actions"
+        variant="danger"
+      />
+
+      <TransferSection workspace={workspace} />
+
+      <Separator className="my-6" />
+
+      <DeleteSection workspace={workspace} />
+    </div>
+  );
+}
+
+// -- Transfer Ownership sub-section --
+
+function TransferSection({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -675,14 +694,14 @@ function TransferPanel({
   };
 
   return (
-    <div>
-      <PanelHeader
-        icon={UserSwitch}
-        title="Transfer Ownership"
-        description="Transfer this workspace to another member. You will lose creator privileges."
-      />
+    <div className="border border-destructive/20 p-4">
+      <h3 className="text-xs font-medium">Transfer Ownership</h3>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Transfer this workspace to another member. You will lose creator
+        privileges.
+      </p>
 
-      <div className="flex flex-col gap-4">
+      <div className="mt-3 flex flex-col gap-3">
         <div className="grid gap-1.5">
           <label htmlFor="transfer-member" className="text-xs font-medium">
             New owner
@@ -750,11 +769,9 @@ function TransferPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// 6. Delete Workspace Panel
-// ---------------------------------------------------------------------------
+// -- Delete Workspace sub-section --
 
-function DeletePanel({
+function DeleteSection({
   workspace,
 }: {
   workspace: WorkspaceOptionsProps["workspace"];
@@ -788,32 +805,23 @@ function DeletePanel({
   };
 
   return (
-    <div>
-      <PanelHeader
-        icon={Warning}
-        title="Danger Zone"
-        description="Irreversible and destructive actions"
-        variant="danger"
-      />
+    <div className="border border-destructive/20 p-4">
+      <h3 className="text-xs font-medium">Delete Workspace</h3>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Permanently delete{" "}
+        <strong className="text-foreground">{workspace.name}</strong> and all of
+        its data including channels, messages, and members. This action cannot be
+        undone.
+      </p>
 
-      <div className="border border-destructive/20 p-4">
-        <h3 className="text-xs font-medium">Delete Workspace</h3>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          Permanently delete{" "}
-          <strong className="text-foreground">{workspace.name}</strong> and all
-          of its data including channels, messages, and members. This action
-          cannot be undone.
-        </p>
-
-        <Button
-          variant="destructive"
-          size="sm"
-          className="mt-3"
-          onClick={() => setDeleteOpen(true)}
-        >
-          Delete Workspace
-        </Button>
-      </div>
+      <Button
+        variant="destructive"
+        size="sm"
+        className="mt-3"
+        onClick={() => setDeleteOpen(true)}
+      >
+        Delete Workspace
+      </Button>
 
       <AlertDialog
         open={deleteOpen}
