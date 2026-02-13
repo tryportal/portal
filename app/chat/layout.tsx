@@ -13,7 +13,11 @@ export default function ChatLayout({
 
   return (
     <div className="min-h-screen">
-      {firstWorkspace?.slug && <WorkspaceNavbar slug={firstWorkspace.slug} />}
+      {firstWorkspace?.slug ? (
+        <WorkspaceNavbar slug={firstWorkspace.slug} />
+      ) : (
+        <header className="h-14 border-b border-border" />
+      )}
       {children}
     </div>
   );
