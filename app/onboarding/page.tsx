@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,8 +19,10 @@ type Step = "choice" | "join" | "create-details" | "create-invite" | "create-don
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const memberships = useQuery(api.organizations.getUserMemberships);
-  const [step, setStep] = useState<Step>("choice");
+  const initialStep = searchParams.get("step") === "create" ? "create-details" : "choice";
+  const [step, setStep] = useState<Step>(initialStep);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
 
   // Loading state while checking memberships

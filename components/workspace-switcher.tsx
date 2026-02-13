@@ -81,7 +81,7 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
             })}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push("/onboarding")}>
+          <DropdownMenuItem onClick={() => router.push("/onboarding?step=create")}>
             <Plus size={14} />
             Create workspace
           </DropdownMenuItem>
