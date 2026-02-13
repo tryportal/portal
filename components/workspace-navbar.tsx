@@ -38,7 +38,7 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
             const isActive = global
               ? pathname.startsWith(href)
               : href === ""
-                ? pathname === base || pathname === base + "/"
+                ? pathname.startsWith(base)
                 : pathname.startsWith(base + href);
 
             return (
