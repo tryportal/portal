@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import { House, ChatCircle, Tray } from "@phosphor-icons/react";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { UserMenu } from "@/components/user-menu";
 
 interface NavItem {
   icon: typeof House;
@@ -57,15 +57,7 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
         <div className="flex flex-1" />
         <div className="flex items-stretch">
           <WorkspaceSwitcher slug={slug} />
-          <div className="flex w-14 items-center justify-center border-l border-border">
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "size-6 rounded-none",
-                },
-              }}
-            />
-          </div>
+          <UserMenu />
         </div>
       </div>
     </header>

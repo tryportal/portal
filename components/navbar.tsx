@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { UserMenu } from "@/components/user-menu";
 
 const navLinks = [
   { href: "/home", label: "Home" },
@@ -75,15 +76,7 @@ export function Navbar() {
             >
               Dashboard
             </Link>
-            <div className="flex w-14 items-center justify-center border-l border-border">
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "size-6 rounded-none",
-                  },
-                }}
-              />
-            </div>
+            <UserMenu />
           </SignedIn>
         </div>
       </div>
