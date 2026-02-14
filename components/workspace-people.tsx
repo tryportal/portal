@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -160,7 +159,6 @@ function MemberRow({
   isMe: boolean;
   organizationId: Id<"organizations">;
 }) {
-  const router = useRouter();
   const [removeOpen, setRemoveOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const updateRole = useMutation(api.organizations.updateMemberRole);
@@ -199,8 +197,9 @@ function MemberRow({
     setIsUpdating(true);
     try {
       await leaveWorkspace({ organizationId });
-      router.push("/");
-    } finally {
+      // Hard redirect to avoid Convex reactive re-render showing "not found"
+      window.location.href = "/";
+    } catch {
       setIsUpdating(false);
     }
   };
