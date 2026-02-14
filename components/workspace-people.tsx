@@ -199,7 +199,7 @@ function MemberRow({
     setIsUpdating(true);
     try {
       await leaveWorkspace({ organizationId });
-      router.push("/home");
+      router.push("/");
     } finally {
       setIsUpdating(false);
     }
