@@ -143,8 +143,20 @@ export const getUserFirstWorkspace = query({
       .unique();
 
     if (user?.primaryWorkspaceId) {
-      const org = await ctx.db.get(user.primaryWorkspaceId);
-      if (org) return { slug: org.slug };
+      // Verify the user is still a member of their primary workspace
+      const primaryMembership = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q
+            .eq("organizationId", user.primaryWorkspaceId!)
+            .eq("userId", identity.subject)
+        )
+        .unique();
+
+      if (primaryMembership) {
+        const org = await ctx.db.get(user.primaryWorkspaceId);
+        if (org) return { slug: org.slug };
+      }
     }
 
     // Otherwise, get the first membership
