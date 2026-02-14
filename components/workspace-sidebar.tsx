@@ -629,7 +629,7 @@ function SortableCategory({
     <div ref={setNodeRef} style={style} className="mt-1">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground cursor-grab active:cursor-grabbing"
+        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
         {...attributes}
         {...listeners}
       >
@@ -706,7 +706,7 @@ function SortableChannel({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs cursor-grab active:cursor-grabbing ${
+      className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
         isChannelActive
           ? "bg-primary text-primary-foreground font-medium"
           : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
