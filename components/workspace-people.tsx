@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -13,6 +15,7 @@ import {
   Copy,
   Check,
   Link as LinkIcon,
+  SignOut,
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,6 +67,7 @@ export function WorkspacePeople({
   organizationId,
   workspace,
 }: WorkspacePeopleProps) {
+  const { user } = useUser();
   const members = useQuery(api.organizations.getWorkspaceMembers, {
     organizationId,
   });
@@ -108,6 +112,7 @@ export function WorkspacePeople({
               key={member._id}
               member={member}
               isAdmin={isAdmin}
+              isMe={member.userId === user?.id}
               organizationId={organizationId}
             />
           ))}
@@ -137,6 +142,7 @@ export function WorkspacePeople({
 function MemberRow({
   member,
   isAdmin,
+  isMe,
   organizationId,
 }: {
   member: {
@@ -151,17 +157,22 @@ function MemberRow({
     imageUrl: string | null;
   };
   isAdmin: boolean;
+  isMe: boolean;
   organizationId: Id<"organizations">;
 }) {
+  const router = useRouter();
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const updateRole = useMutation(api.organizations.updateMemberRole);
   const removeMember = useMutation(api.organizations.removeMember);
+  const leaveWorkspace = useMutation(api.organizations.leaveWorkspace);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const displayName =
     [member.firstName, member.lastName].filter(Boolean).join(" ") || "Unknown";
 
-  const canManage = isAdmin && !member.isCreator;
+  const canManage = isAdmin && !member.isCreator && !isMe;
+  const canLeave = isMe && !member.isCreator;
 
   const handleRoleChange = async (
     newRole: "admin" | "member"
@@ -179,6 +190,16 @@ function MemberRow({
     try {
       await removeMember({ memberId: member._id });
       setRemoveOpen(false);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    setIsUpdating(true);
+    try {
+      await leaveWorkspace({ organizationId });
+      router.push("/home");
     } finally {
       setIsUpdating(false);
     }
@@ -224,8 +245,8 @@ function MemberRow({
           Joined {formatDate(member.joinedAt)}
         </span>
 
-        {/* Actions (admin only, not for creator) */}
-        {canManage && (
+        {/* Actions */}
+        {(canManage || canLeave) && (
           <DropdownMenu>
             <DropdownMenuTrigger
               className="text-muted-foreground hover:text-foreground cursor-pointer outline-none"
@@ -234,29 +255,42 @@ function MemberRow({
               <DotsThree size={18} weight="bold" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" sideOffset={4} align="end">
-              {member.role === "member" ? (
+              {canManage && (
+                <>
+                  {member.role === "member" ? (
+                    <DropdownMenuItem
+                      onClick={() => handleRoleChange("admin")}
+                    >
+                      <ShieldCheck size={14} />
+                      Promote to admin
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={() => handleRoleChange("member")}
+                    >
+                      <Crown size={14} />
+                      Demote to member
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setRemoveOpen(true)}
+                  >
+                    <UserMinus size={14} />
+                    Remove from workspace
+                  </DropdownMenuItem>
+                </>
+              )}
+              {canLeave && (
                 <DropdownMenuItem
-                  onClick={() => handleRoleChange("admin")}
+                  variant="destructive"
+                  onClick={() => setLeaveOpen(true)}
                 >
-                  <ShieldCheck size={14} />
-                  Promote to admin
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={() => handleRoleChange("member")}
-                >
-                  <Crown size={14} />
-                  Demote to member
+                  <SignOut size={14} />
+                  Leave workspace
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setRemoveOpen(true)}
-              >
-                <UserMinus size={14} />
-                Remove from workspace
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -281,6 +315,31 @@ function MemberRow({
               disabled={isUpdating}
             >
               {isUpdating ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Leave Confirmation */}
+      <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave workspace?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will lose access to all channels and messages in this
+              workspace. You can rejoin later if the workspace is public or
+              if you receive a new invite.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              size="default"
+              onClick={handleLeave}
+              disabled={isUpdating}
+            >
+              {isUpdating ? "Leaving..." : "Leave"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -386,6 +386,32 @@ export const removeMember = mutation({
   },
 });
 
+export const leaveWorkspace = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", args.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Workspace creator cannot leave
+    const org = await ctx.db.get(args.organizationId);
+    if (org?.createdBy === identity.subject) {
+      throw new Error("The workspace owner cannot leave. Transfer ownership first.");
+    }
+
+    await ctx.db.delete(membership._id);
+  },
+});
+
 export const updateWorkspace = mutation({
   args: {
     organizationId: v.id("organizations"),
