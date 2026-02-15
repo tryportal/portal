@@ -1,28 +1,17 @@
 "use client";
 
-import { useWorkspaceData } from "@/components/workspace-context";
-import { InboxPage } from "@/components/preview/inbox-page";
-import { usePageTitle } from "@/lib/use-page-title";
-import { LoadingSpinner } from "@/components/loading-spinner";
+import { Tray } from "@phosphor-icons/react";
 
-export default function InboxPageRoute() {
-  const data = useWorkspaceData();
-  const organization = data?.organization;
-  
-  usePageTitle("Inbox - Portal");
-
-  if (!organization?._id) {
-    return (
-      <main className="flex-1 overflow-hidden">
-        <LoadingSpinner fullScreen />
-      </main>
-    );
-  }
-
+export default function InboxPage() {
   return (
-    <main className="flex-1 overflow-hidden">
-      <InboxPage organizationId={organization._id} />
-    </main>
+    <div className="flex flex-1 items-center justify-center" style={{ minHeight: "calc(100vh - 57px)" }}>
+      <div className="text-center">
+        <Tray size={32} className="mx-auto text-muted-foreground" />
+        <h1 className="mt-3 text-sm font-medium">Inbox</h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Mentions and notifications will appear here.
+        </p>
+      </div>
+    </div>
   );
 }
-

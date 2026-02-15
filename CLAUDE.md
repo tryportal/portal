@@ -1,0 +1,7 @@
+1. NEVER run the dev server for the frontend or Convex.
+2. Keep the UI style consistent with the design system.
+3. Don't overthink solutions.
+4. Use the latest version of the tools and libraries.
+5. If you are unsure about a library/tool, use Context7 to help you.
+6. Always use Bun.
+7. When you complete a task, commit the code

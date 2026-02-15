@@ -1,29 +1,45 @@
 "use client";
 
-import { useWorkspace, useWorkspaceData } from "@/components/workspace-context";
-import { OverviewPage } from "@/components/preview/overview-page";
-import { usePageTitle } from "@/lib/use-page-title";
-import { LoadingSpinner } from "@/components/loading-spinner";
+import { use } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { WorkspaceSidebar } from "@/components/workspace-sidebar";
+import { WorkspaceOverview } from "@/components/workspace-overview";
+import { WorkspaceNotFound } from "@/components/workspace-not-found";
 
-export default function WorkspacePage() {
-  const data = useWorkspaceData();
-  const organization = data?.organization;
-  
-  usePageTitle(organization?.name ? `${organization.name} - Portal` : "Home - Portal");
+export default function WorkspacePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = use(params);
+  const workspace = useQuery(api.organizations.getWorkspaceBySlug, { slug });
 
-  // Show overview page when no channel is selected
-  // The actual channel view is handled by the [category]/[channel] route
-  if (!organization?._id) {
+  if (workspace === undefined) {
     return (
-      <main className="flex-1 overflow-hidden">
-        <LoadingSpinner fullScreen />
-      </main>
+      <div
+        className="flex flex-1 items-center justify-center"
+        style={{ height: "calc(100vh - 57px)" }}
+      >
+        <p className="text-xs text-muted-foreground">Loading...</p>
+      </div>
     );
   }
 
+  if (workspace === null) {
+    return <WorkspaceNotFound slug={slug} />;
+  }
+
   return (
-    <main className="flex-1 overflow-hidden">
-      <OverviewPage organizationId={organization._id} />
-    </main>
+    <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
+      <WorkspaceSidebar slug={slug} organizationId={workspace._id} role={workspace.role} />
+      <main className="flex flex-1">
+        <WorkspaceOverview
+          slug={slug}
+          organizationId={workspace._id}
+          workspace={workspace}
+        />
+      </main>
+    </div>
   );
 }
