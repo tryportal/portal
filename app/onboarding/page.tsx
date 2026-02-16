@@ -15,6 +15,7 @@ import {
 } from "@/components/onboarding/create-details-step";
 import { CreateInviteStep } from "@/components/onboarding/create-invite-step";
 import { CreateDoneStep } from "@/components/onboarding/create-done-step";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 type Step = "choice" | "join" | "create-details" | "create-invite" | "create-done";
 
@@ -30,7 +31,7 @@ export default function OnboardingPage() {
   if (memberships === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-xs text-muted-foreground">Loading...</p>
+        <DotLoader />
       </div>
     );
   }

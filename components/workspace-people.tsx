@@ -51,6 +51,7 @@ import {
   FieldDescription,
   FieldSeparator,
 } from "@/components/ui/field";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 interface WorkspacePeopleProps {
   organizationId: Id<"organizations">;
@@ -83,7 +84,7 @@ export function WorkspacePeople({
             <h1 className="text-xl font-medium tracking-tight">People</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               {members === undefined
-                ? "Loading..."
+                ? "\u00A0"
                 : `${members.length} member${members.length !== 1 ? "s" : ""}`}
             </p>
           </div>
@@ -102,9 +103,9 @@ export function WorkspacePeople({
         {/* Member List */}
         <div className="mt-6 flex flex-col gap-px">
           {members === undefined && (
-            <p className="py-8 text-center text-[11px] text-muted-foreground">
-              Loading members...
-            </p>
+            <div className="py-8">
+              <DotLoader dotCount={7} dotSize={4} gap={5} />
+            </div>
           )}
           {members?.map((member) => (
             <MemberRow

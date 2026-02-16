@@ -14,6 +14,7 @@ import {
   CaretDown,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
+import { DotLoader } from "@/components/ui/dot-loader";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -95,9 +96,9 @@ export function WorkspaceOverview({
 
             <div className="mt-3 flex flex-col gap-px">
               {mentions === undefined && (
-                <p className="py-6 text-center text-[11px] text-muted-foreground">
-                  Loading...
-                </p>
+                <div className="py-6">
+                  <DotLoader dotCount={7} dotSize={4} gap={5} />
+                </div>
               )}
               {mentions && mentions.length === 0 && (
                 <div className="border border-border bg-card px-4 py-6 text-center">
@@ -140,9 +141,9 @@ export function WorkspaceOverview({
 
             <div className="mt-3 flex flex-col gap-px">
               {savedMessages === undefined && (
-                <p className="py-6 text-center text-[11px] text-muted-foreground">
-                  Loading...
-                </p>
+                <div className="py-6">
+                  <DotLoader dotCount={7} dotSize={4} gap={5} />
+                </div>
               )}
               {savedMessages && savedMessages.length === 0 && (
                 <div className="border border-border bg-card px-4 py-6 text-center">
@@ -174,9 +175,9 @@ export function WorkspaceOverview({
 
           <div className="mt-4 flex flex-col gap-4">
             {channelsData === undefined && (
-              <p className="py-6 text-center text-[11px] text-muted-foreground">
-                Loading...
-              </p>
+              <div className="py-6">
+                <DotLoader dotCount={7} dotSize={4} gap={5} />
+              </div>
             )}
             {channelsData && channelsData.length === 0 && (
               <div className="border border-border bg-card px-4 py-8 text-center">

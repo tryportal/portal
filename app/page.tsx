@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Navbar } from "@/components/navbar";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function Page() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -29,7 +30,7 @@ export default function Page() {
   if (isLoaded && isSignedIn) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-xs text-muted-foreground">Loading...</p>
+        <DotLoader />
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Check } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -19,7 +20,7 @@ export default function SettingsPage() {
   if (!user || !currentUser) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-xs text-muted-foreground">Loading...</p>
+        <DotLoader />
       </div>
     );
   }

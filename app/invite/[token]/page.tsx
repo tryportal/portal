@@ -11,6 +11,7 @@ import { LightRays } from "@/components/ui/light-rays";
 import { Button } from "@/components/ui/button";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 import { Users, WarningCircle, CheckCircle } from "@phosphor-icons/react";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function InvitePage({
   params,
@@ -107,7 +108,7 @@ export default function InvitePage({
         <div className="flex flex-1 items-center justify-center px-6 py-12">
           {isLoading ? (
             <div className="flex flex-col items-center gap-3">
-              <p className="text-xs text-muted-foreground">Loading invite...</p>
+              <DotLoader />
             </div>
           ) : isInvalid ? (
             <ErrorState

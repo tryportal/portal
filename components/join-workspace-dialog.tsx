@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { DotLoader } from "@/components/ui/dot-loader";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +58,7 @@ export function JoinWorkspaceDialog({
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {workspaces === undefined ? (
             <div className="flex items-center justify-center py-8">
-              <p className="text-xs text-muted-foreground">Loading...</p>
+              <DotLoader dotCount={7} dotSize={4} gap={5} />
             </div>
           ) : workspaces.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">

@@ -48,6 +48,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { DotLoader } from "@/components/ui/dot-loader";
 import {
   DndContext,
   DragOverlay,
@@ -397,9 +398,7 @@ export function WorkspaceSidebar({
 
           {data === undefined && (
             <div className="px-2.5 py-1.5">
-              <span className="text-[11px] text-muted-foreground">
-                Loading...
-              </span>
+              <DotLoader dotCount={5} dotSize={3} gap={4} duration={1400} />
             </div>
           )}
 

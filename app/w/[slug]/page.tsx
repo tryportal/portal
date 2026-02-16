@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 import { WorkspaceOverview } from "@/components/workspace-overview";
 import { WorkspaceNotFound } from "@/components/workspace-not-found";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function WorkspacePage({
   params,
@@ -21,7 +22,7 @@ export default function WorkspacePage({
         className="flex flex-1 items-center justify-center"
         style={{ height: "calc(100vh - 57px)" }}
       >
-        <p className="text-xs text-muted-foreground">Loading...</p>
+        <DotLoader />
       </div>
     );
   }

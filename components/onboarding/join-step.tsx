@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { DotLoader } from "@/components/ui/dot-loader";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 
@@ -43,7 +44,7 @@ export function JoinStep({ onBack, onJoinedSlug }: JoinStepProps) {
       <div className="flex flex-col gap-3">
         {workspaces === undefined ? (
           <div className="flex items-center justify-center py-12">
-            <p className="text-xs text-muted-foreground">Loading...</p>
+            <DotLoader dotCount={7} dotSize={4} gap={5} />
           </div>
         ) : workspaces.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
