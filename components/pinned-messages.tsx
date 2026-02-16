@@ -49,7 +49,7 @@ export function PinnedMessages({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PushPin size={16} />
+            <PushPin size={14} />
             Pinned messages
           </DialogTitle>
           <DialogDescription>
@@ -67,54 +67,56 @@ export function PinnedMessages({
           {pinned && pinned.length === 0 && (
             <div className="py-8 text-center">
               <PushPin
-                size={32}
-                className="mx-auto mb-2 text-muted-foreground/40"
+                size={24}
+                className="mx-auto text-muted-foreground/40"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 No pinned messages yet
               </p>
             </div>
           )}
 
-          {pinned &&
-            pinned.length > 0 &&
-            pinned.map((msg) => (
-              <div
-                key={msg._id}
-                className="flex gap-2.5 border-b border-border px-1 py-3 last:border-b-0"
-              >
-                <div className="w-7 shrink-0">
-                  {msg.userImageUrl ? (
-                    <Image
-                      src={msg.userImageUrl}
-                      alt={msg.userName}
-                      width={28}
-                      height={28}
-                      className="size-7 object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-7 items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground">
-                      {msg.userName.charAt(0).toUpperCase()}
+          {pinned && pinned.length > 0 && (
+            <div className="flex flex-col gap-px">
+              {pinned.map((msg) => (
+                <div
+                  key={msg._id}
+                  className="flex gap-3 border border-border bg-card px-3 py-2.5"
+                >
+                  <div className="w-7 shrink-0">
+                    {msg.userImageUrl ? (
+                      <Image
+                        src={msg.userImageUrl}
+                        alt={msg.userName}
+                        width={28}
+                        height={28}
+                        className="size-7 object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-7 items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground">
+                        {msg.userName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-semibold">
+                        {msg.userName}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatTime(msg.createdAt)}
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-semibold">
-                      {msg.userName}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatTime(msg.createdAt)}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 text-xs leading-relaxed text-foreground/90 [&_p]:my-0">
-                    <Markdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </Markdown>
+                    <div className="prose-chat mt-0.5 text-xs leading-relaxed text-foreground/90 [&_p]:my-0">
+                      <Markdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </Markdown>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -63,7 +63,7 @@ interface MessageItemProps {
   isAdmin: boolean;
   onReply: (message: MessageData) => void;
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
-  showAvatar: boolean; // false if same user sent previous message within 2 min
+  showAvatar: boolean;
 }
 
 function formatTime(timestamp: number): string {
@@ -112,7 +112,6 @@ function MessageItemInner({
   onEmojiPickerOpen,
   showAvatar,
 }: MessageItemProps) {
-  const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
 
@@ -158,14 +157,12 @@ function MessageItemInner({
 
   return (
     <div
-      className={`group relative flex gap-2.5 px-5 py-0.5 transition-colors hover:bg-muted/50 ${
-        showAvatar ? "mt-3" : "mt-px"
+      className={`group relative flex gap-3 px-4 py-0.5 transition-colors hover:bg-muted/50 ${
+        showAvatar ? "mt-2.5" : "mt-px"
       }`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* Avatar column */}
-      <div className="w-8 shrink-0">
+      <div className="w-8 shrink-0 pt-0.5">
         {showAvatar ? (
           message.userImageUrl ? (
             <Image
@@ -182,9 +179,8 @@ function MessageItemInner({
             </div>
           )
         ) : (
-          // Show timestamp on hover for consecutive messages
           <span
-            className="flex h-5 items-center text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            className="flex h-5 items-center justify-end text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
             title={formatFullDate(message.createdAt)}
           >
             {formatTime(message.createdAt)}
@@ -209,7 +205,7 @@ function MessageItemInner({
 
         {/* Forwarded indicator */}
         {message.forwardedFrom && (
-          <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+          <div className="mb-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
             <ArrowSquareRight size={12} />
             <span>
               Forwarded from{" "}
@@ -222,7 +218,7 @@ function MessageItemInner({
 
         {/* Reply preview */}
         {message.parentMessage && (
-          <div className="mb-1 flex items-center gap-2 border-l-2 border-muted-foreground/30 pl-2">
+          <div className="mb-0.5 flex items-center gap-2 border-l-2 border-border pl-2">
             <span className="text-[10px] font-medium text-muted-foreground">
               {message.parentMessage.userName}
             </span>
@@ -239,7 +235,7 @@ function MessageItemInner({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-ring resize-none"
+              className="w-full border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed outline-none focus:border-ring resize-none"
               rows={Math.min(editContent.split("\n").length + 1, 8)}
               autoFocus
               onKeyDown={(e) => {
@@ -294,11 +290,11 @@ function MessageItemInner({
 
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-2">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {message.attachments.map((att, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 border border-border bg-muted/50 px-2.5 py-1.5"
+                className="flex items-center gap-2 border border-border bg-muted/30 px-2.5 py-1.5"
               >
                 <span className="text-xs font-medium truncate max-w-40">
                   {att.name}
@@ -313,15 +309,15 @@ function MessageItemInner({
 
         {/* Reactions */}
         {reactions.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
+          <div className="mt-1 flex flex-wrap gap-1">
             {reactions.map((r) => (
               <button
                 key={r.emoji}
                 onClick={() => handleReactionClick(r.emoji)}
                 className={`inline-flex items-center gap-1 border px-1.5 py-0.5 text-xs transition-colors ${
                   r.userIds.includes(message.userId)
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border bg-muted/50 hover:bg-muted"
+                    ? "border-foreground/20 bg-foreground/5"
+                    : "border-border hover:bg-muted"
                 }`}
               >
                 <span>{r.emoji}</span>
@@ -335,11 +331,11 @@ function MessageItemInner({
       </div>
 
       {/* Hover toolbar */}
-      {hovered && !editing && (
-        <div className="absolute -top-3 right-5 flex items-center border border-border bg-background shadow-sm">
+      {!editing && (
+        <div className="absolute -top-3 right-4 flex items-center border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onReply(message)}
-            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="Reply"
           >
             <ArrowBendUpLeft size={14} />
@@ -349,14 +345,14 @@ function MessageItemInner({
               const rect = e.currentTarget.getBoundingClientRect();
               onEmojiPickerOpen(message._id, rect);
             }}
-            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="Add reaction"
           >
             <Smiley size={14} />
           </button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground outline-none cursor-pointer">
+            <DropdownMenuTrigger className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground outline-none cursor-pointer transition-colors">
               <DotsThree size={14} weight="bold" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" sideOffset={4} align="end">

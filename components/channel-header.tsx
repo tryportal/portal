@@ -57,11 +57,11 @@ export function ChannelHeader({
   }, [isMuted, channelId, muteChannel, unmuteChannel]);
 
   return (
-    <div className="flex h-12 shrink-0 items-center border-b border-border px-4">
+    <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
       {/* Channel name */}
       <div className="flex items-center gap-1.5">
-        <Hash size={16} weight="bold" className="text-muted-foreground" />
-        <span className="text-sm font-medium">{channelName}</span>
+        <Hash size={14} weight="bold" className="text-muted-foreground" />
+        <span className="text-xs font-semibold">{channelName}</span>
         {isMuted && (
           <BellSlash
             size={12}
@@ -71,22 +71,20 @@ export function ChannelHeader({
         )}
       </div>
 
-      <div className="flex-1" />
-
-      {/* Search */}
-      <div className="flex items-center gap-1">
+      {/* Actions */}
+      <div className="flex items-center gap-0.5">
         {searchOpen ? (
           <div className="flex h-7 items-center border border-border bg-background">
             <MagnifyingGlass
               size={14}
-              className="ml-2 text-muted-foreground"
+              className="ml-2 shrink-0 text-muted-foreground"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearch(e.target.value)}
               placeholder="Search messages..."
-              className="h-full w-48 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+              className="h-full w-44 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
@@ -100,7 +98,7 @@ export function ChannelHeader({
                 setSearchOpen(false);
                 onSearch("");
               }}
-              className="flex h-full items-center px-1.5 text-muted-foreground hover:text-foreground"
+              className="flex h-full items-center px-1.5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X size={12} />
             </button>
@@ -111,13 +109,12 @@ export function ChannelHeader({
             size="icon-xs"
             onClick={() => setSearchOpen(true)}
           >
-            <MagnifyingGlass size={16} />
+            <MagnifyingGlass size={14} />
           </Button>
         )}
 
-        {/* Context menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex size-6 items-center justify-center hover:bg-muted outline-none cursor-pointer">
+          <DropdownMenuTrigger className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground outline-none cursor-pointer transition-colors">
             <DotsThree size={16} weight="bold" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="bottom" sideOffset={4} align="end">

@@ -45,8 +45,7 @@ export function ChannelChat({ channel }: ChannelChatProps) {
   const markChannelRead = useMutation(api.messages.markChannelRead);
 
   const isAdmin = channel.role === "admin";
-  const isReadOnly =
-    channel.permissions === "readOnly" && !isAdmin;
+  const isReadOnly = channel.permissions === "readOnly" && !isAdmin;
 
   // Debounce search
   useEffect(() => {
@@ -150,10 +149,12 @@ export function ChannelChat({ channel }: ChannelChatProps) {
       )}
 
       {isReadOnly && (
-        <div className="shrink-0 border-t border-border px-4 py-3 text-center">
-          <p className="text-xs text-muted-foreground">
-            This channel is read-only. Only admins can send messages.
-          </p>
+        <div className="shrink-0 px-4 pb-4">
+          <div className="border border-border bg-muted/30 px-4 py-3 text-center">
+            <p className="text-xs text-muted-foreground">
+              This channel is read-only. Only admins can send messages.
+            </p>
+          </div>
         </div>
       )}
 

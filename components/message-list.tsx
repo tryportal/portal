@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { MessageItem, type MessageData } from "@/components/message-item";
 import { DotLoader } from "@/components/ui/dot-loader";
-import { ArrowDown } from "@phosphor-icons/react";
+import { ArrowDown, ChatCircle } from "@phosphor-icons/react";
 
 interface MessageListProps {
   channelId: Id<"channels">;
@@ -27,10 +27,10 @@ function shouldGroupMessages(
 ): boolean {
   if (!previous) return false;
   if (current.userId !== previous.userId) return false;
-  if (current.parentMessage) return false; // Replies always show avatar
-  if (current.forwardedFrom) return false; // Forwards always show avatar
+  if (current.parentMessage) return false;
+  if (current.forwardedFrom) return false;
   const timeDiff = current.createdAt - previous.createdAt;
-  return timeDiff < 2 * 60 * 1000; // 2 minutes
+  return timeDiff < 2 * 60 * 1000;
 }
 
 /**
@@ -111,13 +111,11 @@ export function MessageList({
         ) {
           isLoadingMoreRef.current = true;
 
-          // Save scroll position before loading more
           const prevScrollHeight = container.scrollHeight;
           const prevScrollTop = container.scrollTop;
 
           loadMore(BATCH_SIZE);
 
-          // Restore scroll position after DOM updates
           requestAnimationFrame(() => {
             const newScrollHeight = container.scrollHeight;
             const heightDiff = newScrollHeight - prevScrollHeight;
@@ -184,7 +182,11 @@ export function MessageList({
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <p className="text-sm font-medium">No messages yet</p>
+          <ChatCircle
+            size={32}
+            className="mx-auto text-muted-foreground/40"
+          />
+          <p className="mt-3 text-sm font-medium">No messages yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Be the first to send a message in this channel.
           </p>
@@ -193,7 +195,7 @@ export function MessageList({
     );
   }
 
-   return (
+  return (
     <div className="relative flex-1 overflow-hidden">
       <div
         ref={scrollContainerRef}
@@ -213,7 +215,7 @@ export function MessageList({
           )}
 
           {status === "Exhausted" && messages.length > BATCH_SIZE && (
-            <div className="flex justify-center py-3">
+            <div className="flex justify-center py-4">
               <span className="text-[10px] text-muted-foreground">
                 Beginning of conversation
               </span>
@@ -232,7 +234,7 @@ export function MessageList({
               return (
                 <div key={msg._id}>
                   {showDateSeparator && (
-                    <div className="my-4 flex items-center gap-3 px-5">
+                    <div className="my-4 flex items-center gap-3 px-4">
                       <div className="h-px flex-1 bg-border" />
                       <span className="text-[10px] font-medium text-muted-foreground">
                         {formatDateSeparator(msg.createdAt)}
@@ -245,7 +247,9 @@ export function MessageList({
                     isAdmin={isAdmin}
                     onReply={onReply}
                     onEmojiPickerOpen={onEmojiPickerOpen}
-                    showAvatar={showDateSeparator || !shouldGroupMessages(msg, prevMsg)}
+                    showAvatar={
+                      showDateSeparator || !shouldGroupMessages(msg, prevMsg)
+                    }
                   />
                 </div>
               );
@@ -260,7 +264,7 @@ export function MessageList({
       {showNewMessagePill && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 border border-border bg-background px-3 py-1.5 text-xs font-medium shadow-md transition-colors hover:bg-muted"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 border border-border bg-background px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted"
         >
           <ArrowDown size={12} />
           New messages
