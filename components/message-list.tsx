@@ -193,64 +193,67 @@ export function MessageList({
     );
   }
 
-  return (
+   return (
     <div className="relative flex-1 overflow-hidden">
       <div
         ref={scrollContainerRef}
         className="h-full overflow-y-auto"
         onScroll={handleScroll}
       >
-        {/* Sentinel for infinite scroll (top of list) */}
-        <div ref={sentinelRef} className="h-1" />
+        {/* Flex container that pushes content to bottom */}
+        <div className="flex min-h-full flex-col justify-end">
+          {/* Sentinel for infinite scroll (top of list) */}
+          <div ref={sentinelRef} className="h-1" />
 
-        {/* Loading indicator for older messages */}
-        {status === "LoadingMore" && (
-          <div className="flex justify-center py-3">
-            <DotLoader dotCount={3} dotSize={3} gap={3} duration={1000} />
+          {/* Loading indicator for older messages */}
+          {status === "LoadingMore" && (
+            <div className="flex justify-center py-3">
+              <DotLoader dotCount={3} dotSize={3} gap={3} duration={1000} />
+            </div>
+          )}
+
+          {status === "Exhausted" && messages.length > BATCH_SIZE && (
+            <div className="flex justify-center py-3">
+              <span className="text-[10px] text-muted-foreground">
+                Beginning of conversation
+              </span>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="pb-2">
+            {messages.map((msg, idx) => {
+              const prevMsg = idx > 0 ? messages[idx - 1] : undefined;
+              const showDateSeparator =
+                !prevMsg ||
+                new Date(msg.createdAt).toDateString() !==
+                  new Date(prevMsg.createdAt).toDateString();
+
+              return (
+                <div key={msg._id}>
+                  {showDateSeparator && (
+                    <div className="my-4 flex items-center gap-3 px-5">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {formatDateSeparator(msg.createdAt)}
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                  )}
+                  <MessageItem
+                    message={msg}
+                    isAdmin={isAdmin}
+                    onReply={onReply}
+                    onEmojiPickerOpen={onEmojiPickerOpen}
+                    showAvatar={showDateSeparator || !shouldGroupMessages(msg, prevMsg)}
+                  />
+                </div>
+              );
+            })}
           </div>
-        )}
 
-        {status === "Exhausted" && messages.length > BATCH_SIZE && (
-          <div className="flex justify-center py-3">
-            <span className="text-[10px] text-muted-foreground">
-              Beginning of conversation
-            </span>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="pb-2">
-          {messages.map((msg, idx) => {
-            const prevMsg = idx > 0 ? messages[idx - 1] : undefined;
-            const showDateSeparator =
-              !prevMsg ||
-              new Date(msg.createdAt).toDateString() !==
-                new Date(prevMsg.createdAt).toDateString();
-
-            return (
-              <div key={msg._id}>
-                {showDateSeparator && (
-                  <div className="my-4 flex items-center gap-3 px-5">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {formatDateSeparator(msg.createdAt)}
-                    </span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                )}
-                <MessageItem
-                  message={msg}
-                  isAdmin={isAdmin}
-                  onReply={onReply}
-                  onEmojiPickerOpen={onEmojiPickerOpen}
-                  showAvatar={showDateSeparator || !shouldGroupMessages(msg, prevMsg)}
-                />
-              </div>
-            );
-          })}
+          <div ref={bottomRef} />
         </div>
-
-        <div ref={bottomRef} />
       </div>
 
       {/* New messages pill */}
