@@ -1,0 +1,190 @@
+"use client";
+
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { ChannelHeader } from "@/components/channel-header";
+import { MessageList } from "@/components/message-list";
+import { MessageInput } from "@/components/message-input";
+import { PinnedMessages } from "@/components/pinned-messages";
+import type { MessageData } from "@/components/message-item";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
+
+interface ChannelData {
+  _id: Id<"channels">;
+  name: string;
+  categoryName: string;
+  role: string;
+  isMuted: boolean;
+  organizationId: Id<"organizations">;
+  permissions: "open" | "readOnly";
+  description?: string;
+}
+
+interface ChannelChatProps {
+  channel: ChannelData;
+  slug?: string;
+}
+
+export function ChannelChat({ channel }: ChannelChatProps) {
+  const [replyTo, setReplyTo] = useState<MessageData | null>(null);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Emoji picker state for message reactions
+  const [emojiPickerState, setEmojiPickerState] = useState<{
+    messageId: Id<"messages">;
+    position: { top: number; left: number };
+  } | null>(null);
+  const emojiReactionRef = useRef<HTMLDivElement>(null);
+
+  const toggleReaction = useMutation(api.messages.toggleReaction);
+  const markChannelRead = useMutation(api.messages.markChannelRead);
+
+  const isAdmin = channel.role === "admin";
+  const isReadOnly =
+    channel.permissions === "readOnly" && !isAdmin;
+
+  // Debounce search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // Search query (only when debounced search has value)
+  const searchResults = useQuery(
+    api.messages.searchMessages,
+    debouncedSearch.trim()
+      ? { channelId: channel._id, searchQuery: debouncedSearch.trim() }
+      : "skip"
+  );
+
+  // Mark channel as read when entering
+  useEffect(() => {
+    markChannelRead({ channelId: channel._id });
+  }, [channel._id, markChannelRead]);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerState) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        emojiReactionRef.current &&
+        !emojiReactionRef.current.contains(e.target as Node)
+      ) {
+        setEmojiPickerState(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [emojiPickerState]);
+
+  const handleReply = useCallback((message: MessageData) => {
+    setReplyTo(message);
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTo(null);
+  }, []);
+
+  const handleEmojiPickerOpen = useCallback(
+    (messageId: Id<"messages">, rect: DOMRect) => {
+      setEmojiPickerState({
+        messageId,
+        position: {
+          top: rect.top - 350,
+          left: Math.min(rect.left, window.innerWidth - 360),
+        },
+      });
+    },
+    []
+  );
+
+  const handleReactionEmojiSelect = useCallback(
+    async (emoji: { native: string }) => {
+      if (!emojiPickerState) return;
+      await toggleReaction({
+        messageId: emojiPickerState.messageId,
+        emoji: emoji.native,
+      });
+      setEmojiPickerState(null);
+    },
+    [emojiPickerState, toggleReaction]
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      <ChannelHeader
+        channelName={channel.name}
+        channelId={channel._id}
+        isMuted={channel.isMuted}
+        role={channel.role}
+        onOpenPinned={() => setPinnedOpen(true)}
+        onSearch={setSearchQuery}
+        searchQuery={searchQuery}
+      />
+
+      <MessageList
+        channelId={channel._id}
+        isAdmin={isAdmin}
+        onReply={handleReply}
+        onEmojiPickerOpen={handleEmojiPickerOpen}
+        searchResults={
+          debouncedSearch.trim() && searchResults
+            ? (searchResults as MessageData[])
+            : null
+        }
+      />
+
+      {!isReadOnly && (
+        <MessageInput
+          channelId={channel._id}
+          replyTo={replyTo}
+          onCancelReply={handleCancelReply}
+        />
+      )}
+
+      {isReadOnly && (
+        <div className="shrink-0 border-t border-border px-4 py-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            This channel is read-only. Only admins can send messages.
+          </p>
+        </div>
+      )}
+
+      {/* Pinned messages dialog */}
+      <PinnedMessages
+        open={pinnedOpen}
+        onOpenChange={setPinnedOpen}
+        channelId={channel._id}
+        channelName={channel.name}
+      />
+
+      {/* Floating emoji picker for reactions */}
+      {emojiPickerState && (
+        <div
+          ref={emojiReactionRef}
+          className="fixed z-50"
+          style={{
+            top: Math.max(10, emojiPickerState.position.top),
+            left: emojiPickerState.position.left,
+          }}
+        >
+          <Picker
+            data={data}
+            onEmojiSelect={handleReactionEmojiSelect}
+            theme="light"
+            previewPosition="none"
+            skinTonePosition="search"
+            maxFrequentRows={2}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

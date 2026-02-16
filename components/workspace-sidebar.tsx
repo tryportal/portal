@@ -467,7 +467,8 @@ export function WorkspaceSidebar({
                   {!isCollapsed && (
                     <div className="flex flex-col gap-px">
                       {category.channels.map((channel) => {
-                        const channelHref = `${base}/channels/${channel.name}`;
+                        const categorySlug = category.name.toLowerCase().replace(/\s+/g, "-");
+                        const channelHref = `${base}/c/${categorySlug}/${channel.name}`;
                         const isChannelActive = pathname === channelHref;
                         const IconComponent =
                           channel.channelType === "forum" ? ChatCircle : Hash;
@@ -538,9 +539,10 @@ export function WorkspaceSidebar({
           });
           setEditingChannel(null);
           // If viewing the renamed channel, redirect to the new URL
-          if (pathname === `${base}/channels/${oldName}`) {
+          if (pathname.endsWith(`/${oldName}`) && pathname.includes(`${base}/c/`)) {
             const newName = name.trim().toLowerCase().replace(/\s+/g, "-");
-            router.push(`${base}/channels/${newName}`);
+            const pathPrefix = pathname.substring(0, pathname.lastIndexOf("/"));
+            router.push(`${pathPrefix}/${newName}`);
           }
         }}
       />
@@ -551,7 +553,7 @@ export function WorkspaceSidebar({
         onOpenChange={(open) => !open && setDeletingChannel(null)}
         onConfirm={async () => {
           if (!deletingChannel) return;
-          const wasActive = pathname === `${base}/channels/${deletingChannel.name}`;
+          const wasActive = pathname.endsWith(`/${deletingChannel.name}`) && pathname.includes(`${base}/c/`);
           await deleteChannel({ channelId: deletingChannel.id });
           setDeletingChannel(null);
           if (wasActive) {
@@ -650,6 +652,7 @@ function SortableCategory({
               <SortableChannel
                 key={channel._id}
                 channel={channel}
+                categorySlug={category.name.toLowerCase().replace(/\s+/g, "-")}
                 base={base}
                 pathname={pathname}
                 isAdmin={isAdmin}
@@ -666,6 +669,7 @@ function SortableCategory({
 
 function SortableChannel({
   channel,
+  categorySlug,
   base,
   pathname,
   isAdmin,
@@ -673,6 +677,7 @@ function SortableChannel({
   onDelete,
 }: {
   channel: ChannelItem;
+  categorySlug: string;
   base: string;
   pathname: string;
   isAdmin: boolean;
@@ -697,7 +702,7 @@ function SortableChannel({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const channelHref = `${base}/channels/${channel.name}`;
+  const channelHref = `${base}/c/${categorySlug}/${channel.name}`;
   const isChannelActive = pathname === channelHref;
   const IconComponent = channel.channelType === "forum" ? ChatCircle : Hash;
 
