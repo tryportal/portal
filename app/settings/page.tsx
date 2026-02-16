@@ -7,7 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Check } from "@phosphor-icons/react";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -94,20 +94,12 @@ export default function SettingsPage() {
                     : "border-border"
                 }`}
               >
-                {ws.logoUrl ? (
-                  <img
-                    src={ws.logoUrl}
-                    alt={ws.name}
-                    className="size-5 object-cover"
-                  />
-                ) : (
-                  <Facehash
-                    name={ws.slug}
-                    size={20}
-                    interactive={false}
-                    showInitial={false}
-                  />
-                )}
+                <WorkspaceIcon
+                  logoUrl={ws.logoUrl}
+                  name={ws.name}
+                  slug={ws.slug}
+                  size={20}
+                />
                 <span className="flex-1 truncate">{ws.name}</span>
                 {isDefault && (
                   <Check

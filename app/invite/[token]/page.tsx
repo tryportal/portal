@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { LightRays } from "@/components/ui/light-rays";
 import { Button } from "@/components/ui/button";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 import { Users, WarningCircle, CheckCircle } from "@phosphor-icons/react";
 
 export default function InvitePage({
@@ -229,20 +229,12 @@ function WorkspaceCard({
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex-shrink-0">
-        {workspace.logoUrl ? (
-          <img
-            src={workspace.logoUrl}
-            alt={workspace.name}
-            className="size-16 object-cover"
-          />
-        ) : (
-          <Facehash
-            name={workspace.slug}
-            size={64}
-            interactive={false}
-            showInitial={false}
-          />
-        )}
+        <WorkspaceIcon
+          logoUrl={workspace.logoUrl}
+          name={workspace.name}
+          slug={workspace.slug}
+          size={64}
+        />
       </div>
       <div className="text-center">
         <h1 className="text-lg font-medium tracking-tight">

@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 import {
   At,
   BookmarkSimple,
@@ -52,20 +52,12 @@ export function WorkspaceOverview({
       <div className="mx-auto max-w-3xl px-6 py-8">
         {/* Welcome Header */}
         <div className="flex items-center gap-4">
-          {workspace.logoUrl ? (
-            <img
-              src={workspace.logoUrl}
-              alt={workspace.name}
-              className="size-14 object-cover"
-            />
-          ) : (
-            <Facehash
-              name={workspace.slug}
-              size={56}
-              interactive={false}
-              showInitial={false}
-            />
-          )}
+          <WorkspaceIcon
+            logoUrl={workspace.logoUrl}
+            name={workspace.name}
+            slug={workspace.slug}
+            size={56}
+          />
           <div>
             <h1 className="text-xl font-medium tracking-tight">
               Welcome to {workspace.name}

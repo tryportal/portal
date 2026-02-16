@@ -14,7 +14,7 @@ import {
   FieldDescription,
 } from "@/components/ui/field";
 import { ArrowLeft, UploadSimple } from "@phosphor-icons/react";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 function slugify(name: string): string {
   return name
@@ -170,19 +170,12 @@ export function CreateDetailsStep({ onNext, onBack }: CreateDetailsStepProps) {
               onClick={() => fileInputRef.current?.click()}
               className="relative flex size-16 items-center justify-center border border-dashed border-border hover:border-foreground/30 overflow-hidden"
             >
-              {logoPreviewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logoPreviewUrl}
-                  alt="Logo preview"
-                  className="size-full object-cover"
-                />
-              ) : slug ? (
-                <Facehash
-                  name={slug}
+              {logoPreviewUrl || slug ? (
+                <WorkspaceIcon
+                  logoUrl={logoPreviewUrl ?? null}
+                  name={name || "Workspace"}
+                  slug={slug}
                   size={64}
-                  interactive={false}
-                  showInitial={false}
                 />
               ) : (
                 <UploadSimple className="size-5 text-muted-foreground" />

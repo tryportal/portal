@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 interface JoinWorkspaceDialogProps {
   open: boolean;
@@ -73,20 +73,12 @@ export function JoinWorkspaceDialog({
                   key={workspace._id}
                   className="flex items-center gap-3 border border-border p-2.5"
                 >
-                  {workspace.logoUrl ? (
-                    <img
-                      src={workspace.logoUrl}
-                      alt={workspace.name}
-                      className="size-8 object-cover"
-                    />
-                  ) : (
-                    <Facehash
-                      name={workspace.slug}
-                      size={32}
-                      interactive={false}
-                      showInitial={false}
-                    />
-                  )}
+                  <WorkspaceIcon
+                    logoUrl={workspace.logoUrl}
+                    name={workspace.name}
+                    slug={workspace.slug}
+                    size={32}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">
                       {workspace.name}

@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "@phosphor-icons/react";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 interface JoinStepProps {
   onBack: () => void;
@@ -60,21 +60,12 @@ export function JoinStep({ onBack, onJoinedSlug }: JoinStepProps) {
               key={workspace._id}
               className="flex items-center gap-3 border border-border p-3"
             >
-              {workspace.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={workspace.logoUrl}
-                  alt={workspace.name}
-                  className="size-10 object-cover"
-                />
-              ) : (
-                <Facehash
-                  name={workspace.slug}
-                  size={40}
-                  interactive={false}
-                  showInitial={false}
-                />
-              )}
+              <WorkspaceIcon
+                logoUrl={workspace.logoUrl}
+                name={workspace.name}
+                slug={workspace.slug}
+                size={40}
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{workspace.name}</p>
                 {workspace.description && (

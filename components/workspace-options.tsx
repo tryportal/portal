@@ -29,7 +29,7 @@ import {
   PencilSimple,
   Eye,
 } from "@phosphor-icons/react";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 interface WorkspaceOptionsProps {
   workspace: {
@@ -261,20 +261,12 @@ function LogoSection({
           onClick={() => fileInputRef.current?.click()}
           className="relative flex size-16 flex-shrink-0 items-center justify-center overflow-hidden hover:opacity-80"
         >
-          {currentLogo ? (
-            <img
-              src={currentLogo}
-              alt={`${workspace.name} logo`}
-              className="size-full object-cover"
-            />
-          ) : (
-            <Facehash
-              name={workspace.slug}
-              size={64}
-              interactive={false}
-              showInitial={false}
-            />
-          )}
+          <WorkspaceIcon
+            logoUrl={currentLogo}
+            name={workspace.name}
+            slug={workspace.slug}
+            size={64}
+          />
           {uploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <p className="text-[10px] text-muted-foreground">{"\u2026"}</p>

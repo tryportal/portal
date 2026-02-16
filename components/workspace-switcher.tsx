@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CaretUpDown, Plus, SignIn, Check } from "@phosphor-icons/react";
-import { Facehash } from "facehash";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -29,20 +29,12 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 border-l border-border px-3 text-xs hover:bg-muted cursor-pointer outline-none">
-          {currentWorkspace?.logoUrl ? (
-            <img
-              src={currentWorkspace.logoUrl}
-              alt={currentWorkspace.name}
-              className="size-5 object-cover"
-            />
-          ) : (
-            <Facehash
-              name={currentWorkspace?.slug ?? slug}
-              size={20}
-              interactive={false}
-              showInitial={false}
-            />
-          )}
+          <WorkspaceIcon
+            logoUrl={currentWorkspace?.logoUrl}
+            name={currentWorkspace?.name ?? "Workspace"}
+            slug={currentWorkspace?.slug ?? slug}
+            size={20}
+          />
           <span className="max-w-24 truncate">
             {currentWorkspace?.name ?? "Workspace"}
           </span>
@@ -61,20 +53,12 @@ export function WorkspaceSwitcher({ slug }: { slug: string }) {
                   }}
                   className={isCurrent ? "font-bold" : ""}
                 >
-                  {ws!.logoUrl ? (
-                    <img
-                      src={ws!.logoUrl}
-                      alt={ws!.name}
-                      className="size-4 object-cover"
-                    />
-                  ) : (
-                    <Facehash
-                      name={ws!.slug}
-                      size={16}
-                      interactive={false}
-                      showInitial={false}
-                    />
-                  )}
+                  <WorkspaceIcon
+                    logoUrl={ws!.logoUrl}
+                    name={ws!.name}
+                    slug={ws!.slug}
+                    size={16}
+                  />
                   <span className="truncate">{ws!.name}</span>
                   {isCurrent && (
                     <Check

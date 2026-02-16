@@ -21,6 +21,7 @@ import {
   FieldDescription,
 } from "@/components/ui/field";
 import { UploadSimple } from "@phosphor-icons/react";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 function slugify(name: string): string {
   return name
@@ -174,10 +175,11 @@ export function CreateWorkspaceDialog({
                 className="relative flex size-12 items-center justify-center border border-dashed border-border hover:border-foreground/30 overflow-hidden"
               >
                 {logoPreviewUrl ? (
-                  <img
-                    src={logoPreviewUrl}
-                    alt="Logo preview"
-                    className="size-full object-cover"
+                  <WorkspaceIcon
+                    logoUrl={logoPreviewUrl}
+                    name={name || "Workspace"}
+                    slug={slug}
+                    size={48}
                   />
                 ) : (
                   <UploadSimple className="size-4 text-muted-foreground" />
