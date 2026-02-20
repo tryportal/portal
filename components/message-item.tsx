@@ -157,7 +157,7 @@ function MessageItemInner({
 
   return (
     <div
-      className={`group relative flex gap-3 px-4 py-0.5 transition-colors hover:bg-muted/50 ${
+      className={`group relative flex gap-3 px-4 py-0.5 ${
         showAvatar ? "mt-2.5" : "mt-px"
       }`}
     >
@@ -180,7 +180,7 @@ function MessageItemInner({
           )
         ) : (
           <span
-            className="flex h-5 items-center justify-end text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            className="flex h-5 items-center justify-end whitespace-nowrap text-[10px] leading-none text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
             title={formatFullDate(message.createdAt)}
           >
             {formatTime(message.createdAt)}
