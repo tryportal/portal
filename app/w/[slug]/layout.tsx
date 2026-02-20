@@ -1,4 +1,5 @@
 import { WorkspaceNavbar } from "@/components/workspace-navbar";
+import { WorkspaceShell } from "@/components/workspace-shell";
 import { SetLastWorkspace } from "@/components/set-last-workspace";
 
 export default async function WorkspaceLayout({
@@ -14,7 +15,7 @@ export default async function WorkspaceLayout({
     <div className="min-h-screen">
       <SetLastWorkspace slug={slug} />
       <WorkspaceNavbar slug={slug} />
-      {children}
+      <WorkspaceShell slug={slug}>{children}</WorkspaceShell>
     </div>
   );
 }
