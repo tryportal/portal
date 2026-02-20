@@ -182,7 +182,7 @@ function MessageItemInner({
           )
         ) : (
           <span
-            className="flex h-5 items-center justify-end whitespace-nowrap text-[10px] leading-none text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            className="flex h-5 items-center justify-end whitespace-nowrap text-[10px] leading-none text-muted-foreground opacity-0 group-hover:opacity-100"
             title={formatFullDate(message.createdAt)}
           >
             {formatTime(message.createdAt)}
@@ -334,7 +334,7 @@ function MessageItemInner({
 
       {/* Hover toolbar */}
       {!editing && (
-        <div className="absolute -top-3 right-4 flex items-center border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute -top-3 right-4 flex items-center border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100">
           <button
             onClick={() => onReply(message)}
             className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
