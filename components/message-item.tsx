@@ -64,6 +64,7 @@ interface MessageItemProps {
   onReply: (message: MessageData) => void;
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
   showAvatar: boolean;
+  pending?: boolean;
 }
 
 function formatTime(timestamp: number): string {
@@ -111,6 +112,7 @@ function MessageItemInner({
   onReply,
   onEmojiPickerOpen,
   showAvatar,
+  pending,
 }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -159,7 +161,7 @@ function MessageItemInner({
     <div
       className={`group relative flex gap-3 px-4 py-0.5 ${
         showAvatar ? "mt-2.5" : "mt-px"
-      }`}
+      } ${pending ? "opacity-50" : ""}`}
     >
       {/* Avatar column */}
       <div className="w-8 shrink-0 pt-0.5">

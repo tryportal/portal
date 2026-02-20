@@ -2,11 +2,16 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ChannelHeader } from "@/components/channel-header";
-import { MessageList } from "@/components/message-list";
-import { MessageInput } from "@/components/message-input";
+import {
+  MessageList,
+  type MessageListHandle,
+  type OptimisticMessage,
+} from "@/components/message-list";
+import { MessageInput, type PendingMessage } from "@/components/message-input";
 import { PinnedMessages } from "@/components/pinned-messages";
 import type { MessageData } from "@/components/message-item";
 import data from "@emoji-mart/data";
@@ -33,6 +38,45 @@ export function ChannelChat({ channel }: ChannelChatProps) {
   const [pinnedOpen, setPinnedOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const messageListRef = useRef<MessageListHandle>(null);
+  const { user } = useUser();
+
+  // Optimistic messages for instant feedback
+  const [optimisticMessages, setOptimisticMessages] = useState<
+    OptimisticMessage[]
+  >([]);
+
+  const handleMessageSending = useCallback(
+    (pending: PendingMessage) => {
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: pending.id,
+          content: pending.content,
+          userName: user?.fullName ?? user?.username ?? "You",
+          userImageUrl: user?.imageUrl ?? null,
+          parentMessage: pending.replyTo
+            ? {
+                content: pending.replyTo.content,
+                userId: pending.replyTo.userId,
+                userName: pending.replyTo.userName,
+              }
+            : null,
+        },
+      ]);
+      // Scroll to bottom immediately
+      requestAnimationFrame(() => {
+        messageListRef.current?.scrollToBottom();
+      });
+    },
+    [user]
+  );
+
+  // Clear optimistic messages when real messages arrive matching the content
+  const clearOptimistic = useCallback(() => {
+    setOptimisticMessages([]);
+  }, []);
 
   // Emoji picker state for message reactions
   const [emojiPickerState, setEmojiPickerState] = useState<{
@@ -129,6 +173,7 @@ export function ChannelChat({ channel }: ChannelChatProps) {
       />
 
       <MessageList
+        ref={messageListRef}
         channelId={channel._id}
         isAdmin={isAdmin}
         onReply={handleReply}
@@ -138,6 +183,8 @@ export function ChannelChat({ channel }: ChannelChatProps) {
             ? (searchResults as MessageData[])
             : null
         }
+        optimisticMessages={optimisticMessages}
+        onOptimisticClear={clearOptimistic}
       />
 
       {!isReadOnly && (
@@ -145,6 +192,7 @@ export function ChannelChat({ channel }: ChannelChatProps) {
           channelId={channel._id}
           replyTo={replyTo}
           onCancelReply={handleCancelReply}
+          onMessageSending={handleMessageSending}
         />
       )}
 

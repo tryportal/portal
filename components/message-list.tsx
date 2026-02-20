@@ -1,6 +1,14 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState, useMemo } from "react";
+import {
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -8,12 +16,26 @@ import { MessageItem, type MessageData } from "@/components/message-item";
 import { DotLoader } from "@/components/ui/dot-loader";
 import { ArrowDown, ChatCircle } from "@phosphor-icons/react";
 
+export interface MessageListHandle {
+  scrollToBottom: () => void;
+}
+
+export interface OptimisticMessage {
+  id: string;
+  content: string;
+  userName: string;
+  userImageUrl: string | null;
+  parentMessage: { content: string; userId: string; userName: string } | null;
+}
+
 interface MessageListProps {
   channelId: Id<"channels">;
   isAdmin: boolean;
   onReply: (message: MessageData) => void;
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
   searchResults: MessageData[] | null;
+  optimisticMessages?: OptimisticMessage[];
+  onOptimisticClear?: () => void;
 }
 
 const BATCH_SIZE = 50;
@@ -54,13 +76,11 @@ function formatDateSeparator(timestamp: number): string {
   });
 }
 
-export function MessageList({
-  channelId,
-  isAdmin,
-  onReply,
-  onEmojiPickerOpen,
-  searchResults,
-}: MessageListProps) {
+export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
+  function MessageList(
+    { channelId, isAdmin, onReply, onEmojiPickerOpen, searchResults, optimisticMessages, onOptimisticClear },
+    ref
+  ) {
   const { results, status, loadMore } = usePaginatedQuery(
     api.messages.getMessages,
     { channelId },
@@ -136,31 +156,36 @@ export function MessageList({
     if (messages.length > 0 && prevMessageCountRef.current === 0) {
       bottomRef.current?.scrollIntoView();
     }
-    prevMessageCountRef.current = messages.length;
   }, [messages.length]);
 
   // When new messages arrive and user is at bottom, scroll down
+  const messageCount = messages.length;
   useEffect(() => {
-    if (!results) return;
-    const currentCount = results.length;
-    if (
-      currentCount > prevMessageCountRef.current &&
-      prevMessageCountRef.current > 0
-    ) {
-      if (isAtBottom) {
-        requestAnimationFrame(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        });
-      } else {
-        setShowNewMessagePill(true);
-      }
+    const prev = prevMessageCountRef.current;
+    prevMessageCountRef.current = messageCount;
+
+    if (prev === 0 || messageCount <= prev) return;
+
+    // Clear optimistic messages since real ones have arrived
+    if (optimisticMessages?.length) {
+      onOptimisticClear?.();
     }
-  }, [results?.length, isAtBottom, results]);
+
+    if (isAtBottom) {
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+    } else {
+      setShowNewMessagePill(true);
+    }
+  }, [messageCount, isAtBottom, optimisticMessages?.length, onOptimisticClear]);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowNewMessagePill(false);
   }, []);
+
+  useImperativeHandle(ref, () => ({ scrollToBottom }), [scrollToBottom]);
 
   if (!results || results.length === 0) {
     if (status === "LoadingFirstPage") {
@@ -254,6 +279,40 @@ export function MessageList({
                 </div>
               );
             })}
+
+            {/* Optimistic pending messages */}
+            {optimisticMessages?.map((opt) => {
+              const lastMsg = messages[messages.length - 1];
+              const fakeMsg: MessageData = {
+                _id: opt.id as Id<"messages">,
+                userId: "pending",
+                content: opt.content,
+                createdAt: Date.now(),
+                userName: opt.userName,
+                userImageUrl: opt.userImageUrl,
+                parentMessage: opt.parentMessage,
+                isSaved: false,
+                isOwn: true,
+              };
+              const shouldGroup =
+                lastMsg &&
+                lastMsg.isOwn &&
+                !fakeMsg.parentMessage &&
+                Date.now() - lastMsg.createdAt < 2 * 60 * 1000;
+
+              return (
+                <div key={opt.id}>
+                  <MessageItem
+                    message={fakeMsg}
+                    isAdmin={isAdmin}
+                    onReply={onReply}
+                    onEmojiPickerOpen={onEmojiPickerOpen}
+                    showAvatar={!shouldGroup}
+                    pending
+                  />
+                </div>
+              );
+            })}
           </div>
 
           <div ref={bottomRef} />
@@ -272,4 +331,4 @@ export function MessageList({
       )}
     </div>
   );
-}
+});

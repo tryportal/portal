@@ -21,16 +21,25 @@ import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import type { MessageData } from "@/components/message-item";
 
+export interface PendingMessage {
+  id: string;
+  content: string;
+  parentMessageId?: Id<"messages">;
+  replyTo: MessageData | null;
+}
+
 interface MessageInputProps {
   channelId: Id<"channels">;
   replyTo: MessageData | null;
   onCancelReply: () => void;
+  onMessageSending?: (pending: PendingMessage) => void;
 }
 
 export function MessageInput({
   channelId,
   replyTo,
   onCancelReply,
+  onMessageSending,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -74,23 +83,30 @@ export function MessageInput({
     }
   }, [replyTo]);
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(() => {
     const trimmed = content.trim();
     if (!trimmed || isSending) return;
 
+    // Clear input immediately for instant feedback
+    const pendingId = `pending-${Date.now()}`;
+    setContent("");
+    onCancelReply();
+    onMessageSending?.({
+      id: pendingId,
+      content: trimmed,
+      parentMessageId: replyTo?._id,
+      replyTo,
+    });
+
     setIsSending(true);
-    try {
-      await sendMessage({
-        channelId,
-        content: trimmed,
-        parentMessageId: replyTo?._id,
-      });
-      setContent("");
-      onCancelReply();
-    } finally {
+    sendMessage({
+      channelId,
+      content: trimmed,
+      parentMessageId: replyTo?._id,
+    }).finally(() => {
       setIsSending(false);
-    }
-  }, [content, isSending, sendMessage, channelId, replyTo, onCancelReply]);
+    });
+  }, [content, isSending, sendMessage, channelId, replyTo, onCancelReply, onMessageSending]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -165,7 +181,7 @@ export function MessageInput({
   ]);
 
   return (
-    <div className="shrink-0 px-4 pb-4">
+    <div className="relative shrink-0 px-4 pb-4">
       <div className="border border-border bg-background">
         {/* Reply banner */}
         {replyTo && (

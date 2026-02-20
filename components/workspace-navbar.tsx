@@ -35,10 +35,14 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
         <nav className="flex items-stretch">
           {navItems.map(({ icon: Icon, href, global }) => {
             const fullHref = global ? href : base + href;
+            const otherHrefs = navItems
+              .filter((n) => n.href !== "" && !n.global)
+              .map((n) => n.href);
             const isActive = global
               ? pathname.startsWith(href)
               : href === ""
-                ? pathname.startsWith(base)
+                ? pathname.startsWith(base) &&
+                  !otherHrefs.some((h) => pathname.startsWith(base + h))
                 : pathname.startsWith(base + href);
 
             return (
