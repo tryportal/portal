@@ -91,6 +91,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Check if a message contains only emoji characters (up to ~10) */
+const EMOJI_ONLY_RE = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\s*(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
+function isEmojiOnly(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length === 0 || trimmed.length > 40) return false;
+  return EMOJI_ONLY_RE.test(trimmed);
+}
+
 function groupReactions(
   reactions: { userId: string; emoji: string }[]
 ): { emoji: string; count: number; userIds: string[] }[] {
@@ -275,6 +283,18 @@ function MessageItemInner({
                 </button>
               </span>
             </div>
+          </div>
+        ) : isEmojiOnly(message.content) ? (
+          <div className="text-3xl leading-snug">
+            {message.content}
+            {message.editedAt && (
+              <span
+                className="ml-1 text-[10px] text-muted-foreground"
+                title={`Edited ${formatFullDate(message.editedAt)}`}
+              >
+                (edited)
+              </span>
+            )}
           </div>
         ) : (
           <div className="prose-chat text-xs leading-relaxed [&_p]:my-0">

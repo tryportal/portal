@@ -27,7 +27,7 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
     <header className="border-b border-border">
       <div className="flex h-14 items-stretch">
         <Link
-          href="/"
+          href="/home"
           className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} />
