@@ -23,7 +23,7 @@ export default function SettingsLayout({
             href="/"
             className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
           >
-            <Image src="/portal.svg" alt="Portal" width={24} height={24} />
+            <Image src="/portal.svg" alt="Portal" width={24} height={24} className="dark:invert" />
           </Link>
           <Link
             href={backHref}

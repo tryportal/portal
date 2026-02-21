@@ -6,6 +6,8 @@ import {
   useCallback,
   useEffect,
   type KeyboardEvent,
+  type DragEvent,
+  type ClipboardEvent,
 } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -16,6 +18,7 @@ import {
   PaperPlaneRight,
   X,
   ArrowBendUpLeft,
+  Image as ImageIcon,
 } from "@phosphor-icons/react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -44,9 +47,12 @@ export function MessageInput({
   const [content, setContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const dragCounterRef = useRef(0);
 
   const sendMessage = useMutation(api.messages.sendMessage);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
@@ -83,30 +89,71 @@ export function MessageInput({
     }
   }, [replyTo]);
 
-  const handleSend = useCallback(() => {
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      const attachments: {
+        storageId: Id<"_storage">;
+        name: string;
+        size: number;
+        type: string;
+      }[] = [];
+
+      for (const file of files) {
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const { storageId } = await result.json();
+        attachments.push({
+          storageId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+      }
+
+      return attachments;
+    },
+    [generateUploadUrl]
+  );
+
+  const handleSend = useCallback(async () => {
     const trimmed = content.trim();
-    if (!trimmed || isSending) return;
+    const hasFiles = pendingFiles.length > 0;
+    if ((!trimmed && !hasFiles) || isSending) return;
+
+    const filesToUpload = [...pendingFiles];
 
     // Clear input immediately for instant feedback
     const pendingId = `pending-${Date.now()}`;
     setContent("");
+    setPendingFiles([]);
     onCancelReply();
-    onMessageSending?.({
-      id: pendingId,
-      content: trimmed,
-      parentMessageId: replyTo?._id,
-      replyTo,
-    });
+
+    if (!hasFiles) {
+      onMessageSending?.({
+        id: pendingId,
+        content: trimmed,
+        parentMessageId: replyTo?._id,
+        replyTo,
+      });
+    }
 
     setIsSending(true);
-    sendMessage({
-      channelId,
-      content: trimmed,
-      parentMessageId: replyTo?._id,
-    }).finally(() => {
+    try {
+      const attachments = hasFiles ? await uploadFiles(filesToUpload) : undefined;
+      await sendMessage({
+        channelId,
+        content: trimmed || `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`,
+        attachments,
+        parentMessageId: replyTo?._id,
+      });
+    } finally {
       setIsSending(false);
-    });
-  }, [content, isSending, sendMessage, channelId, replyTo, onCancelReply, onMessageSending]);
+    }
+  }, [content, pendingFiles, isSending, sendMessage, channelId, replyTo, onCancelReply, onMessageSending, uploadFiles]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -127,62 +174,88 @@ export function MessageInput({
     []
   );
 
-  const handleFileAttach = useCallback(async () => {
+  const addFiles = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...files]);
+    textareaRef.current?.focus();
+  }, []);
+
+  const removePendingFile = useCallback((index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleFileAttach = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
-    input.onchange = async () => {
+    input.onchange = () => {
       if (!input.files?.length) return;
-
-      const attachments: {
-        storageId: Id<"_storage">;
-        name: string;
-        size: number;
-        type: string;
-      }[] = [];
-
-      for (const file of Array.from(input.files)) {
-        const uploadUrl = await generateUploadUrl();
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        const { storageId } = await result.json();
-        attachments.push({
-          storageId,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        });
-      }
-
-      if (attachments.length > 0) {
-        await sendMessage({
-          channelId,
-          content:
-            content.trim() ||
-            `Sent ${attachments.length} file${attachments.length > 1 ? "s" : ""}`,
-          attachments,
-          parentMessageId: replyTo?._id,
-        });
-        setContent("");
-        onCancelReply();
-      }
+      addFiles(Array.from(input.files));
     };
     input.click();
-  }, [
-    generateUploadUrl,
-    sendMessage,
-    channelId,
-    content,
-    replyTo,
-    onCancelReply,
-  ]);
+  }, [addFiles]);
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = Array.from(e.clipboardData.files);
+      if (files.length > 0) {
+        e.preventDefault();
+        addFiles(files);
+      }
+    },
+    [addFiles]
+  );
+
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+      const files = Array.from(e.dataTransfer.files);
+      addFiles(files);
+    },
+    [addFiles]
+  );
+
+  const canSend = content.trim() || pendingFiles.length > 0;
 
   return (
-    <div className="relative shrink-0 px-4 pb-4">
-      <div className="border border-border bg-background">
+    <div
+      className="relative shrink-0 px-4 pb-4"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      <div className={`border bg-background transition-colors ${isDragging ? "border-foreground/40 bg-foreground/[0.02]" : "border-border"}`}>
+        {/* Drag overlay */}
+        {isDragging && (
+          <div className="flex items-center justify-center gap-2 px-3 py-3 border-b border-border">
+            <ImageIcon size={14} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Drop files here</span>
+          </div>
+        )}
+
         {/* Reply banner */}
         {replyTo && (
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
@@ -211,12 +284,38 @@ export function MessageInput({
           </div>
         )}
 
+        {/* Pending files preview */}
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+            {pendingFiles.map((file, i) => (
+              <div
+                key={`${file.name}-${i}`}
+                className="group/file flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
+              >
+                {file.type.startsWith("image/") ? (
+                  <ImageIcon size={12} className="shrink-0 text-muted-foreground" />
+                ) : (
+                  <Paperclip size={12} className="shrink-0 text-muted-foreground" />
+                )}
+                <span className="text-[11px] truncate max-w-32">{file.name}</span>
+                <button
+                  onClick={() => removePendingFile(i)}
+                  className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Textarea */}
         <textarea
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder="Send a message..."
           className="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-xs leading-relaxed outline-none placeholder:text-muted-foreground"
           rows={1}
@@ -245,9 +344,9 @@ export function MessageInput({
 
           <button
             onClick={handleSend}
-            disabled={!content.trim() || isSending}
+            disabled={!canSend || isSending}
             className={`flex size-7 items-center justify-center transition-colors ${
-              content.trim()
+              canSend
                 ? "text-foreground hover:bg-muted"
                 : "text-muted-foreground/30 cursor-default"
             }`}
@@ -255,7 +354,7 @@ export function MessageInput({
           >
             <PaperPlaneRight
               size={16}
-              weight={content.trim() ? "fill" : "regular"}
+              weight={canSend ? "fill" : "regular"}
             />
           </button>
         </div>
