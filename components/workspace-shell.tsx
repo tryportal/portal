@@ -9,6 +9,8 @@ import { WorkspaceNotFound } from "@/components/workspace-not-found";
 import { WorkspaceProvider } from "@/components/workspace-context";
 import { DotLoader } from "@/components/ui/dot-loader";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
+import { NotificationPrompt } from "@/components/notification-prompt";
+import { useMentionNotifications } from "@/components/use-mention-notifications";
 
 /** Routes that do NOT show the sidebar */
 const NO_SIDEBAR_ROUTES = ["/inbox", "/saved"];
@@ -33,6 +35,9 @@ export function WorkspaceShell({
     close();
   }, [pathname, close]);
 
+  // Browser notifications for mentions
+  useMentionNotifications(workspace?._id);
+
   if (workspace === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center h-[calc(100dvh-57px)]">
@@ -47,6 +52,7 @@ export function WorkspaceShell({
 
   return (
     <WorkspaceProvider workspace={workspace}>
+      <NotificationPrompt />
       <div className="flex h-[calc(100dvh-57px)]">
         {/* Desktop sidebar */}
         {showSidebar && (

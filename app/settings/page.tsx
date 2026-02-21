@@ -7,9 +7,10 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Check, Sun, Moon, Monitor } from "@phosphor-icons/react";
+import { Check, Sun, Moon, Monitor, Bell, BellSlash } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 import { DotLoader } from "@/components/ui/dot-loader";
+import { useState, useEffect, useCallback } from "react";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -24,6 +25,42 @@ export default function SettingsPage() {
   const currentUser = useQuery(api.users.currentUser);
   const workspaces = useQuery(api.organizations.getUserWorkspaces);
   const setPrimaryWorkspace = useMutation(api.users.setPrimaryWorkspace);
+  const setNotificationsEnabled = useMutation(
+    api.users.setNotificationsEnabled
+  );
+
+  const [browserPermission, setBrowserPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("default");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setBrowserPermission(Notification.permission);
+    } else {
+      setBrowserPermission("unsupported");
+    }
+  }, []);
+
+  const handleToggleNotifications = useCallback(async () => {
+    if (!currentUser) return;
+
+    if (currentUser.notificationsEnabled) {
+      // Disable
+      await setNotificationsEnabled({ enabled: false });
+    } else {
+      // Enable - request browser permission if needed
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission !== "granted"
+      ) {
+        const result = await Notification.requestPermission();
+        setBrowserPermission(result);
+        if (result !== "granted") return;
+      }
+      await setNotificationsEnabled({ enabled: true });
+    }
+  }, [currentUser, setNotificationsEnabled]);
 
   if (!user || !currentUser) {
     return (
@@ -120,6 +157,68 @@ export default function SettingsPage() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <Separator className="my-6" />
+
+      {/* Notifications section */}
+      <div>
+        <h2 className="text-sm font-bold">Notifications</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Get browser notifications when someone mentions you
+        </p>
+
+        <div className="mt-4 flex flex-col gap-1">
+          {browserPermission === "unsupported" ? (
+            <p className="text-xs text-muted-foreground">
+              Your browser does not support notifications.
+            </p>
+          ) : browserPermission === "denied" ? (
+            <p className="text-xs text-muted-foreground">
+              Notifications are blocked by your browser. Update your browser
+              settings to allow notifications for this site.
+            </p>
+          ) : (
+            <>
+              <button
+                onClick={handleToggleNotifications}
+                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs hover:bg-muted ${
+                  currentUser.notificationsEnabled
+                    ? "border-foreground bg-muted font-bold"
+                    : "border-border"
+                }`}
+              >
+                <Bell size={16} />
+                <span className="flex-1">Enabled</span>
+                {currentUser.notificationsEnabled && (
+                  <Check
+                    size={14}
+                    weight="bold"
+                    className="text-foreground"
+                  />
+                )}
+              </button>
+              <button
+                onClick={handleToggleNotifications}
+                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs hover:bg-muted ${
+                  !currentUser.notificationsEnabled
+                    ? "border-foreground bg-muted font-bold"
+                    : "border-border"
+                }`}
+              >
+                <BellSlash size={16} />
+                <span className="flex-1">Disabled</span>
+                {!currentUser.notificationsEnabled && (
+                  <Check
+                    size={14}
+                    weight="bold"
+                    className="text-foreground"
+                  />
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

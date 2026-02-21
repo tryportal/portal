@@ -15,6 +15,8 @@ export default defineSchema({
     primaryWorkspaceId: v.optional(v.id("organizations")), // User's preferred default workspace
     // DM sharing - unique handle for shareable DM links (3-12 chars, alphanumeric + underscore, stored lowercase)
     handle: v.optional(v.string()),
+    // Browser notification preference
+    notificationsEnabled: v.optional(v.boolean()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"])
