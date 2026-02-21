@@ -6,6 +6,7 @@ import {
   useImperativeHandle,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -120,11 +121,17 @@ export function useMentionSuggestion(): Omit<SuggestionOptions, "editor"> {
     organizationId: workspace._id,
   });
 
+  // Use a ref so the items callback always reads the latest members data,
+  // even though TipTap captures the suggestion config once at editor creation.
+  const membersRef = useRef(members);
+  membersRef.current = members;
+
   return {
     items: ({ query }: { query: string }) => {
-      if (!members) return [];
+      const currentMembers = membersRef.current;
+      if (!currentMembers) return [];
       const q = query.toLowerCase();
-      return members.filter((m) => {
+      return currentMembers.filter((m) => {
         const name = [m.firstName, m.lastName].filter(Boolean).join(" ").toLowerCase();
         const email = (m.email ?? "").toLowerCase();
         return name.includes(q) || email.includes(q);
