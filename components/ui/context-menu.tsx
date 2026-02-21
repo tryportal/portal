@@ -21,16 +21,41 @@ function ContextMenu({ children, content }: ContextMenuProps) {
     x: 0,
     y: 0,
   })
+  const [positioned, setPositioned] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
 
   const handleContextMenu = React.useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
+      setPositioned(false)
       setState({ open: true, x: e.clientX, y: e.clientY })
     },
     []
   )
+
+  // After mount, measure and adjust position, then reveal
+  React.useLayoutEffect(() => {
+    if (!state.open || !menuRef.current) return
+
+    const menu = menuRef.current
+    const rect = menu.getBoundingClientRect()
+    let x = state.x
+    let y = state.y
+
+    if (x + rect.width > window.innerWidth) {
+      x = window.innerWidth - rect.width - 4
+    }
+    if (y + rect.height > window.innerHeight) {
+      y = window.innerHeight - rect.height - 4
+    }
+    if (x < 0) x = 4
+    if (y < 0) y = 4
+
+    menu.style.left = `${x}px`
+    menu.style.top = `${y}px`
+    setPositioned(true)
+  }, [state])
 
   React.useEffect(() => {
     if (!state.open) return
@@ -70,27 +95,6 @@ function ContextMenu({ children, content }: ContextMenuProps) {
     }
   }, [state.open])
 
-  // Adjust position if menu would overflow viewport
-  React.useEffect(() => {
-    if (!state.open || !menuRef.current) return
-
-    const menu = menuRef.current
-    const rect = menu.getBoundingClientRect()
-    let { x, y } = state
-
-    if (x + rect.width > window.innerWidth) {
-      x = window.innerWidth - rect.width - 4
-    }
-    if (y + rect.height > window.innerHeight) {
-      y = window.innerHeight - rect.height - 4
-    }
-
-    if (x !== state.x || y !== state.y) {
-      menu.style.left = `${x}px`
-      menu.style.top = `${y}px`
-    }
-  }, [state])
-
   const close = React.useCallback(
     () => setState((s) => ({ ...s, open: false })),
     []
@@ -105,7 +109,12 @@ function ContextMenu({ children, content }: ContextMenuProps) {
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-50 animate-in fade-in-0 zoom-in-95 duration-100 ring-foreground/10 bg-popover text-popover-foreground min-w-48 shadow-md ring-1 overflow-hidden"
+            className={cn(
+              "fixed z-50 ring-foreground/10 bg-popover text-popover-foreground min-w-48 shadow-md ring-1 overflow-hidden",
+              positioned
+                ? "animate-in fade-in-0 zoom-in-95 duration-100"
+                : "opacity-0"
+            )}
             style={{ left: state.x, top: state.y }}
           >
             <ContextMenuContext.Provider value={{ close }}>
