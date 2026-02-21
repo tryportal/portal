@@ -97,7 +97,7 @@ export default function InboxPage({
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {mention.content}
+                        {stripMentions(mention.content)}
                       </p>
                       <span className="mt-1 block text-[10px] text-muted-foreground/60">
                         {formatRelativeTime(mention.createdAt)}
@@ -112,6 +112,10 @@ export default function InboxPage({
       </div>
     </div>
   );
+}
+
+function stripMentions(content: string): string {
+  return content.replace(/<@[^|>]+\|([^>]+)>/g, "@$1");
 }
 
 function formatRelativeTime(timestamp: number): string {

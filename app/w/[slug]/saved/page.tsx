@@ -94,7 +94,7 @@ export default function SavedMessagesPage({
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {saved.content}
+                        {stripMentions(saved.content)}
                       </p>
                       <span className="mt-1 block text-[10px] text-muted-foreground/60">
                         {formatRelativeTime(saved.createdAt)}
@@ -109,6 +109,10 @@ export default function SavedMessagesPage({
       </div>
     </div>
   );
+}
+
+function stripMentions(content: string): string {
+  return content.replace(/<@[^|>]+\|([^>]+)>/g, "@$1");
 }
 
 function formatRelativeTime(timestamp: number): string {

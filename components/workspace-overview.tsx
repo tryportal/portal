@@ -273,7 +273,7 @@ function MentionItem({
           )}
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {mention.content}
+          {stripMentions(mention.content)}
         </p>
         <span className="mt-1 block text-[10px] text-muted-foreground/60">
           {formatRelativeTime(mention.createdAt)}
@@ -342,7 +342,7 @@ function SavedItem({
           )}
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {saved.content}
+          {stripMentions(saved.content)}
         </p>
         <span className="mt-1 block text-[10px] text-muted-foreground/60">
           {formatRelativeTime(saved.createdAt)}
@@ -422,6 +422,11 @@ function CategoryGroup({
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
+
+/** Strip mention tokens from content for display in previews */
+function stripMentions(content: string): string {
+  return content.replace(/<@[^|>]+\|([^>]+)>/g, "@$1");
+}
 
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();

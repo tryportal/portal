@@ -214,21 +214,26 @@ function updatePosition(props: SuggestionProps, popup: HTMLDivElement) {
   );
   const editorRect = editorEl?.getBoundingClientRect();
 
+  // Use bottom anchoring so we don't need offsetHeight (which is 0 before layout)
+  popup.style.top = "auto";
+
   if (editorRect) {
-    // Position at the left edge of the editor, above it
     popup.style.left = `${editorRect.left}px`;
-    popup.style.right = `${window.innerWidth - editorRect.right}px`;
     popup.style.width = `${Math.min(editorRect.width, 280)}px`;
-    popup.style.top = `${editorRect.top - popup.offsetHeight - 4}px`;
+    // Anchor to bottom: place popup above the editor
+    popup.style.bottom = `${window.innerHeight - editorRect.top + 4}px`;
   } else {
-    // Fallback: position at cursor
     popup.style.left = `${rect.left}px`;
-    popup.style.top = `${rect.top - popup.offsetHeight - 4}px`;
+    popup.style.bottom = `${window.innerHeight - rect.top + 4}px`;
   }
 
-  // If popup goes above viewport, show below the editor
-  if (popup.getBoundingClientRect().top < 0) {
-    const bottom = editorRect ? editorRect.bottom : rect.bottom;
-    popup.style.top = `${bottom + 4}px`;
-  }
+  // After layout, check if popup goes above viewport — if so, flip below
+  requestAnimationFrame(() => {
+    const popupRect = popup.getBoundingClientRect();
+    if (popupRect.top < 0) {
+      popup.style.bottom = "auto";
+      const bottom = editorRect ? editorRect.bottom : rect.bottom;
+      popup.style.top = `${bottom + 4}px`;
+    }
+  });
 }
