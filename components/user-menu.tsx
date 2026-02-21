@@ -53,7 +53,7 @@ export function UserMenu() {
                   onClick={() => setTheme(option.value)}
                   className={`flex size-6 items-center justify-center rounded-full transition-colors ${
                     isActive
-                      ? "bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400"
+                      ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
