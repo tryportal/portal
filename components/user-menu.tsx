@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const themeOptions = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Monitor },
+  { value: "system", icon: Moon },
 ] as const;
 
 export function UserMenu() {
@@ -25,15 +25,6 @@ export function UserMenu() {
   const { theme, setTheme } = useTheme();
 
   if (!user) return null;
-
-  const nextTheme = () => {
-    const current = themeOptions.findIndex((o) => o.value === theme);
-    const next = (current + 1) % themeOptions.length;
-    setTheme(themeOptions[next].value);
-  };
-
-  const currentOption = themeOptions.find((o) => o.value === theme) ?? themeOptions[2];
-  const ThemeIcon = currentOption.icon;
 
   return (
     <DropdownMenu>
@@ -49,10 +40,29 @@ export function UserMenu() {
           <Gear size={14} />
           Settings
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={nextTheme}>
-          <ThemeIcon size={14} />
-          {currentOption.label}
-        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <div className="flex items-center gap-1 px-2 py-1.5">
+          <span className="text-xs font-medium mr-auto">Theme</span>
+          <div className="flex items-center gap-0.5 rounded-full border border-border p-0.5">
+            {themeOptions.map((option) => {
+              const isActive = theme === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setTheme(option.value)}
+                  className={`flex size-6 items-center justify-center rounded-full transition-colors ${
+                    isActive
+                      ? "bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={14} weight={isActive ? "bold" : "regular"} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
