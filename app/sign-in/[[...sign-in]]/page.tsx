@@ -44,7 +44,7 @@ export default function SignInPage() {
             alt="Portal"
             width={24}
             height={24}
-            className="invert"
+            className="invert dark:invert-0"
           />
           <span className="text-sm font-medium">Portal</span>
         </Link>
@@ -59,7 +59,7 @@ export default function SignInPage() {
         {/* Mobile header */}
         <div className="flex items-center border-b border-border p-4 lg:hidden">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/portal.svg" alt="Portal" width={20} height={20} />
+            <Image src="/portal.svg" alt="Portal" width={20} height={20} className="dark:invert" />
             <span className="text-xs font-medium">Portal</span>
           </Link>
         </div>
