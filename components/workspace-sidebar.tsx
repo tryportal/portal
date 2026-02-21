@@ -371,8 +371,8 @@ export function WorkspaceSidebar({
         </div>
 
         {/* Channels & Categories */}
-        <div className="flex-1 overflow-y-auto px-2 pb-2">
-          <div className="flex items-center justify-between px-2.5 py-1.5">
+        <div className="flex-1 overflow-y-auto pl-2 pb-2">
+          <div className="flex items-center justify-between px-2.5 py-1.5 pr-4.5">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Channels
             </span>
