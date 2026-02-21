@@ -2,17 +2,25 @@
 
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
+import { useTheme } from "next-themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Check } from "@phosphor-icons/react";
+import { Check, Sun, Moon, Monitor } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 import { DotLoader } from "@/components/ui/dot-loader";
+
+const themeOptions = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+] as const;
 
 export default function SettingsPage() {
   const { user } = useUser();
   const { openUserProfile } = useClerk();
+  const { theme, setTheme } = useTheme();
   const currentUser = useQuery(api.users.currentUser);
   const workspaces = useQuery(api.organizations.getUserWorkspaces);
   const setPrimaryWorkspace = useMutation(api.users.setPrimaryWorkspace);
@@ -103,6 +111,45 @@ export default function SettingsPage() {
                 />
                 <span className="flex-1 truncate">{ws.name}</span>
                 {isDefault && (
+                  <Check
+                    size={14}
+                    weight="bold"
+                    className="text-foreground"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Separator className="my-6" />
+
+      {/* Appearance section */}
+      <div>
+        <h2 className="text-sm font-bold">Appearance</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Choose your preferred theme
+        </p>
+
+        <div className="mt-4 flex flex-col gap-1">
+          {themeOptions.map((option) => {
+            const isActive = theme === option.value;
+            const Icon = option.icon;
+
+            return (
+              <button
+                key={option.value}
+                onClick={() => setTheme(option.value)}
+                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs hover:bg-muted ${
+                  isActive
+                    ? "border-foreground bg-muted font-bold"
+                    : "border-border"
+                }`}
+              >
+                <Icon size={16} />
+                <span className="flex-1">{option.label}</span>
+                {isActive && (
                   <Check
                     size={14}
                     weight="bold"

@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { Gear, SignOut } from "@phosphor-icons/react";
+import { useTheme } from "next-themes";
+import { Gear, SignOut, Moon, Sun, Monitor } from "@phosphor-icons/react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,12 +12,28 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
+const themeOptions = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+] as const;
+
 export function UserMenu() {
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { theme, setTheme } = useTheme();
 
   if (!user) return null;
+
+  const nextTheme = () => {
+    const current = themeOptions.findIndex((o) => o.value === theme);
+    const next = (current + 1) % themeOptions.length;
+    setTheme(themeOptions[next].value);
+  };
+
+  const currentOption = themeOptions.find((o) => o.value === theme) ?? themeOptions[2];
+  const ThemeIcon = currentOption.icon;
 
   return (
     <DropdownMenu>
@@ -31,6 +48,10 @@ export function UserMenu() {
         <DropdownMenuItem onClick={() => router.push("/settings")}>
           <Gear size={14} />
           Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={nextTheme}>
+          <ThemeIcon size={14} />
+          {currentOption.label}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

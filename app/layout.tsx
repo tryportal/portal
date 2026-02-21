@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Agentation } from "agentation";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { AuthSync } from "@/components/auth-sync";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,14 +32,16 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <ConvexClientProvider>
-            <AuthSync />
-            {children}
-          </ConvexClientProvider>
+          <ThemeProvider>
+            <ConvexClientProvider>
+              <AuthSync />
+              {children}
+            </ConvexClientProvider>
+          </ThemeProvider>
           {process.env.NODE_ENV === "development" && <Agentation />}
         </body>
       </html>
