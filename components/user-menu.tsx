@@ -14,8 +14,8 @@ import {
 
 const themeOptions = [
   { value: "light", icon: Sun },
-  { value: "dark", icon: Monitor },
-  { value: "system", icon: Moon },
+  { value: "system", icon: Monitor },
+  { value: "dark", icon: Moon },
 ] as const;
 
 export function UserMenu() {
