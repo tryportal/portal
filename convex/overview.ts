@@ -23,12 +23,20 @@ export const getRecentMentions = query({
     if (!membership) return [];
 
     // Get all channels in this workspace
-    const channels = await ctx.db
+    const allChannels = await ctx.db
       .query("channels")
       .withIndex("by_organization", (q) =>
         q.eq("organizationId", args.organizationId)
       )
       .collect();
+
+    // Filter out muted channels
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
+    const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
 
     const channelIds = new Set(channels.map((c) => c._id));
     const channelMap = new Map(channels.map((c) => [c._id, c]));
@@ -205,12 +213,20 @@ export const getUnreadMentionCount = query({
       .unique();
     if (!membership) return 0;
 
-    const channels = await ctx.db
+    const allChannels = await ctx.db
       .query("channels")
       .withIndex("by_organization", (q) =>
         q.eq("organizationId", args.organizationId)
       )
       .collect();
+
+    // Filter out muted channels
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
+    const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
 
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
@@ -261,12 +277,20 @@ export const getAllMentions = query({
       .unique();
     if (!membership) return [];
 
-    const channels = await ctx.db
+    const allChannels = await ctx.db
       .query("channels")
       .withIndex("by_organization", (q) =>
         q.eq("organizationId", args.organizationId)
       )
       .collect();
+
+    // Filter out muted channels
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
+    const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
 
     const channelMap = new Map(channels.map((c) => [c._id, c]));
 
@@ -406,5 +430,23 @@ export const getAllSavedMessages = query({
     }
 
     return results;
+  },
+});
+
+/**
+ * Get all muted channel IDs for the current user.
+ */
+export const getMutedChannelIds = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+
+    return mutedEntries.map((m) => m.channelId);
   },
 });

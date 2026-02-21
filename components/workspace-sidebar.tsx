@@ -19,6 +19,8 @@ import {
   DotsThree,
   PencilSimple,
   Trash,
+  Bell,
+  BellSlash,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -97,6 +99,10 @@ export function WorkspaceSidebar({
   const serverData = useQuery(api.channels.getChannelsAndCategories, {
     organizationId,
   });
+  const mutedChannelIds = useQuery(api.overview.getMutedChannelIds) ?? [];
+  const mutedSet = useMemo(() => new Set(mutedChannelIds), [mutedChannelIds]);
+  const muteChannel = useMutation(api.messages.muteChannel);
+  const unmuteChannel = useMutation(api.messages.unmuteChannel);
 
   // Optimistic local copy — updated instantly on drag, synced from server
   const [localData, setLocalData] = useState(serverData);
@@ -469,6 +475,14 @@ export function WorkspaceSidebar({
                     onEdit={(ch) => setEditingChannel(ch)}
                     onDelete={(ch) => setDeletingChannel(ch)}
                     isDraggingChannel={activeType === "channel"}
+                    mutedSet={mutedSet}
+                    onMuteToggle={async (channelId) => {
+                      if (mutedSet.has(channelId)) {
+                        await unmuteChannel({ channelId });
+                      } else {
+                        await muteChannel({ channelId });
+                      }
+                    }}
                   />
                 ))}
               </SortableContext>
@@ -515,19 +529,37 @@ export function WorkspaceSidebar({
                         const isChannelActive = pathname === channelHref;
                         const IconComponent =
                           channel.channelType === "forum" ? ChatCircle : Hash;
+                        const isMuted = mutedSet.has(channel._id);
                         return (
-                          <Link
+                          <ContextMenu
                             key={channel._id}
-                            href={channelHref}
-                            className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
-                              isChannelActive
-                                ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
-                                : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
-                            }`}
+                            content={
+                              <ContextMenuItem
+                                onClick={async () => {
+                                  if (isMuted) {
+                                    await unmuteChannel({ channelId: channel._id });
+                                  } else {
+                                    await muteChannel({ channelId: channel._id });
+                                  }
+                                }}
+                              >
+                                {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
+                                {isMuted ? "Unmute channel" : "Mute channel"}
+                              </ContextMenuItem>
+                            }
                           >
-                            <IconComponent size={14} className="flex-shrink-0" />
-                            <span className="truncate">{channel.name}</span>
-                          </Link>
+                            <Link
+                              href={channelHref}
+                              className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
+                                isChannelActive
+                                  ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
+                                  : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+                              }`}
+                            >
+                              <IconComponent size={14} className="flex-shrink-0" />
+                              <span className="truncate">{channel.name}</span>
+                            </Link>
+                          </ContextMenu>
                         );
                       })}
                     </div>
@@ -629,6 +661,8 @@ function SortableCategory({
   onEdit,
   onDelete,
   isDraggingChannel,
+  mutedSet,
+  onMuteToggle,
 }: {
   category: CategoryItem;
   isCollapsed: boolean;
@@ -639,6 +673,8 @@ function SortableCategory({
   onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
   isDraggingChannel: boolean;
+  mutedSet: Set<Id<"channels">>;
+  onMuteToggle: (channelId: Id<"channels">) => Promise<void>;
 }) {
   const {
     attributes,
@@ -697,6 +733,8 @@ function SortableCategory({
                 isAdmin={isAdmin}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                isMuted={mutedSet.has(channel._id)}
+                onMuteToggle={() => onMuteToggle(channel._id)}
               />
             ))}
           </div>
@@ -714,6 +752,8 @@ function SortableChannel({
   isAdmin,
   onEdit,
   onDelete,
+  isMuted,
+  onMuteToggle,
 }: {
   channel: ChannelItem;
   categorySlug: string;
@@ -722,6 +762,8 @@ function SortableChannel({
   isAdmin: boolean;
   onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+  isMuted: boolean;
+  onMuteToggle: () => Promise<void>;
 }) {
   const {
     attributes,
@@ -745,8 +787,17 @@ function SortableChannel({
   const isChannelActive = pathname === channelHref;
   const IconComponent = channel.channelType === "forum" ? ChatCircle : Hash;
 
+  const muteMenuItem = (
+    <ContextMenuItem onClick={onMuteToggle}>
+      {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
+      {isMuted ? "Unmute channel" : "Mute channel"}
+    </ContextMenuItem>
+  );
+
   const channelContextMenu = isAdmin ? (
     <>
+      {muteMenuItem}
+      <ContextMenuSeparator />
       <ContextMenuItem
         onClick={() =>
           onEdit({
@@ -773,7 +824,9 @@ function SortableChannel({
         Delete channel
       </ContextMenuItem>
     </>
-  ) : null;
+  ) : (
+    muteMenuItem
+  );
 
   const inner = (
     <div
@@ -841,10 +894,7 @@ function SortableChannel({
     </div>
   );
 
-  if (channelContextMenu) {
-    return <ContextMenu content={channelContextMenu}>{inner}</ContextMenu>;
-  }
-  return inner;
+  return <ContextMenu content={channelContextMenu}>{inner}</ContextMenu>;
 }
 
 function CreateChannelDialog({
