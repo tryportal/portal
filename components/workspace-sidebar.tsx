@@ -87,9 +87,18 @@ export function WorkspaceSidebar({
   const router = useRouter();
   const base = `/w/${slug}`;
 
-  const data = useQuery(api.channels.getChannelsAndCategories, {
+  const serverData = useQuery(api.channels.getChannelsAndCategories, {
     organizationId,
   });
+
+  // Optimistic local copy — updated instantly on drag, synced from server
+  const [localData, setLocalData] = useState(serverData);
+  useEffect(() => {
+    if (serverData) setLocalData(serverData);
+  }, [serverData]);
+
+  // Expose as `data` so the rest of the component works unchanged
+  const data = localData;
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
     new Set()
@@ -199,6 +208,7 @@ export function WorkspaceSidebar({
       if (oldIndex === -1 || newIndex === -1) return;
 
       const newOrder = arrayMove(data, oldIndex, newIndex);
+      setLocalData(newOrder);
       reorderCategories({
         organizationId,
         categoryIds: newOrder.map((c) => c._id) as Id<"channelCategories">[],
@@ -232,6 +242,15 @@ export function WorkspaceSidebar({
         const newChannels = targetCategory.channels
           .filter((ch) => ch._id !== activeId)
           .concat(channelToMove);
+
+        // Optimistic update
+        const updated = data.map((cat, i) => {
+          if (i === targetCatIdx) return { ...cat, channels: newChannels };
+          if (i === sourceCatIdx && sourceCatIdx !== targetCatIdx)
+            return { ...cat, channels: cat.channels.filter((ch) => ch._id !== activeId) };
+          return cat;
+        });
+        setLocalData(updated);
 
         reorderChannels({
           categoryId: targetCategory._id as Id<"channelCategories">,
@@ -271,6 +290,13 @@ export function WorkspaceSidebar({
           sourceChIdx,
           targetChIdx
         );
+
+        // Optimistic update
+        const updated = data.map((cat, i) =>
+          i === sourceCatIdx ? { ...cat, channels: newChannels } : cat
+        );
+        setLocalData(updated);
+
         reorderChannels({
           categoryId: category._id as Id<"channelCategories">,
           channelIds: newChannels.map((ch) => ch._id) as Id<"channels">[],
@@ -288,6 +314,14 @@ export function WorkspaceSidebar({
         // Insert into target at the right position
         const newTargetChannels = [...targetCategory.channels];
         newTargetChannels.splice(targetChIdx, 0, channelToMove);
+
+        // Optimistic update
+        const updated = data.map((cat, i) => {
+          if (i === sourceCatIdx) return { ...cat, channels: newSourceChannels };
+          if (i === targetCatIdx) return { ...cat, channels: newTargetChannels };
+          return cat;
+        });
+        setLocalData(updated);
 
         reorderChannels({
           categoryId: sourceCategory._id as Id<"channelCategories">,
