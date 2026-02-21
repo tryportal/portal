@@ -180,6 +180,25 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
     }
   }, [messageCount, isAtBottom, optimisticMessages?.length, onOptimisticClear]);
 
+  // Keep scroll pinned to bottom when content height changes (e.g. reactions)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      if (!isLoadingMoreRef.current && isAtBottom) {
+        bottomRef.current?.scrollIntoView();
+      }
+    });
+
+    // Observe the scrollable content inside the container
+    for (const child of container.children) {
+      observer.observe(child);
+    }
+
+    return () => observer.disconnect();
+  }, [isAtBottom]);
+
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowNewMessagePill(false);
