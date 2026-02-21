@@ -126,13 +126,10 @@ export default function SettingsPage() {
       <Separator className="my-6" />
 
       {/* Appearance section */}
-      <div>
-        <h2 className="text-sm font-bold">Appearance</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Choose your preferred theme
-        </p>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold">Theme</h2>
 
-        <div className="mt-4 flex flex-col gap-1">
+        <div className="flex items-center gap-1 rounded-full border border-border p-1">
           {themeOptions.map((option) => {
             const isActive = theme === option.value;
             const Icon = option.icon;
@@ -141,21 +138,13 @@ export default function SettingsPage() {
               <button
                 key={option.value}
                 onClick={() => setTheme(option.value)}
-                className={`flex items-center gap-3 border px-3 py-2.5 text-left text-xs hover:bg-muted ${
+                className={`flex size-8 items-center justify-center rounded-full transition-colors ${
                   isActive
-                    ? "border-foreground bg-muted font-bold"
-                    : "border-border"
+                    ? "bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon size={16} />
-                <span className="flex-1">{option.label}</span>
-                {isActive && (
-                  <Check
-                    size={14}
-                    weight="bold"
-                    className="text-foreground"
-                  />
-                )}
+                <Icon size={16} weight={isActive ? "bold" : "regular"} />
               </button>
             );
           })}
