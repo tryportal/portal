@@ -102,8 +102,13 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
   const [showNewMessagePill, setShowNewMessagePill] = useState(false);
   const prevMessageCountRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
-  const isAtBottomRef = useRef(true);
-  const userScrolledRef = useRef(false);
+
+  // "wantBottom" = user intends to be at the bottom.
+  // Only set to false when the user actively scrolls up.
+  // Stays true through programmatic scrolls and content growth.
+  const wantBottomRef = useRef(true);
+  // Timestamp of last programmatic scroll, used to ignore scroll events we caused
+  const lastProgrammaticScrollRef = useRef(0);
 
   // Messages come in desc order from query, reverse for chronological display
   const messages = useMemo(() => {
@@ -111,25 +116,31 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
     return [...(results ?? [])].reverse();
   }, [results, searchResults]);
 
-  // Helper: check if scroll container is at the bottom
-  const checkIsAtBottom = useCallback(() => {
+  // Pin scroll to bottom (synchronous)
+  const pinToBottom = useCallback(() => {
     const container = scrollContainerRef.current;
-    if (!container) return true;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    return scrollHeight - scrollTop - clientHeight < 50;
+    if (!container) return;
+    lastProgrammaticScrollRef.current = Date.now();
+    container.scrollTop = container.scrollHeight;
   }, []);
 
   // Detect when user scrolls away from bottom
   const handleScroll = useCallback(() => {
-    // Ignore scroll events caused by us programmatically scrolling
-    if (userScrolledRef.current) return;
-    const atBottom = checkIsAtBottom();
-    isAtBottomRef.current = atBottom;
+    // Ignore scroll events caused by our programmatic scrolls (within 100ms)
+    if (Date.now() - lastProgrammaticScrollRef.current < 100) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+
+    wantBottomRef.current = atBottom;
 
     if (atBottom && showNewMessagePill) {
       setShowNewMessagePill(false);
     }
-  }, [showNewMessagePill, checkIsAtBottom]);
+  }, [showNewMessagePill]);
 
   // Infinite scroll: load more when sentinel is visible
   useEffect(() => {
@@ -155,6 +166,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
             const newScrollHeight = container.scrollHeight;
             const heightDiff = newScrollHeight - prevScrollHeight;
             container.scrollTop = prevScrollTop + heightDiff;
+            lastProgrammaticScrollRef.current = Date.now();
             isLoadingMoreRef.current = false;
           });
         }
@@ -169,9 +181,9 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
   // Auto-scroll to bottom on initial load
   useEffect(() => {
     if (messages.length > 0 && prevMessageCountRef.current === 0) {
-      bottomRef.current?.scrollIntoView();
+      pinToBottom();
     }
-  }, [messages.length]);
+  }, [messages.length, pinToBottom]);
 
   // When new messages arrive and user is at bottom, scroll down
   const messageCount = messages.length;
@@ -186,42 +198,40 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
       onOptimisticClear?.();
     }
 
-    if (isAtBottomRef.current) {
+    if (wantBottomRef.current) {
       requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        pinToBottom();
       });
     } else {
       setShowNewMessagePill(true);
     }
-  }, [messageCount, optimisticMessages?.length, onOptimisticClear]);
+  }, [messageCount, optimisticMessages?.length, onOptimisticClear, pinToBottom]);
 
-  // ResizeObserver: pin to bottom whenever content height changes
-  // This catches image/video loads, reactions, edits, new messages, etc.
+  // ResizeObserver on content: catches ALL height changes including
+  // async image/video loads, reactions, edits, new messages, etc.
+  // Re-attach whenever content ref becomes available (after loading state).
+  const hasMessages = messages.length > 0;
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
 
     const observer = new ResizeObserver(() => {
       if (isLoadingMoreRef.current) return;
-      if (!isAtBottomRef.current) return;
-
-      // Programmatic scroll — suppress handleScroll from reacting
-      userScrolledRef.current = true;
-      bottomRef.current?.scrollIntoView();
-      // Re-sync after the scroll settles
-      requestAnimationFrame(() => {
-        userScrolledRef.current = false;
-        isAtBottomRef.current = true;
-      });
+      if (!wantBottomRef.current) return;
+      pinToBottom();
     });
 
     observer.observe(content);
     return () => observer.disconnect();
-  }, []);
+  }, [hasMessages, pinToBottom]);
 
   const scrollToBottom = useCallback(() => {
-    isAtBottomRef.current = true;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    wantBottomRef.current = true;
+    const container = scrollContainerRef.current;
+    if (container) {
+      lastProgrammaticScrollRef.current = Date.now();
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
     setShowNewMessagePill(false);
   }, []);
 
