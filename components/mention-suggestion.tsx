@@ -1,0 +1,187 @@
+"use client";
+
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
+  useCallback,
+} from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useWorkspace } from "@/components/workspace-context";
+import Image from "next/image";
+import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
+import { ReactRenderer } from "@tiptap/react";
+
+interface MemberItem {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  imageUrl: string | null;
+}
+
+interface MentionListProps {
+  items: MemberItem[];
+  command: (item: { id: string; label: string }) => void;
+}
+
+interface MentionListRef {
+  onKeyDown: (props: { event: KeyboardEvent }) => boolean;
+}
+
+const MentionList = forwardRef<MentionListRef, MentionListProps>(
+  ({ items, command }, ref) => {
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
+    useEffect(() => {
+      setSelectedIndex(0);
+    }, [items]);
+
+    const selectItem = useCallback(
+      (index: number) => {
+        const item = items[index];
+        if (!item) return;
+        const name = [item.firstName, item.lastName].filter(Boolean).join(" ") || item.email || "Unknown";
+        command({ id: item.userId, label: name });
+      },
+      [items, command]
+    );
+
+    useImperativeHandle(ref, () => ({
+      onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+        if (event.key === "ArrowUp") {
+          setSelectedIndex((i) => (i + items.length - 1) % items.length);
+          return true;
+        }
+        if (event.key === "ArrowDown") {
+          setSelectedIndex((i) => (i + 1) % items.length);
+          return true;
+        }
+        if (event.key === "Enter") {
+          selectItem(selectedIndex);
+          return true;
+        }
+        return false;
+      },
+    }));
+
+    if (items.length === 0) {
+      return (
+        <div className="border border-border bg-popover p-2 shadow-md">
+          <span className="text-xs text-muted-foreground">No members found</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="border border-border bg-popover shadow-md max-h-48 overflow-y-auto">
+        {items.map((item, index) => {
+          const name = [item.firstName, item.lastName].filter(Boolean).join(" ") || item.email || "Unknown";
+          return (
+            <button
+              key={item.userId}
+              onClick={() => selectItem(index)}
+              className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors ${
+                index === selectedIndex
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-muted"
+              }`}
+            >
+              {item.imageUrl ? (
+                <Image
+                  src={item.imageUrl}
+                  alt={name}
+                  width={20}
+                  height={20}
+                  className="size-5 shrink-0 object-cover"
+                />
+              ) : (
+                <div className="flex size-5 shrink-0 items-center justify-center bg-muted text-[8px] font-medium text-muted-foreground">
+                  {(item.firstName?.[0] || item.email?.[0] || "?").toUpperCase()}
+                </div>
+              )}
+              <span className="truncate">{name}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+);
+
+MentionList.displayName = "MentionList";
+
+// Hook to provide filtered members for the suggestion
+export function useMentionSuggestion(): Omit<SuggestionOptions, "editor"> {
+  const workspace = useWorkspace();
+  const members = useQuery(api.organizations.getWorkspaceMembers, {
+    organizationId: workspace._id,
+  });
+
+  return {
+    items: ({ query }: { query: string }) => {
+      if (!members) return [];
+      const q = query.toLowerCase();
+      return members.filter((m) => {
+        const name = [m.firstName, m.lastName].filter(Boolean).join(" ").toLowerCase();
+        const email = (m.email ?? "").toLowerCase();
+        return name.includes(q) || email.includes(q);
+      }).slice(0, 8);
+    },
+    render: () => {
+      let component: ReactRenderer<MentionListRef> | null = null;
+      let popup: HTMLDivElement | null = null;
+
+      return {
+        onStart: (props: SuggestionProps) => {
+          component = new ReactRenderer(MentionList, {
+            props,
+            editor: props.editor,
+          });
+
+          popup = document.createElement("div");
+          popup.style.position = "absolute";
+          popup.style.zIndex = "50";
+          document.body.appendChild(popup);
+
+          popup.appendChild(component.element);
+          updatePosition(props, popup);
+        },
+        onUpdate: (props: SuggestionProps) => {
+          component?.updateProps(props);
+          if (popup) updatePosition(props, popup);
+        },
+        onKeyDown: (props: { event: KeyboardEvent }) => {
+          if (props.event.key === "Escape") {
+            popup?.remove();
+            component?.destroy();
+            popup = null;
+            component = null;
+            return true;
+          }
+          return component?.ref?.onKeyDown(props) ?? false;
+        },
+        onExit: () => {
+          popup?.remove();
+          component?.destroy();
+          popup = null;
+          component = null;
+        },
+      };
+    },
+  };
+}
+
+function updatePosition(props: SuggestionProps, popup: HTMLDivElement) {
+  const { clientRect } = props;
+  if (!clientRect?.()) return;
+  const rect = clientRect()!;
+  popup.style.left = `${rect.left}px`;
+  popup.style.top = `${rect.top - popup.offsetHeight - 4}px`;
+  // If popup goes above viewport, show below
+  if (popup.getBoundingClientRect().top < 0) {
+    popup.style.top = `${rect.bottom + 4}px`;
+  }
+}

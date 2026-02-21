@@ -5,9 +5,7 @@ import {
   useRef,
   useCallback,
   useEffect,
-  type KeyboardEvent,
   type DragEvent,
-  type ClipboardEvent,
 } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +21,11 @@ import {
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import type { MessageData } from "@/components/message-item";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Mention from "@tiptap/extension-mention";
+import Placeholder from "@tiptap/extension-placeholder";
+import { useMentionSuggestion } from "@/components/mention-suggestion";
 
 export interface PendingMessageAttachment {
   name: string;
@@ -46,33 +49,111 @@ interface MessageInputProps {
   onMessageSending?: (pending: PendingMessage) => void;
 }
 
+function getContentFromEditor(editor: ReturnType<typeof useEditor>): {
+  text: string;
+  mentions: string[];
+} {
+  if (!editor) return { text: "", mentions: [] };
+
+  const mentions: string[] = [];
+  let text = "";
+
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === "mention") {
+      const id = node.attrs.id as string;
+      const label = node.attrs.label as string;
+      text += `<@${id}|${label}>`;
+      if (!mentions.includes(id)) mentions.push(id);
+    } else if (node.isText) {
+      text += node.text;
+    } else if (node.type.name === "paragraph") {
+      // Add newline between paragraphs (but not before first)
+      if (text.length > 0) text += "\n";
+    } else if (node.type.name === "hardBreak") {
+      text += "\n";
+    }
+  });
+
+  return { text: text.trim(), mentions };
+}
+
 export function MessageInput({
   channelId,
   replyTo,
   onCancelReply,
   onMessageSending,
 }: MessageInputProps) {
-  const [content, setContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const dragCounterRef = useRef(0);
+  const isSendingRef = useRef(false);
 
   const sendMessage = useMutation(api.messages.sendMessage);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
-  }, [content]);
+  const mentionSuggestion = useMentionSuggestion();
+
+  // Store callbacks in refs so the editor keymap doesn't go stale
+  const handleSendRef = useRef<() => void>(() => {});
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        blockquote: false,
+        codeBlock: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+        horizontalRule: false,
+        hardBreak: {
+          keepMarks: true,
+        },
+      }),
+      Mention.configure({
+        HTMLAttributes: { class: "mention" },
+        suggestion: mentionSuggestion,
+        renderText: ({ node }) => `<@${node.attrs.id}|${node.attrs.label}>`,
+      }),
+      Placeholder.configure({
+        placeholder: "Send a message...",
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class:
+          "w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed outline-none md:text-xs min-h-[36px] max-h-[160px] overflow-y-auto",
+      },
+      handleKeyDown: (_view, event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          // Don't send if mention suggestion is active
+          const mentionPopup = document.querySelector("[data-tippy-root]");
+          if (mentionPopup) return false;
+
+          event.preventDefault();
+          handleSendRef.current();
+          return true;
+        }
+        return false;
+      },
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        if (files.length > 0) {
+          event.preventDefault();
+          addFiles(files);
+          return true;
+        }
+        return false;
+      },
+    },
+    editable: true,
+    immediatelyRender: false,
+  });
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -91,12 +172,12 @@ export function MessageInput({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showEmojiPicker]);
 
-  // Focus textarea when reply changes
+  // Focus editor when reply changes
   useEffect(() => {
-    if (replyTo) {
-      textareaRef.current?.focus();
+    if (replyTo && editor) {
+      editor.commands.focus();
     }
-  }, [replyTo]);
+  }, [replyTo, editor]);
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -129,9 +210,11 @@ export function MessageInput({
   );
 
   const handleSend = useCallback(async () => {
-    const trimmed = content.trim();
+    if (!editor || isSendingRef.current) return;
+
+    const { text: trimmed, mentions } = getContentFromEditor(editor);
     const hasFiles = pendingFiles.length > 0;
-    if ((!trimmed && !hasFiles) || isSending) return;
+    if (!trimmed && !hasFiles) return;
 
     const filesToUpload = [...pendingFiles];
 
@@ -148,59 +231,70 @@ export function MessageInput({
 
     // Clear input immediately for instant feedback
     const pendingId = `pending-${Date.now()}`;
-    setContent("");
+    editor.commands.clearContent();
     setPendingFiles([]);
     onCancelReply();
 
     onMessageSending?.({
       id: pendingId,
-      content: trimmed || (hasFiles ? `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}` : ""),
+      content:
+        trimmed ||
+        (hasFiles
+          ? `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`
+          : ""),
       parentMessageId: replyTo?._id,
       replyTo,
       attachments: hasFiles ? optimisticAttachments : undefined,
     });
 
+    isSendingRef.current = true;
     setIsSending(true);
     try {
-      const attachments = hasFiles ? await uploadFiles(filesToUpload) : undefined;
+      const attachments = hasFiles
+        ? await uploadFiles(filesToUpload)
+        : undefined;
       await sendMessage({
         channelId,
-        content: trimmed || `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`,
+        content:
+          trimmed ||
+          `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`,
         attachments,
         parentMessageId: replyTo?._id,
+        mentions: mentions.length > 0 ? mentions : undefined,
       });
     } finally {
+      isSendingRef.current = false;
       setIsSending(false);
-      // Revoke preview URLs
       for (const att of optimisticAttachments) {
         if (att.previewUrl) URL.revokeObjectURL(att.previewUrl);
       }
     }
-  }, [content, pendingFiles, isSending, sendMessage, channelId, replyTo, onCancelReply, onMessageSending, uploadFiles]);
+  }, [
+    editor,
+    pendingFiles,
+    sendMessage,
+    channelId,
+    replyTo,
+    onCancelReply,
+    onMessageSending,
+    uploadFiles,
+  ]);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend]
-  );
+  // Keep ref in sync
+  handleSendRef.current = handleSend;
 
   const handleEmojiSelect = useCallback(
     (emoji: { native: string }) => {
-      setContent((prev) => prev + emoji.native);
+      if (!editor) return;
+      editor.chain().focus().insertContent(emoji.native).run();
       setShowEmojiPicker(false);
-      textareaRef.current?.focus();
     },
-    []
+    [editor]
   );
 
   const addFiles = useCallback((files: File[]) => {
     if (files.length === 0) return;
     setPendingFiles((prev) => [...prev, ...files]);
-    textareaRef.current?.focus();
   }, []);
 
   const removePendingFile = useCallback((index: number) => {
@@ -210,17 +304,6 @@ export function MessageInput({
   const handleFileAttach = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
-
-  const handlePaste = useCallback(
-    (e: ClipboardEvent<HTMLTextAreaElement>) => {
-      const files = Array.from(e.clipboardData.files);
-      if (files.length > 0) {
-        e.preventDefault();
-        addFiles(files);
-      }
-    },
-    [addFiles]
-  );
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -253,7 +336,8 @@ export function MessageInput({
     [addFiles]
   );
 
-  const canSend = content.trim() || pendingFiles.length > 0;
+  const hasContent = editor ? !editor.isEmpty : false;
+  const canSend = hasContent || pendingFiles.length > 0;
 
   return (
     <div
@@ -263,12 +347,16 @@ export function MessageInput({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className={`border bg-background transition-colors ${isDragging ? "border-foreground/40 bg-foreground/[0.02]" : "border-border"}`}>
+      <div
+        className={`border bg-background transition-colors ${isDragging ? "border-foreground/40 bg-foreground/[0.02]" : "border-border"}`}
+      >
         {/* Drag overlay */}
         {isDragging && (
           <div className="flex items-center justify-center gap-2 px-3 py-3 border-b border-border">
             <ImageIcon size={14} className="text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Drop files here</span>
+            <span className="text-xs text-muted-foreground">
+              Drop files here
+            </span>
           </div>
         )}
 
@@ -314,7 +402,11 @@ export function MessageInput({
                     src={URL.createObjectURL(file)}
                     alt={file.name}
                     className="size-full object-cover"
-                    onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                    onLoad={(e) =>
+                      URL.revokeObjectURL(
+                        (e.target as HTMLImageElement).src
+                      )
+                    }
                   />
                   <button
                     onClick={() => removePendingFile(i)}
@@ -332,7 +424,11 @@ export function MessageInput({
                     src={URL.createObjectURL(file)}
                     className="size-full object-cover"
                     muted
-                    onLoadedData={(e) => URL.revokeObjectURL((e.target as HTMLVideoElement).src)}
+                    onLoadedData={(e) =>
+                      URL.revokeObjectURL(
+                        (e.target as HTMLVideoElement).src
+                      )
+                    }
                   />
                   <button
                     onClick={() => removePendingFile(i)}
@@ -349,8 +445,13 @@ export function MessageInput({
                   key={`${file.name}-${i}`}
                   className="group/file flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
                 >
-                  <Paperclip size={12} className="shrink-0 text-muted-foreground" />
-                  <span className="text-[11px] truncate max-w-32">{file.name}</span>
+                  <Paperclip
+                    size={12}
+                    className="shrink-0 text-muted-foreground"
+                  />
+                  <span className="text-[11px] truncate max-w-32">
+                    {file.name}
+                  </span>
                   <button
                     onClick={() => removePendingFile(i)}
                     className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -363,18 +464,8 @@ export function MessageInput({
           </div>
         )}
 
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder="Send a message..."
-          className="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed outline-none placeholder:text-muted-foreground md:text-xs"
-          rows={1}
-          style={{ maxHeight: 160 }}
-        />
+        {/* TipTap Editor */}
+        <EditorContent editor={editor} />
 
         {/* Bottom toolbar */}
         <div className="flex items-center justify-between px-1 pb-1 md:px-1.5 md:pb-1.5">

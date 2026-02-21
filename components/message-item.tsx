@@ -105,6 +105,11 @@ function isEmojiOnly(text: string): boolean {
   return EMOJI_ONLY_RE.test(trimmed);
 }
 
+/** Pre-process content to replace mention tokens with styled text for markdown */
+function preprocessMentions(content: string): string {
+  return content.replace(/<@([^|>]+)\|([^>]+)>/g, '**@$2**');
+}
+
 function groupReactions(
   reactions: { userId: string; emoji: string }[]
 ): { emoji: string; count: number; userIds: string[] }[] {
@@ -530,7 +535,7 @@ function MessageItemInner({
           </div>
         ) : (
           <div className="prose-chat text-xs leading-relaxed [&_p]:my-0">
-            <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
+            <Markdown remarkPlugins={[remarkGfm]}>{preprocessMentions(message.content)}</Markdown>
             {message.editedAt && (
               <span
                 className="ml-1 text-[10px] text-muted-foreground"
