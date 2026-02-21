@@ -3,7 +3,6 @@
 import {
   useRef,
   useEffect,
-  useLayoutEffect,
   useCallback,
   useState,
   useMemo,
@@ -97,12 +96,14 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
   );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
   const [showNewMessagePill, setShowNewMessagePill] = useState(false);
   const prevMessageCountRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
+  const isAtBottomRef = useRef(true);
+  const userScrolledRef = useRef(false);
 
   // Messages come in desc order from query, reverse for chronological display
   const messages = useMemo(() => {
@@ -110,20 +111,25 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
     return [...(results ?? [])].reverse();
   }, [results, searchResults]);
 
+  // Helper: check if scroll container is at the bottom
+  const checkIsAtBottom = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    return scrollHeight - scrollTop - clientHeight < 50;
+  }, []);
+
   // Detect when user scrolls away from bottom
   const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    const atBottom = distanceFromBottom < 50;
-    setIsAtBottom(atBottom);
+    // Ignore scroll events caused by us programmatically scrolling
+    if (userScrolledRef.current) return;
+    const atBottom = checkIsAtBottom();
+    isAtBottomRef.current = atBottom;
 
     if (atBottom && showNewMessagePill) {
       setShowNewMessagePill(false);
     }
-  }, [showNewMessagePill]);
+  }, [showNewMessagePill, checkIsAtBottom]);
 
   // Infinite scroll: load more when sentinel is visible
   useEffect(() => {
@@ -180,34 +186,41 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
       onOptimisticClear?.();
     }
 
-    if (isAtBottom) {
+    if (isAtBottomRef.current) {
       requestAnimationFrame(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       });
     } else {
       setShowNewMessagePill(true);
     }
-  }, [messageCount, isAtBottom, optimisticMessages?.length, onOptimisticClear]);
+  }, [messageCount, optimisticMessages?.length, onOptimisticClear]);
 
-  // Keep scroll pinned to bottom when content height changes (e.g. reactions, edits)
-  const isAtBottomRef = useRef(isAtBottom);
-  isAtBottomRef.current = isAtBottom;
-  const prevScrollHeightRef = useRef(0);
+  // ResizeObserver: pin to bottom whenever content height changes
+  // This catches image/video loads, reactions, edits, new messages, etc.
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
 
-  useLayoutEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      if (isLoadingMoreRef.current) return;
+      if (!isAtBottomRef.current) return;
 
-    const newHeight = container.scrollHeight;
-    if (newHeight !== prevScrollHeightRef.current) {
-      prevScrollHeightRef.current = newHeight;
-      if (!isLoadingMoreRef.current && isAtBottomRef.current) {
-        bottomRef.current?.scrollIntoView();
-      }
-    }
-  });
+      // Programmatic scroll — suppress handleScroll from reacting
+      userScrolledRef.current = true;
+      bottomRef.current?.scrollIntoView();
+      // Re-sync after the scroll settles
+      requestAnimationFrame(() => {
+        userScrolledRef.current = false;
+        isAtBottomRef.current = true;
+      });
+    });
+
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToBottom = useCallback(() => {
+    isAtBottomRef.current = true;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowNewMessagePill(false);
   }, []);
@@ -255,7 +268,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
         onScroll={handleScroll}
       >
         {/* Flex container that pushes content to bottom */}
-        <div className="flex min-h-full flex-col justify-end">
+        <div ref={contentRef} className="flex min-h-full flex-col justify-end">
           {/* Sentinel for infinite scroll (top of list) */}
           <div ref={sentinelRef} className="h-1" />
 
