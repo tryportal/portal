@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, ChatCircle, Tray } from "@phosphor-icons/react";
+import { House, ChatCircle, Tray, List } from "@phosphor-icons/react";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { UserMenu } from "@/components/user-menu";
+import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
 interface NavItem {
   icon: typeof House;
@@ -22,13 +23,23 @@ const navItems: NavItem[] = [
 export function WorkspaceNavbar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/w/${slug}`;
+  const { toggle } = useMobileSidebar();
 
   return (
     <header className="border-b border-border">
       <div className="flex h-14 items-stretch">
+        {/* Hamburger menu - mobile only */}
+        <button
+          onClick={toggle}
+          className="flex w-12 items-center justify-center border-r border-border hover:bg-muted md:hidden"
+          aria-label="Toggle sidebar"
+        >
+          <List size={20} />
+        </button>
+
         <Link
           href="/home"
-          className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
+          className="hidden w-14 items-center justify-center border-r border-border hover:bg-muted md:flex"
         >
           <Image src="/portal.svg" alt="Portal" width={24} height={24} className="dark:invert" />
         </Link>
@@ -49,11 +60,11 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex w-14 items-center justify-center border-r border-border hover:bg-muted ${
+                className={`flex w-12 items-center justify-center border-r border-border hover:bg-muted md:w-14 ${
                   isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
-                <Icon size={24} weight={isActive ? "fill" : "regular"} />
+                <Icon size={22} weight={isActive ? "fill" : "regular"} className="md:size-6" />
               </Link>
             );
           })}

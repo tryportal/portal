@@ -1,6 +1,7 @@
 import { WorkspaceNavbar } from "@/components/workspace-navbar";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { SetLastWorkspace } from "@/components/set-last-workspace";
+import { MobileSidebarProvider } from "@/components/mobile-sidebar-context";
 
 export default async function WorkspaceLayout({
   children,
@@ -12,10 +13,12 @@ export default async function WorkspaceLayout({
   const { slug } = await params;
 
   return (
-    <div className="min-h-screen">
-      <SetLastWorkspace slug={slug} />
-      <WorkspaceNavbar slug={slug} />
-      <WorkspaceShell slug={slug}>{children}</WorkspaceShell>
-    </div>
+    <MobileSidebarProvider>
+      <div className="min-h-screen">
+        <SetLastWorkspace slug={slug} />
+        <WorkspaceNavbar slug={slug} />
+        <WorkspaceShell slug={slug}>{children}</WorkspaceShell>
+      </div>
+    </MobileSidebarProvider>
   );
 }

@@ -77,14 +77,13 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
   }, [isCreator, activeSection, visibleSections]);
 
   return (
-    <div className="flex h-full flex-1">
+    <div className="flex h-full flex-1 max-md:flex-col">
       {/* Sidebar nav */}
       <nav
-        className="flex flex-shrink-0 flex-col border-r border-border bg-sidebar"
-        style={{ width: 224 }}
+        className="flex w-full flex-shrink-0 flex-row overflow-x-auto border-b border-border bg-sidebar md:w-56 md:flex-col md:overflow-x-visible md:border-b-0 md:border-r"
         aria-label="Settings navigation"
       >
-        <div className="flex flex-col gap-px pl-2 pt-2 pb-2">
+        <div className="flex flex-row gap-px px-2 py-2 md:flex-col md:pl-2 md:pr-0">
           {visibleSections.map(({ id, label, icon: Icon }) => {
             const isActive = activeSection === id;
             const isDanger = id === "danger";
@@ -93,14 +92,14 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
               <button
                 key={id}
                 onClick={() => setActiveSection(id)}
-                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-left text-xs ${
+                className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[6px] px-2.5 py-1.5 text-left text-xs md:rounded-l-[6px] md:rounded-r-none md:border-r-[3px] ${
                   isActive
                     ? isDanger
-                      ? "border-destructive/30 bg-destructive/10 font-medium text-destructive"
-                      : "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
+                      ? "bg-destructive/10 font-medium text-destructive md:border-destructive/30"
+                      : "bg-muted font-medium text-sidebar-foreground md:border-foreground/30"
                     : isDanger
-                      ? "border-transparent text-destructive/60 hover:bg-destructive/5 hover:text-destructive"
-                      : "border-transparent text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
+                      ? "text-destructive/60 hover:bg-destructive/5 hover:text-destructive md:border-transparent"
+                      : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground md:border-transparent"
                 }`}
               >
                 <Icon
@@ -117,7 +116,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-xl px-8 py-4">
+        <div className="mx-auto w-full max-w-xl px-4 py-4 md:px-8">
           {activeSection === "details" && <DetailsPanel workspace={workspace} />}
           {activeSection === "visibility" && <VisibilityPanel workspace={workspace} />}
           {activeSection === "danger" && isCreator && <DangerPanel workspace={workspace} />}

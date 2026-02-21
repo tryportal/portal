@@ -257,7 +257,7 @@ function ImageAttachment({
         <img
           src={displayUrl}
           alt={att.name}
-          className="max-h-72 max-w-80 object-contain bg-muted/20"
+          className="max-h-72 max-w-full object-contain bg-muted/20 md:max-w-80"
           loading="lazy"
         />
       </button>
@@ -281,7 +281,7 @@ function VideoAttachment({
   if (!displayUrl) return null;
 
   return (
-    <div className="max-w-96 overflow-hidden border border-border">
+    <div className="max-w-full overflow-hidden border border-border md:max-w-96">
       <video
         src={displayUrl}
         controls
@@ -399,7 +399,7 @@ function MessageItemInner({
 
   return (
     <div
-      className={`group relative flex gap-3 px-4 py-0.5 ${
+      className={`group relative flex gap-2.5 px-3 py-0.5 md:gap-3 md:px-4 ${
         showAvatar ? "mt-2.5" : "mt-px"
       } ${pending ? "opacity-50" : ""}`}
     >
@@ -592,12 +592,12 @@ function MessageItemInner({
         )}
       </div>
 
-      {/* Hover toolbar */}
+      {/* Action toolbar - hover on desktop, always-visible dots on mobile */}
       {!editing && (
-        <div className="absolute -top-3 right-4 flex items-center border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100">
+        <div className="absolute -top-3 right-3 flex items-center border border-border bg-background shadow-sm opacity-0 transition-opacity group-hover:opacity-100 md:right-4 max-md:opacity-0 max-md:group-active:opacity-100 max-md:has-[*[data-state=open]]:opacity-100">
           <button
             onClick={() => onReply(message)}
-            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="hidden size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:flex"
             title="Reply"
           >
             <ArrowBendUpLeft size={14} />
@@ -607,14 +607,14 @@ function MessageItemInner({
               const rect = e.currentTarget.getBoundingClientRect();
               onEmojiPickerOpen(message._id, rect);
             }}
-            className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="hidden size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:flex"
             title="Add reaction"
           >
             <Smiley size={14} />
           </button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground outline-none cursor-pointer transition-colors">
+            <DropdownMenuTrigger className="flex size-8 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground outline-none cursor-pointer transition-colors md:size-7">
               <DotsThree size={14} weight="bold" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" sideOffset={4} align="end">

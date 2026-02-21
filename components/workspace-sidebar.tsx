@@ -75,12 +75,14 @@ interface WorkspaceSidebarProps {
   slug: string;
   organizationId: Id<"organizations">;
   role?: string;
+  isMobileDrawer?: boolean;
 }
 
 export function WorkspaceSidebar({
   slug,
   organizationId,
   role,
+  isMobileDrawer,
 }: WorkspaceSidebarProps) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
@@ -371,8 +373,10 @@ export function WorkspaceSidebar({
   return (
     <>
       <aside
-        className="flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground"
-        style={{ width: SIDEBAR_WIDTH }}
+        className={`flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground ${
+          isMobileDrawer ? "w-full" : ""
+        }`}
+        style={isMobileDrawer ? undefined : { width: SIDEBAR_WIDTH }}
       >
         {/* Navigation */}
         <nav className="flex flex-col gap-px pl-2 pt-2 pb-2">

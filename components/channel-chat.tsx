@@ -219,11 +219,15 @@ export function ChannelChat({ channel }: ChannelChatProps) {
       {emojiPickerState && (
         <div
           ref={emojiReactionRef}
-          className="fixed z-50"
-          style={{
-            top: Math.max(10, emojiPickerState.position.top),
-            left: emojiPickerState.position.left,
-          }}
+          className="fixed z-50 max-md:inset-x-0 max-md:bottom-0 max-md:flex max-md:justify-center max-md:p-2"
+          style={
+            window.innerWidth >= 768
+              ? {
+                  top: Math.max(10, emojiPickerState.position.top),
+                  left: emojiPickerState.position.left,
+                }
+              : undefined
+          }
         >
           <Picker
             data={data}

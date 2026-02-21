@@ -263,7 +263,7 @@ export function MessageInput({
 
   return (
     <div
-      className="relative shrink-0 px-4 pb-4"
+      className="relative shrink-0 px-3 pb-3 md:px-4 md:pb-4"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -377,35 +377,35 @@ export function MessageInput({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder="Send a message..."
-          className="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-xs leading-relaxed outline-none placeholder:text-muted-foreground"
+          className="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed outline-none placeholder:text-muted-foreground md:text-xs"
           rows={1}
           style={{ maxHeight: 160 }}
         />
 
         {/* Bottom toolbar */}
-        <div className="flex items-center justify-between px-1.5 pb-1.5">
+        <div className="flex items-center justify-between px-1 pb-1 md:px-1.5 md:pb-1.5">
           <div className="flex items-center gap-0.5">
             <button
               onClick={handleFileAttach}
-              className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="flex size-9 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:size-7"
               title="Attach file"
             >
-              <Paperclip size={16} />
+              <Paperclip size={18} className="md:size-4" />
             </button>
             <button
               ref={emojiButtonRef}
               onClick={() => setShowEmojiPicker((v) => !v)}
-              className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="flex size-9 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:size-7"
               title="Emoji"
             >
-              <Smiley size={16} />
+              <Smiley size={18} className="md:size-4" />
             </button>
           </div>
 
           <button
             onClick={handleSend}
             disabled={!canSend || isSending}
-            className={`flex size-7 items-center justify-center transition-colors ${
+            className={`flex size-9 items-center justify-center transition-colors md:size-7 ${
               canSend
                 ? "text-foreground hover:bg-muted"
                 : "text-muted-foreground/30 cursor-default"
@@ -413,8 +413,9 @@ export function MessageInput({
             title="Send message"
           >
             <PaperPlaneRight
-              size={16}
+              size={18}
               weight={canSend ? "fill" : "regular"}
+              className="md:size-4"
             />
           </button>
         </div>
@@ -424,7 +425,7 @@ export function MessageInput({
       {showEmojiPicker && (
         <div
           ref={emojiPickerRef}
-          className="absolute bottom-full left-4 mb-2 z-50"
+          className="absolute bottom-full left-0 right-0 z-50 mb-2 flex justify-center md:left-4 md:right-auto md:justify-start"
         >
           <Picker
             data={data}

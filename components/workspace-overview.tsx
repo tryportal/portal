@@ -50,7 +50,7 @@ export function WorkspaceOverview({
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-6 py-8">
+      <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-8">
         {/* Welcome Header */}
         <div className="flex items-center gap-4">
           <WorkspaceIcon
@@ -76,7 +76,7 @@ export function WorkspaceOverview({
         </div>
 
         {/* Mentions & Saved Messages Side by Side */}
-        <div className="mt-8 grid grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Recent Mentions */}
           <div>
             <div className="flex items-center justify-between">

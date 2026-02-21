@@ -57,24 +57,24 @@ export function ChannelHeader({
   }, [isMuted, channelId, muteChannel, unmuteChannel]);
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+    <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3 md:px-4">
       {/* Channel name */}
-      <div className="flex items-center gap-1.5">
-        <Hash size={14} weight="bold" className="text-muted-foreground" />
-        <span className="text-xs font-semibold">{channelName}</span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Hash size={14} weight="bold" className="shrink-0 text-muted-foreground" />
+        <span className="truncate text-xs font-semibold">{channelName}</span>
         {isMuted && (
           <BellSlash
             size={12}
-            className="text-muted-foreground"
+            className="shrink-0 text-muted-foreground"
             weight="fill"
           />
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-0.5">
         {searchOpen ? (
-          <div className="flex h-7 items-center border border-border bg-background">
+          <div className="flex h-8 items-center border border-border bg-background md:h-7">
             <MagnifyingGlass
               size={14}
               className="ml-2 shrink-0 text-muted-foreground"
@@ -83,8 +83,8 @@ export function ChannelHeader({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearch(e.target.value)}
-              placeholder="Search messages..."
-              className="h-full w-44 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+              placeholder="Search..."
+              className="h-full w-28 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground md:w-44 md:text-xs"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
@@ -98,9 +98,9 @@ export function ChannelHeader({
                 setSearchOpen(false);
                 onSearch("");
               }}
-              className="flex h-full items-center px-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="flex h-full items-center px-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </div>
         ) : (
