@@ -29,6 +29,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 
 export interface MessageData {
   _id: Id<"messages">;
@@ -402,7 +407,53 @@ function MessageItemInner({
     (a) => !a.type.startsWith("image/") && !a.type.startsWith("video/")
   ) ?? [];
 
+  const contextMenuContent = (
+    <>
+      <ContextMenuItem onClick={handleCopy}>
+        <Copy size={14} />
+        Copy text
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => onReply(message)}>
+        <ArrowBendUpLeft size={14} />
+        Reply
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      {isAdmin && (
+        <ContextMenuItem onClick={handlePin}>
+          <PushPin size={14} />
+          {message.pinned ? "Unpin message" : "Pin message"}
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem onClick={handleSave}>
+        <BookmarkSimple size={14} />
+        {message.isSaved ? "Unsave message" : "Save message"}
+      </ContextMenuItem>
+      {message.isOwn && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={() => {
+              setEditing(true);
+              setEditContent(message.content);
+            }}
+          >
+            <PencilSimple size={14} />
+            Edit message
+          </ContextMenuItem>
+          <ContextMenuItem
+            className="text-destructive hover:text-destructive focus:text-destructive"
+            onClick={handleDelete}
+          >
+            <Trash size={14} />
+            Delete message
+          </ContextMenuItem>
+        </>
+      )}
+    </>
+  );
+
   return (
+    <ContextMenu content={contextMenuContent}>
     <div
       className={`group relative flex gap-2.5 px-3 py-0.5 md:gap-3 md:px-4 ${
         showAvatar ? "mt-2.5" : "mt-px"
@@ -679,6 +730,7 @@ function MessageItemInner({
         </div>
       )}
     </div>
+    </ContextMenu>
   );
 }
 

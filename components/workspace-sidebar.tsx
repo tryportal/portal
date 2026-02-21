@@ -38,6 +38,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
+import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
@@ -740,7 +745,37 @@ function SortableChannel({
   const isChannelActive = pathname === channelHref;
   const IconComponent = channel.channelType === "forum" ? ChatCircle : Hash;
 
-  return (
+  const channelContextMenu = isAdmin ? (
+    <>
+      <ContextMenuItem
+        onClick={() =>
+          onEdit({
+            id: channel._id,
+            name: channel.name,
+            description: channel.description,
+          })
+        }
+      >
+        <PencilSimple size={14} />
+        Edit channel
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem
+        className="text-destructive hover:text-destructive focus:text-destructive"
+        onClick={() =>
+          onDelete({
+            id: channel._id,
+            name: channel.name,
+          })
+        }
+      >
+        <Trash size={14} />
+        Delete channel
+      </ContextMenuItem>
+    </>
+  ) : null;
+
+  const inner = (
     <div
       ref={setNodeRef}
       style={style}
@@ -805,6 +840,11 @@ function SortableChannel({
       )}
     </div>
   );
+
+  if (channelContextMenu) {
+    return <ContextMenu content={channelContextMenu}>{inner}</ContextMenu>;
+  }
+  return inner;
 }
 
 function CreateChannelDialog({
