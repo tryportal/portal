@@ -6,7 +6,7 @@ import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { UserMenu } from "@/components/user-menu";
-import { ChevronDown } from "lucide-react";
+import { CaretDown } from "@phosphor-icons/react";
 
 export function Navbar() {
   const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
@@ -30,11 +30,11 @@ export function Navbar() {
         <nav className="hidden items-center gap-1 md:flex">
           <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
             Products
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <CaretDown className="h-3.5 w-3.5 text-muted-foreground" weight="bold" />
           </button>
           <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
             Resources
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <CaretDown className="h-3.5 w-3.5 text-muted-foreground" weight="bold" />
           </button>
           <Link
             href="/integration"
