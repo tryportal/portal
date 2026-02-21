@@ -58,6 +58,7 @@ export function MessageInput({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const dragCounterRef = useRef(0);
@@ -207,15 +208,8 @@ export function MessageInput({
   }, []);
 
   const handleFileAttach = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = true;
-    input.onchange = () => {
-      if (!input.files?.length) return;
-      addFiles(Array.from(input.files));
-    };
-    input.click();
-  }, [addFiles]);
+    fileInputRef.current?.click();
+  }, []);
 
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -437,6 +431,19 @@ export function MessageInput({
           />
         </div>
       )}
+
+      {/* Hidden file input for mobile compatibility */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (!e.target.files?.length) return;
+          addFiles(Array.from(e.target.files));
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }
