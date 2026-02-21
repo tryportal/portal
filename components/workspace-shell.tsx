@@ -9,7 +9,7 @@ import { WorkspaceProvider } from "@/components/workspace-context";
 import { DotLoader } from "@/components/ui/dot-loader";
 
 /** Routes that do NOT show the sidebar */
-const NO_SIDEBAR_ROUTES = ["/inbox"];
+const NO_SIDEBAR_ROUTES = ["/inbox", "/saved"];
 
 export function WorkspaceShell({
   slug,

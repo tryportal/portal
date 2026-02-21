@@ -73,6 +73,11 @@ export const getRecentMentions = query({
           .unique();
 
         const channel = msg.channelId ? channelMap.get(msg.channelId) : null;
+        let categorySlug: string | null = null;
+        if (channel?.categoryId) {
+          const cat = await ctx.db.get(channel.categoryId);
+          if (cat) categorySlug = cat.name.toLowerCase().replace(/\s+/g, "-");
+        }
 
         return {
           _id: msg._id,
@@ -80,6 +85,7 @@ export const getRecentMentions = query({
           createdAt: msg.createdAt,
           channelName: channel?.name ?? null,
           channelId: msg.channelId ?? null,
+          categorySlug,
           isRead: readMessageIds.has(msg._id),
           sender: sender
             ? {
@@ -151,6 +157,11 @@ export const getRecentSavedMessages = query({
         .unique();
 
       const channel = channelMap.get(msg.channelId);
+      let categorySlug: string | null = null;
+      if (channel?.categoryId) {
+        const cat = await ctx.db.get(channel.categoryId);
+        if (cat) categorySlug = cat.name.toLowerCase().replace(/\s+/g, "-");
+      }
 
       results.push({
         _id: msg._id,
@@ -160,6 +171,7 @@ export const getRecentSavedMessages = query({
         savedAt: s.savedAt,
         channelName: channel?.name ?? null,
         channelId: msg.channelId,
+        categorySlug,
         sender: sender
           ? {
               firstName: sender.firstName ?? null,
@@ -227,5 +239,172 @@ export const getUnreadMentionCount = query({
     }
 
     return count;
+  },
+});
+
+/**
+ * Get all mentions for the current user in a workspace (for inbox page).
+ */
+export const getAllMentions = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", args.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return [];
+
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const channelMap = new Map(channels.map((c) => [c._id, c]));
+
+    const readStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const readMessageIds = new Set(readStatuses.map((s) => s.messageId));
+
+    const mentionMessages = [];
+    for (const channel of channels) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) =>
+          q.eq("channelId", channel._id)
+        )
+        .order("desc")
+        .take(100);
+
+      for (const msg of messages) {
+        if (msg.mentions?.includes(identity.subject)) {
+          mentionMessages.push(msg);
+        }
+      }
+    }
+
+    mentionMessages.sort((a, b) => b.createdAt - a.createdAt);
+
+    const enriched = await Promise.all(
+      mentionMessages.map(async (msg) => {
+        const sender = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", msg.userId))
+          .unique();
+
+        const channel = msg.channelId ? channelMap.get(msg.channelId) : null;
+        let categorySlug: string | null = null;
+        if (channel?.categoryId) {
+          const cat = await ctx.db.get(channel.categoryId);
+          if (cat) categorySlug = cat.name.toLowerCase().replace(/\s+/g, "-");
+        }
+
+        return {
+          _id: msg._id,
+          content: msg.content,
+          createdAt: msg.createdAt,
+          channelName: channel?.name ?? null,
+          channelId: msg.channelId ?? null,
+          categorySlug,
+          isRead: readMessageIds.has(msg._id),
+          sender: sender
+            ? {
+                firstName: sender.firstName ?? null,
+                lastName: sender.lastName ?? null,
+                imageUrl: sender.imageUrl ?? null,
+              }
+            : null,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+/**
+ * Get all saved messages for the current user in a workspace.
+ */
+export const getAllSavedMessages = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q
+          .eq("organizationId", args.organizationId)
+          .eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return [];
+
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+    const channelIds = new Set(channels.map((c) => c._id));
+    const channelMap = new Map(channels.map((c) => [c._id, c]));
+
+    const saved = await ctx.db
+      .query("savedMessages")
+      .withIndex("by_user_and_saved", (q) =>
+        q.eq("userId", identity.subject)
+      )
+      .order("desc")
+      .take(100);
+
+    const results = [];
+    for (const s of saved) {
+      const msg = await ctx.db.get(s.messageId);
+      if (!msg || !msg.channelId) continue;
+      if (!channelIds.has(msg.channelId)) continue;
+
+      const sender = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", msg.userId))
+        .unique();
+
+      const channel = channelMap.get(msg.channelId);
+      let categorySlug: string | null = null;
+      if (channel?.categoryId) {
+        const cat = await ctx.db.get(channel.categoryId);
+        if (cat) categorySlug = cat.name.toLowerCase().replace(/\s+/g, "-");
+      }
+
+      results.push({
+        _id: msg._id,
+        savedMessageId: s._id,
+        content: msg.content,
+        createdAt: msg.createdAt,
+        savedAt: s.savedAt,
+        channelName: channel?.name ?? null,
+        channelId: msg.channelId,
+        categorySlug,
+        sender: sender
+          ? {
+              firstName: sender.firstName ?? null,
+              lastName: sender.lastName ?? null,
+              imageUrl: sender.imageUrl ?? null,
+            }
+          : null,
+      });
+    }
+
+    return results;
   },
 });

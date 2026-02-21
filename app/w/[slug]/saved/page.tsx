@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useWorkspace } from "@/components/workspace-context";
-import { At } from "@phosphor-icons/react";
+import { BookmarkSimple } from "@phosphor-icons/react";
 import { DotLoader } from "@/components/ui/dot-loader";
 
-export default function InboxPage({
+export default function SavedMessagesPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -17,7 +17,7 @@ export default function InboxPage({
   const workspace = useWorkspace();
   const base = `/w/${slug}`;
 
-  const mentions = useQuery(api.overview.getAllMentions, {
+  const savedMessages = useQuery(api.overview.getAllSavedMessages, {
     organizationId: workspace._id,
   });
 
@@ -25,54 +25,54 @@ export default function InboxPage({
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-2xl px-6 py-8">
         <div className="flex items-center gap-2">
-          <At size={16} className="text-muted-foreground" />
-          <h1 className="text-sm font-medium">Inbox</h1>
+          <BookmarkSimple size={16} className="text-muted-foreground" />
+          <h1 className="text-sm font-medium">Saved Messages</h1>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          All your mentions across this workspace.
+          Messages you&apos;ve saved for later.
         </p>
 
         <div className="mt-6 flex flex-col">
-          {mentions === undefined && (
+          {savedMessages === undefined && (
             <div className="py-8">
               <DotLoader dotCount={7} dotSize={4} gap={5} />
             </div>
           )}
-          {mentions && mentions.length === 0 && (
+          {savedMessages && savedMessages.length === 0 && (
             <div className="border border-border bg-card px-4 py-10 text-center">
-              <At size={24} className="mx-auto text-muted-foreground/50" />
+              <BookmarkSimple
+                size={24}
+                className="mx-auto text-muted-foreground/50"
+              />
               <p className="mt-2 text-xs text-muted-foreground">
-                No mentions yet. When someone mentions you, it will show up
-                here.
+                No saved messages yet. Bookmark a message to save it here.
               </p>
             </div>
           )}
-          {mentions && mentions.length > 0 && (
+          {savedMessages && savedMessages.length > 0 && (
             <div className="divide-y divide-border overflow-hidden border border-border bg-card">
-              {mentions.map((mention) => {
-                const senderName = mention.sender
-                  ? [mention.sender.firstName, mention.sender.lastName]
+              {savedMessages.map((saved) => {
+                const senderName = saved.sender
+                  ? [saved.sender.firstName, saved.sender.lastName]
                       .filter(Boolean)
                       .join(" ") || "Unknown"
                   : "Unknown";
 
                 const href =
-                  mention.channelId &&
-                  mention.channelName &&
-                  mention.categorySlug
-                    ? `${base}/c/${mention.categorySlug}/${mention.channelName}`
+                  saved.channelName && saved.categorySlug
+                    ? `${base}/c/${saved.categorySlug}/${saved.channelName}`
                     : base;
 
                 return (
                   <Link
-                    key={mention._id}
+                    key={saved._id}
                     href={href}
                     className="group flex gap-3 px-3 py-2.5 hover:bg-muted"
                   >
                     <div className="flex-shrink-0">
-                      {mention.sender?.imageUrl ? (
+                      {saved.sender?.imageUrl ? (
                         <img
-                          src={mention.sender.imageUrl}
+                          src={saved.sender.imageUrl}
                           alt={senderName}
                           className="size-7 object-cover"
                         />
@@ -87,20 +87,17 @@ export default function InboxPage({
                         <span className="text-xs font-medium">
                           {senderName}
                         </span>
-                        {mention.channelName && (
+                        {saved.channelName && (
                           <span className="text-[10px] text-muted-foreground">
-                            in #{mention.channelName}
+                            in #{saved.channelName}
                           </span>
-                        )}
-                        {!mention.isRead && (
-                          <span className="size-1.5 rounded-full bg-foreground" />
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {mention.content}
+                        {saved.content}
                       </p>
                       <span className="mt-1 block text-[10px] text-muted-foreground/60">
-                        {formatRelativeTime(mention.createdAt)}
+                        {formatRelativeTime(saved.createdAt)}
                       </span>
                     </div>
                   </Link>

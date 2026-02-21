@@ -355,7 +355,7 @@ export function WorkspaceSidebar({
                 href={fullHref}
                 className={`flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
                   isActive
-                    ? "border-white/50 bg-primary text-primary-foreground font-medium"
+                    ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
                     : "border-transparent text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
                 }`}
               >
@@ -475,10 +475,10 @@ export function WorkspaceSidebar({
                         return (
                           <div
                             key={channel._id}
-                            className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
+                            className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
                               isChannelActive
-                                ? "bg-primary text-primary-foreground font-medium"
-                                : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+                                ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
+                                : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
                             }`}
                           >
                             <Link
@@ -710,10 +710,10 @@ function SortableChannel({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2.5 px-2.5 py-1.5 text-xs ${
+      className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
         isChannelActive
-          ? "bg-primary text-primary-foreground font-medium"
-          : "text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
+          ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
+          : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
       }`}
       {...attributes}
       {...listeners}
@@ -734,7 +734,7 @@ function SortableChannel({
           <DropdownMenuTrigger
             className={`mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
               isChannelActive
-                ? "text-primary-foreground/70 hover:text-primary-foreground"
+                ? "text-sidebar-foreground/70 hover:text-sidebar-foreground"
                 : "text-muted-foreground hover:text-sidebar-foreground"
             }`}
           >

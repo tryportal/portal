@@ -133,10 +133,12 @@ export function WorkspaceOverview({
                   Saved Messages
                 </span>
               </div>
-              <Button variant="ghost" size="xs">
-                Show all
-                <CaretRight size={12} />
-              </Button>
+              <Link href={`${base}/saved`}>
+                <Button variant="ghost" size="xs">
+                  Show all
+                  <CaretRight size={12} />
+                </Button>
+              </Link>
             </div>
 
             <div className="mt-3 flex flex-col gap-px">
@@ -218,6 +220,7 @@ function MentionItem({
     createdAt: number;
     channelName: string | null;
     channelId: string | null;
+    categorySlug: string | null;
     isRead: boolean;
     sender: {
       firstName: string | null;
@@ -233,8 +236,8 @@ function MentionItem({
         .join(" ") || "Unknown"
     : "Unknown";
 
-  const href = mention.channelId
-    ? `${base}/channels/${mention.channelName}`
+  const href = mention.channelId && mention.channelName && mention.categorySlug
+    ? `${base}/c/${mention.categorySlug}/${mention.channelName}`
     : base;
 
   return (
@@ -291,6 +294,7 @@ function SavedItem({
     savedAt: number;
     channelName: string | null;
     channelId: Id<"channels">;
+    categorySlug: string | null;
     sender: {
       firstName: string | null;
       lastName: string | null;
@@ -305,8 +309,8 @@ function SavedItem({
         .join(" ") || "Unknown"
     : "Unknown";
 
-  const href = saved.channelName
-    ? `${base}/channels/${saved.channelName}`
+  const href = saved.channelName && saved.categorySlug
+    ? `${base}/c/${saved.categorySlug}/${saved.channelName}`
     : base;
 
   return (
@@ -382,14 +386,14 @@ function CategoryGroup({
       </button>
 
       {!collapsed && (
-        <div className="mt-2 flex flex-col gap-px">
+        <div className="mt-2 divide-y divide-border overflow-hidden border border-border bg-card">
           {category.channels.map((channel) => {
             const Icon = channel.channelType === "forum" ? ChatCircle : Hash;
             return (
               <Link
                 key={channel._id}
-                href={`${base}/channels/${channel.name}`}
-                className="group flex items-center gap-2.5 border border-border bg-card px-3 py-2 hover:bg-muted"
+                href={`${base}/c/${category.name.toLowerCase().replace(/\s+/g, "-")}/${channel.name}`}
+                className="group flex items-center gap-2.5 px-3 py-2 hover:bg-muted"
               >
                 <Icon
                   size={14}
