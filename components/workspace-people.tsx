@@ -101,21 +101,25 @@ export function WorkspacePeople({
         </div>
 
         {/* Member List */}
-        <div className="mt-6 flex flex-col gap-px">
+        <div className="mt-6">
           {members === undefined && (
             <div className="py-8">
               <DotLoader dotCount={7} dotSize={4} gap={5} />
             </div>
           )}
-          {members?.map((member) => (
-            <MemberRow
-              key={member._id}
-              member={member}
-              isAdmin={isAdmin}
-              isMe={member.userId === user?.id}
-              organizationId={organizationId}
-            />
-          ))}
+          {members && members.length > 0 && (
+            <div className="divide-y divide-border overflow-hidden border border-border bg-card">
+              {members.map((member) => (
+                <MemberRow
+                  key={member._id}
+                  member={member}
+                  isAdmin={isAdmin}
+                  isMe={member.userId === user?.id}
+                  organizationId={organizationId}
+                />
+              ))}
+            </div>
+          )}
           {members && members.length === 0 && (
             <p className="py-8 text-center text-[11px] text-muted-foreground">
               No members found.
@@ -207,7 +211,7 @@ function MemberRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 border border-border bg-card px-4 py-3 hover:bg-muted/50">
+      <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
         {/* Avatar */}
         <div className="flex-shrink-0">
           {member.imageUrl ? (
