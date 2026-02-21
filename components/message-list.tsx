@@ -3,6 +3,7 @@
 import {
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useState,
   useMemo,
@@ -180,35 +181,23 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
     }
   }, [messageCount, isAtBottom, optimisticMessages?.length, onOptimisticClear]);
 
-  // Keep scroll pinned to bottom when content height changes (e.g. reactions)
+  // Keep scroll pinned to bottom when content height changes (e.g. reactions, edits)
   const isAtBottomRef = useRef(isAtBottom);
   isAtBottomRef.current = isAtBottom;
+  const prevScrollHeightRef = useRef(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    let prevHeight = container.scrollHeight;
-
-    const observer = new MutationObserver(() => {
-      const newHeight = container.scrollHeight;
-      if (newHeight !== prevHeight) {
-        prevHeight = newHeight;
-        if (!isLoadingMoreRef.current && isAtBottomRef.current) {
-          bottomRef.current?.scrollIntoView();
-        }
+    const newHeight = container.scrollHeight;
+    if (newHeight !== prevScrollHeightRef.current) {
+      prevScrollHeightRef.current = newHeight;
+      if (!isLoadingMoreRef.current && isAtBottomRef.current) {
+        bottomRef.current?.scrollIntoView();
       }
-    });
-
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      characterData: true,
-    });
-
-    return () => observer.disconnect();
-  }, []);
+    }
+  });
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
