@@ -155,6 +155,19 @@ export const getMessages = query({
       .collect();
     const savedMessageIds = new Set(savedMessages.map((s) => s.messageId));
 
+    // Resolve attachment URLs
+    const attachmentUrlMap = new Map<string, string>();
+    for (const msg of results.page) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          if (!attachmentUrlMap.has(att.storageId)) {
+            const url = await ctx.storage.getUrl(att.storageId);
+            if (url) attachmentUrlMap.set(att.storageId, url);
+          }
+        }
+      }
+    }
+
     // Enrich messages
     const enrichedPage = results.page.map((msg) => {
       const user = userMap.get(msg.userId);
@@ -171,6 +184,10 @@ export const getMessages = query({
         parentMessage,
         isSaved: savedMessageIds.has(msg._id),
         isOwn: msg.userId === identity.subject,
+        attachments: msg.attachments?.map((att) => ({
+          ...att,
+          url: attachmentUrlMap.get(att.storageId) ?? null,
+        })),
       };
     });
 
@@ -281,6 +298,19 @@ export const searchMessages = query({
       .collect();
     const savedMessageIds = new Set(savedMessages.map((s) => s.messageId));
 
+    // Resolve attachment URLs
+    const attachmentUrlMap = new Map<string, string>();
+    for (const msg of filtered) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          if (!attachmentUrlMap.has(att.storageId)) {
+            const url = await ctx.storage.getUrl(att.storageId);
+            if (url) attachmentUrlMap.set(att.storageId, url);
+          }
+        }
+      }
+    }
+
     return filtered.map((msg) => {
       const user = userMap.get(msg.userId);
       return {
@@ -292,6 +322,10 @@ export const searchMessages = query({
         parentMessage: null as { content: string; userId: string; userName: string } | null,
         isSaved: savedMessageIds.has(msg._id),
         isOwn: msg.userId === identity.subject,
+        attachments: msg.attachments?.map((att) => ({
+          ...att,
+          url: attachmentUrlMap.get(att.storageId) ?? null,
+        })),
       };
     });
   },

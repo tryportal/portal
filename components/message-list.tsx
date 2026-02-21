@@ -21,12 +21,20 @@ export interface MessageListHandle {
   scrollToBottom: () => void;
 }
 
+export interface OptimisticAttachment {
+  name: string;
+  size: number;
+  type: string;
+  previewUrl?: string;
+}
+
 export interface OptimisticMessage {
   id: string;
   content: string;
   userName: string;
   userImageUrl: string | null;
   parentMessage: { content: string; userId: string; userName: string } | null;
+  attachments?: OptimisticAttachment[];
 }
 
 interface MessageListProps {
@@ -312,6 +320,14 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
                 parentMessage: opt.parentMessage,
                 isSaved: false,
                 isOwn: true,
+                attachments: opt.attachments?.map((a) => ({
+                  storageId: "pending" as Id<"_storage">,
+                  name: a.name,
+                  size: a.size,
+                  type: a.type,
+                  url: null,
+                  previewUrl: a.previewUrl,
+                })),
               };
               const shouldGroup =
                 lastMsg &&

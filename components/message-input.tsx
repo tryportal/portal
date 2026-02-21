@@ -24,11 +24,19 @@ import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import type { MessageData } from "@/components/message-item";
 
+export interface PendingMessageAttachment {
+  name: string;
+  size: number;
+  type: string;
+  previewUrl?: string;
+}
+
 export interface PendingMessage {
   id: string;
   content: string;
   parentMessageId?: Id<"messages">;
   replyTo: MessageData | null;
+  attachments?: PendingMessageAttachment[];
 }
 
 interface MessageInputProps {
@@ -126,20 +134,30 @@ export function MessageInput({
 
     const filesToUpload = [...pendingFiles];
 
+    // Create preview URLs for optimistic display
+    const optimisticAttachments = filesToUpload.map((file) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      previewUrl:
+        file.type.startsWith("image/") || file.type.startsWith("video/")
+          ? URL.createObjectURL(file)
+          : undefined,
+    }));
+
     // Clear input immediately for instant feedback
     const pendingId = `pending-${Date.now()}`;
     setContent("");
     setPendingFiles([]);
     onCancelReply();
 
-    if (!hasFiles) {
-      onMessageSending?.({
-        id: pendingId,
-        content: trimmed,
-        parentMessageId: replyTo?._id,
-        replyTo,
-      });
-    }
+    onMessageSending?.({
+      id: pendingId,
+      content: trimmed || (hasFiles ? `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}` : ""),
+      parentMessageId: replyTo?._id,
+      replyTo,
+      attachments: hasFiles ? optimisticAttachments : undefined,
+    });
 
     setIsSending(true);
     try {
@@ -152,6 +170,10 @@ export function MessageInput({
       });
     } finally {
       setIsSending(false);
+      // Revoke preview URLs
+      for (const att of optimisticAttachments) {
+        if (att.previewUrl) URL.revokeObjectURL(att.previewUrl);
+      }
     }
   }, [content, pendingFiles, isSending, sendMessage, channelId, replyTo, onCancelReply, onMessageSending, uploadFiles]);
 
@@ -286,26 +308,64 @@ export function MessageInput({
 
         {/* Pending files preview */}
         {pendingFiles.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
-            {pendingFiles.map((file, i) => (
-              <div
-                key={`${file.name}-${i}`}
-                className="group/file flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
-              >
-                {file.type.startsWith("image/") ? (
-                  <ImageIcon size={12} className="shrink-0 text-muted-foreground" />
-                ) : (
-                  <Paperclip size={12} className="shrink-0 text-muted-foreground" />
-                )}
-                <span className="text-[11px] truncate max-w-32">{file.name}</span>
-                <button
-                  onClick={() => removePendingFile(i)}
-                  className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          <div className="flex flex-wrap gap-2 px-3 pt-2.5">
+            {pendingFiles.map((file, i) =>
+              file.type.startsWith("image/") ? (
+                <div
+                  key={`${file.name}-${i}`}
+                  className="group/file relative size-20 border border-border bg-muted/20 overflow-hidden"
                 >
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="size-full object-cover"
+                    onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                  />
+                  <button
+                    onClick={() => removePendingFile(i)}
+                    className="absolute top-0.5 right-0.5 flex size-4 items-center justify-center bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : file.type.startsWith("video/") ? (
+                <div
+                  key={`${file.name}-${i}`}
+                  className="group/file relative size-20 border border-border bg-black overflow-hidden"
+                >
+                  <video
+                    src={URL.createObjectURL(file)}
+                    className="size-full object-cover"
+                    muted
+                    onLoadedData={(e) => URL.revokeObjectURL((e.target as HTMLVideoElement).src)}
+                  />
+                  <button
+                    onClick={() => removePendingFile(i)}
+                    className="absolute top-0.5 right-0.5 flex size-4 items-center justify-center bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                  <div className="absolute bottom-0.5 left-0.5 px-1 py-px bg-black/60 text-[8px] text-white">
+                    VIDEO
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key={`${file.name}-${i}`}
+                  className="group/file flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
+                >
+                  <Paperclip size={12} className="shrink-0 text-muted-foreground" />
+                  <span className="text-[11px] truncate max-w-32">{file.name}</span>
+                  <button
+                    onClick={() => removePendingFile(i)}
+                    className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              )
+            )}
           </div>
         )}
 

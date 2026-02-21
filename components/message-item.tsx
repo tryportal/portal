@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -17,6 +17,10 @@ import {
   PencilSimple,
   Trash,
   ArrowSquareRight,
+  DownloadSimple,
+  Link,
+  File,
+  X,
 } from "@phosphor-icons/react";
 import {
   DropdownMenu,
@@ -55,6 +59,8 @@ export interface MessageData {
     name: string;
     size: number;
     type: string;
+    url?: string | null;
+    previewUrl?: string;
   }[];
 }
 
@@ -114,6 +120,225 @@ function groupReactions(
   }));
 }
 
+// ============================================================================
+// Image Lightbox
+// ============================================================================
+
+function ImageLightbox({
+  src,
+  name,
+  onClose,
+}: {
+  src: string;
+  name: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const handleDownload = useCallback(async () => {
+    const response = await fetch(src);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [src, name]);
+
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard.writeText(src);
+  }, [src]);
+
+  const handleCopyImage = useCallback(async () => {
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob }),
+      ]);
+    } catch {
+      // Fallback: copy link instead
+      navigator.clipboard.writeText(src);
+    }
+  }, [src]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80"
+      onClick={onClose}
+    >
+      {/* Top bar */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 z-10">
+        <span className="text-sm font-medium text-white/90 truncate max-w-[50%]">
+          {name}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyLink();
+            }}
+            className="flex size-8 items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Copy link"
+          >
+            <Link size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyImage();
+            }}
+            className="flex size-8 items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Copy image"
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownload();
+            }}
+            className="flex size-8 items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Download"
+          >
+            <DownloadSimple size={16} />
+          </button>
+          <button
+            onClick={onClose}
+            className="flex size-8 items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors ml-2"
+            title="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        className="max-h-[85vh] max-w-[90vw] object-contain select-none"
+        onClick={(e) => e.stopPropagation()}
+        draggable={false}
+      />
+    </div>
+  );
+}
+
+// ============================================================================
+// Attachment renderers
+// ============================================================================
+
+function ImageAttachment({
+  att,
+}: {
+  att: NonNullable<MessageData["attachments"]>[0];
+}) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const displayUrl = att.url || att.previewUrl;
+
+  if (!displayUrl) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setLightboxOpen(true)}
+        className="block overflow-hidden border border-border hover:border-foreground/20 transition-colors cursor-pointer"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={displayUrl}
+          alt={att.name}
+          className="max-h-72 max-w-80 object-contain bg-muted/20"
+          loading="lazy"
+        />
+      </button>
+      {lightboxOpen && (
+        <ImageLightbox
+          src={displayUrl}
+          name={att.name}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function VideoAttachment({
+  att,
+}: {
+  att: NonNullable<MessageData["attachments"]>[0];
+}) {
+  const displayUrl = att.url || att.previewUrl;
+  if (!displayUrl) return null;
+
+  return (
+    <div className="max-w-96 overflow-hidden border border-border">
+      <video
+        src={displayUrl}
+        controls
+        preload="metadata"
+        className="max-h-80 w-full bg-black"
+      >
+        <track kind="captions" />
+      </video>
+    </div>
+  );
+}
+
+function FileAttachment({
+  att,
+}: {
+  att: NonNullable<MessageData["attachments"]>[0];
+}) {
+  const handleDownload = useCallback(async () => {
+    if (!att.url) return;
+    const response = await fetch(att.url);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = att.name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [att.url, att.name]);
+
+  return (
+    <div className="flex items-center gap-2.5 border border-border bg-muted/30 px-3 py-2">
+      <File size={18} className="shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <span className="text-xs font-medium truncate block max-w-60">
+          {att.name}
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          {formatFileSize(att.size)}
+        </span>
+      </div>
+      {att.url && (
+        <button
+          onClick={handleDownload}
+          className="flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          title="Download"
+        >
+          <DownloadSimple size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MessageItem
+// ============================================================================
+
 function MessageItemInner({
   message,
   isAdmin,
@@ -164,6 +389,13 @@ function MessageItemInner({
   );
 
   const reactions = message.reactions ? groupReactions(message.reactions) : [];
+
+  // Categorize attachments
+  const images = message.attachments?.filter((a) => a.type.startsWith("image/")) ?? [];
+  const videos = message.attachments?.filter((a) => a.type.startsWith("video/")) ?? [];
+  const files = message.attachments?.filter(
+    (a) => !a.type.startsWith("image/") && !a.type.startsWith("video/")
+  ) ?? [];
 
   return (
     <div
@@ -310,21 +542,29 @@ function MessageItemInner({
           </div>
         )}
 
-        {/* Attachments */}
-        {message.attachments && message.attachments.length > 0 && (
+        {/* Image attachments */}
+        {images.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {message.attachments.map((att, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 border border-border bg-muted/30 px-2.5 py-1.5"
-              >
-                <span className="text-xs font-medium truncate max-w-40">
-                  {att.name}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {formatFileSize(att.size)}
-                </span>
-              </div>
+            {images.map((att, i) => (
+              <ImageAttachment key={i} att={att} />
+            ))}
+          </div>
+        )}
+
+        {/* Video attachments */}
+        {videos.length > 0 && (
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {videos.map((att, i) => (
+              <VideoAttachment key={i} att={att} />
+            ))}
+          </div>
+        )}
+
+        {/* File attachments */}
+        {files.length > 0 && (
+          <div className="mt-1.5 flex flex-col gap-1">
+            {files.map((att, i) => (
+              <FileAttachment key={i} att={att} />
             ))}
           </div>
         )}

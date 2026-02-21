@@ -63,6 +63,7 @@ export function ChannelChat({ channel }: ChannelChatProps) {
                 userName: pending.replyTo.userName,
               }
             : null,
+          attachments: pending.attachments,
         },
       ]);
       // Scroll to bottom immediately
