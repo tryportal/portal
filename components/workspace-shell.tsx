@@ -11,6 +11,7 @@ import { DotLoader } from "@/components/ui/dot-loader";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import { useMentionNotifications } from "@/components/use-mention-notifications";
+import { CommandPalette } from "@/components/command-palette";
 
 /** Routes that do NOT show the sidebar */
 const NO_SIDEBAR_ROUTES = ["/inbox", "/saved"];
@@ -52,6 +53,11 @@ export function WorkspaceShell({
 
   return (
     <WorkspaceProvider workspace={workspace}>
+      <CommandPalette
+        slug={slug}
+        organizationId={workspace._id}
+        role={workspace.role}
+      />
       <NotificationPrompt />
       <div className="flex h-[calc(100dvh-57px)]">
         {/* Desktop sidebar */}

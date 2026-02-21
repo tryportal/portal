@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, ChatCircle, Tray, List } from "@phosphor-icons/react";
+import {
+  House,
+  ChatCircle,
+  Tray,
+  List,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { UserMenu } from "@/components/user-menu";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
@@ -69,7 +75,20 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
             );
           })}
         </nav>
-        <div className="flex flex-1" />
+        <div className="flex flex-1 items-center justify-end px-2 md:justify-center">
+          <button
+            onClick={() =>
+              document.dispatchEvent(new Event("open-command-palette"))
+            }
+            className="flex h-8 items-center gap-2 rounded-none border border-border bg-muted/50 px-2 text-xs text-muted-foreground hover:bg-muted md:w-60"
+          >
+            <MagnifyingGlass size={16} />
+            <span className="hidden md:inline">Search</span>
+            <kbd className="pointer-events-none ml-auto hidden select-none rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground md:inline">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
         <div className="flex items-stretch">
           <WorkspaceSwitcher slug={slug} />
           <UserMenu />
