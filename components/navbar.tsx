@@ -2,77 +2,63 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { UserMenu } from "@/components/user-menu";
-
-const navLinks = [
-  { href: "/home", label: "Home" },
-  { href: "/features", label: "Features" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/docs", label: "Docs" },
-];
+import { ChevronDown } from "lucide-react";
 
 export function Navbar() {
-  const pathname = usePathname();
   const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
   const dashboardHref = firstWorkspace
     ? `/w/${firstWorkspace.slug}`
     : "/onboarding";
 
   return (
-    <header className="border-b border-border">
-      <div className="flex h-14 items-stretch">
-        <Link
-          href="/"
-          className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
-        >
-          <Image src="/portal.svg" alt="Portal" width={24} height={24} className="dark:invert" />
+    <header className="flex justify-center px-4 pt-0">
+      <div className="flex h-14 w-full max-w-3xl items-center gap-1 rounded-b-2xl bg-muted/60 px-5 shadow-sm">
+        <Link href="/" className="mr-4 flex items-center">
+          <Image
+            src="/portal.svg"
+            alt="Portal"
+            width={24}
+            height={24}
+            className="dark:invert"
+          />
         </Link>
-        <nav className="hidden items-stretch md:flex">
-          {navLinks.map(({ href, label }) => {
-            const isActive = pathname === href || pathname.startsWith(href + "/");
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center border-r border-border px-5 text-xs hover:bg-muted hover:text-foreground ${
-                  isActive
-                    ? "font-bold text-foreground"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
+
+        <nav className="hidden items-center gap-1 md:flex">
+          <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+            Products
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+          <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+            Resources
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+          <Link
+            href="/integration"
+            className="flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            Integration
+          </Link>
         </nav>
-        <div className="flex flex-1" />
-        <div className="flex items-stretch">
+
+        <div className="flex-1" />
+
+        <div className="flex items-center">
           <SignedOut>
             <Link
               href="/sign-in"
-              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="rounded-full border border-border bg-background px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
-              Sign in
-            </Link>
-            <Link
-              href="/get-started"
-              className="flex items-center border-l border-border px-5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              Get started
+              Log in
             </Link>
           </SignedOut>
           <SignedIn>
             <Link
               href={dashboardHref}
-              className={`flex items-center border-l border-border px-5 text-xs hover:bg-muted hover:text-foreground ${
-                pathname.startsWith("/w")
-                  ? "font-bold text-foreground"
-                  : "text-muted-foreground"
-              }`}
+              className="mr-2 rounded-full border border-border bg-background px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               Dashboard
             </Link>
