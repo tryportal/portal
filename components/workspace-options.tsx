@@ -97,7 +97,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
                   isActive
                     ? isDanger
                       ? "border-destructive/30 bg-destructive/10 font-medium text-destructive"
-                      : "border-white/50 bg-primary text-primary-foreground font-medium"
+                      : "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
                     : isDanger
                       ? "border-transparent text-destructive/60 hover:bg-destructive/5 hover:text-destructive"
                       : "border-transparent text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
