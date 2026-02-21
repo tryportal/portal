@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ChannelHeader } from "@/components/channel-header";
@@ -13,6 +14,7 @@ import {
 } from "@/components/message-list";
 import { MessageInput, type PendingMessage } from "@/components/message-input";
 import { PinnedMessages } from "@/components/pinned-messages";
+import { ChannelSettingsDialog } from "@/components/channel-settings-dialog";
 import type { MessageData } from "@/components/message-item";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -33,9 +35,10 @@ interface ChannelChatProps {
   slug?: string;
 }
 
-export function ChannelChat({ channel }: ChannelChatProps) {
+export function ChannelChat({ channel, slug }: ChannelChatProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null);
   const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -169,6 +172,7 @@ export function ChannelChat({ channel }: ChannelChatProps) {
         isMuted={channel.isMuted}
         role={channel.role}
         onOpenPinned={() => setPinnedOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         onSearch={setSearchQuery}
         searchQuery={searchQuery}
       />
@@ -214,6 +218,18 @@ export function ChannelChat({ channel }: ChannelChatProps) {
         channelId={channel._id}
         channelName={channel.name}
       />
+
+      {/* Channel settings dialog */}
+      {isAdmin && (
+        <ChannelSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          channelId={channel._id}
+          channelName={channel.name}
+          channelDescription={channel.description}
+          slug={slug}
+        />
+      )}
 
       {/* Floating emoji picker for reactions */}
       {emojiPickerState && (

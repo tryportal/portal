@@ -29,6 +29,7 @@ interface ChannelHeaderProps {
   isMuted: boolean;
   role: string;
   onOpenPinned: () => void;
+  onOpenSettings?: () => void;
   onSearch: (query: string) => void;
   searchQuery: string;
 }
@@ -39,6 +40,7 @@ export function ChannelHeader({
   isMuted,
   role,
   onOpenPinned,
+  onOpenSettings,
   onSearch,
   searchQuery,
 }: ChannelHeaderProps) {
@@ -126,10 +128,10 @@ export function ChannelHeader({
               <PushPin size={14} />
               Pinned messages
             </DropdownMenuItem>
-            {isAdmin && (
+            {isAdmin && onOpenSettings && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenSettings}>
                   <GearSix size={14} />
                   Channel settings
                 </DropdownMenuItem>

@@ -511,22 +511,18 @@ export function WorkspaceSidebar({
                         const IconComponent =
                           channel.channelType === "forum" ? ChatCircle : Hash;
                         return (
-                          <div
+                          <Link
                             key={channel._id}
+                            href={channelHref}
                             className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
                               isChannelActive
                                 ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
                                 : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
                             }`}
                           >
-                            <Link
-                              href={channelHref}
-                              className="flex min-w-0 flex-1 items-center gap-2.5"
-                            >
-                              <IconComponent size={14} className="flex-shrink-0" />
-                              <span className="truncate">{channel.name}</span>
-                            </Link>
-                          </div>
+                            <IconComponent size={14} className="flex-shrink-0" />
+                            <span className="truncate">{channel.name}</span>
+                          </Link>
                         );
                       })}
                     </div>
@@ -748,7 +744,7 @@ function SortableChannel({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
+      className={`group relative flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
         isChannelActive
           ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
           : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
@@ -756,21 +752,21 @@ function SortableChannel({
       {...attributes}
       {...listeners}
     >
+      {/* Full-area clickable link */}
       <Link
         href={channelHref}
-        className="flex min-w-0 flex-1 items-center gap-2.5"
+        className="absolute inset-0"
         onClick={(e) => {
-          // Prevent navigation when drag ends on same spot
           if (isDragging) e.preventDefault();
         }}
-      >
-        <IconComponent size={14} className="flex-shrink-0" />
-        <span className="truncate">{channel.name}</span>
-      </Link>
+        aria-label={channel.name}
+      />
+      <IconComponent size={14} className="flex-shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{channel.name}</span>
       {isAdmin && (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className={`mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
+            className={`relative z-10 mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
               isChannelActive
                 ? "text-sidebar-foreground/70 hover:text-sidebar-foreground"
                 : "text-muted-foreground hover:text-sidebar-foreground"
