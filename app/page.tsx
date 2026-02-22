@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Navbar } from "@/components/navbar";
 import { DotLoader } from "@/components/ui/dot-loader";
+import { LandingPage } from "@/components/landing-page";
 
 export default function Page() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -38,6 +39,7 @@ export default function Page() {
   return (
     <div className="min-h-screen">
       <Navbar />
+      <LandingPage />
     </div>
   );
 }
