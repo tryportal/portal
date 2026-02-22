@@ -35,7 +35,56 @@ export const getChannelByName = query({
         q.eq("organizationId", org._id).eq("userId", identity.subject)
       )
       .unique();
-    if (!membership) return null;
+
+    // If not a workspace member, check if they're a shared channel member
+    let isSharedMember = false;
+    if (!membership) {
+      // We need to find the channel first to check shared membership
+      const categories = await ctx.db
+        .query("channelCategories")
+        .withIndex("by_organization", (q) => q.eq("organizationId", org._id))
+        .collect();
+
+      const category = categories.find(
+        (c) => c.name.toLowerCase().replace(/\s+/g, "-") === args.categoryName.toLowerCase()
+      );
+      if (!category) return null;
+
+      const channels = await ctx.db
+        .query("channels")
+        .withIndex("by_category", (q) => q.eq("categoryId", category._id))
+        .collect();
+
+      const channel = channels.find(
+        (c) => c.name.toLowerCase() === args.channelName.toLowerCase()
+      );
+      if (!channel) return null;
+
+      const sharedMember = await ctx.db
+        .query("sharedChannelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", channel._id).eq("userId", identity.subject)
+        )
+        .unique();
+      if (!sharedMember) return null;
+      isSharedMember = true;
+
+      // Check mute status
+      const muted = await ctx.db
+        .query("mutedChannels")
+        .withIndex("by_user_and_channel", (q) =>
+          q.eq("userId", identity.subject).eq("channelId", channel._id)
+        )
+        .unique();
+
+      return {
+        ...channel,
+        categoryName: category.name,
+        role: "shared" as const,
+        isMuted: !!muted,
+        organizationId: org._id,
+      };
+    }
 
     // Find the category by name (case-insensitive compare)
     const categories = await ctx.db
@@ -208,6 +257,31 @@ export const getMessages = query({
       }
     }
 
+    // Build shared member map for workspace badge
+    const sharedMembers = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    const sharedMemberMap = new Map<string, { sourceOrgName?: string; sourceOrgLogoUrl?: string | null }>();
+    for (const sm of sharedMembers) {
+      if (userIds.has(sm.userId)) {
+        let sourceOrgName: string | undefined;
+        let sourceOrgLogoUrl: string | null = null;
+        if (sm.sourceOrganizationId) {
+          const sourceOrg = await ctx.db.get(sm.sourceOrganizationId);
+          if (sourceOrg) {
+            sourceOrgName = sourceOrg.name;
+            if (sourceOrg.logoId) {
+              sourceOrgLogoUrl = await ctx.storage.getUrl(sourceOrg.logoId);
+            } else if (sourceOrg.imageUrl) {
+              sourceOrgLogoUrl = sourceOrg.imageUrl;
+            }
+          }
+        }
+        sharedMemberMap.set(sm.userId, { sourceOrgName, sourceOrgLogoUrl });
+      }
+    }
+
     // Enrich messages
     const enrichedPage = mainMessages.map((msg) => {
       const user = userMap.get(msg.userId);
@@ -215,6 +289,7 @@ export const getMessages = query({
         ? parentMap.get(msg.parentMessageId) ?? null
         : null;
       const threadMeta = threadMetaMap.get(msg._id);
+      const sharedInfo = sharedMemberMap.get(msg.userId);
 
       return {
         ...msg,
@@ -231,6 +306,8 @@ export const getMessages = query({
         })),
         threadReplyCount: threadMeta?.count ?? 0,
         threadLatestRepliers: threadMeta?.latestRepliers ?? [],
+        isSharedMember: !!sharedInfo,
+        sharedFromWorkspace: sharedInfo?.sourceOrgName ?? null,
       };
     });
 
@@ -635,11 +712,26 @@ export const sendMessage = mutation({
           .eq("userId", identity.subject)
       )
       .unique();
-    if (!membership) throw new Error("Not a member of this workspace");
 
-    // Check channel permissions
-    if (channel.permissions === "readOnly" && membership.role !== "admin") {
-      throw new Error("This channel is read-only");
+    // If not a workspace member, check shared channel membership
+    if (!membership) {
+      const sharedMember = await ctx.db
+        .query("sharedChannelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", identity.subject)
+        )
+        .unique();
+      if (!sharedMember) throw new Error("Not a member of this workspace");
+
+      // Shared members can't send in read-only channels
+      if (channel.permissions === "readOnly") {
+        throw new Error("This channel is read-only");
+      }
+    } else {
+      // Check channel permissions for workspace members
+      if (channel.permissions === "readOnly" && membership.role !== "admin") {
+        throw new Error("This channel is read-only");
+      }
     }
 
     const messageId = await ctx.db.insert("messages", {

@@ -133,8 +133,20 @@ export function WorkspaceSidebar({
     name: string;
   } | null>(null);
 
+  // Category edit/delete state
+  const [editingCategory, setEditingCategory] = useState<{
+    id: Id<"channelCategories">;
+    name: string;
+  } | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<{
+    id: Id<"channelCategories">;
+    name: string;
+  } | null>(null);
+
   const updateChannel = useMutation(api.channels.updateChannel);
   const deleteChannel = useMutation(api.channels.deleteChannel);
+  const updateCategoryMutation = useMutation(api.channels.updateCategory);
+  const deleteCategoryMutation = useMutation(api.channels.deleteCategory);
   const reorderCategories = useMutation(api.channels.reorderCategories);
   const reorderChannels = useMutation(api.channels.reorderChannels);
 
@@ -474,6 +486,8 @@ export function WorkspaceSidebar({
                     isAdmin={isAdmin}
                     onEdit={(ch) => setEditingChannel(ch)}
                     onDelete={(ch) => setDeletingChannel(ch)}
+                    onEditCategory={() => setEditingCategory({ id: category._id, name: category.name })}
+                    onDeleteCategory={() => setDeletingCategory({ id: category._id, name: category.name })}
                     isDraggingChannel={activeType === "channel"}
                     mutedSet={mutedSet}
                     onMuteToggle={async (channelId) => {
@@ -632,6 +646,45 @@ export function WorkspaceSidebar({
           }
         }}
       />
+
+      {/* Edit Category Dialog */}
+      <EditCategoryDialog
+        category={editingCategory}
+        onOpenChange={(open) => !open && setEditingCategory(null)}
+        onSave={async (name) => {
+          if (!editingCategory) return;
+          const oldSlug = editingCategory.name.toLowerCase().replace(/\s+/g, "-");
+          await updateCategoryMutation({ categoryId: editingCategory.id, name });
+          setEditingCategory(null);
+          // If viewing a channel within the renamed category, redirect
+          const newSlug = name.trim().toLowerCase().replace(/\s+/g, "-");
+          if (pathname.includes(`${base}/c/${oldSlug}/`) && oldSlug !== newSlug) {
+            router.push(pathname.replace(`/c/${oldSlug}/`, `/c/${newSlug}/`));
+          }
+        }}
+      />
+
+      {/* Delete Category Dialog */}
+      <DeleteCategoryDialog
+        category={deletingCategory}
+        firstOtherCategoryName={
+          data
+            ?.filter((c) => c._id !== deletingCategory?.id)
+            .sort((a, b) => (a as { order: number }).order - (b as { order: number }).order)[0]
+            ?.name ?? null
+        }
+        onOpenChange={(open) => !open && setDeletingCategory(null)}
+        onConfirm={async () => {
+          if (!deletingCategory) return;
+          const categorySlug = deletingCategory.name.toLowerCase().replace(/\s+/g, "-");
+          const wasActive = pathname.includes(`${base}/c/${categorySlug}/`);
+          await deleteCategoryMutation({ categoryId: deletingCategory.id });
+          setDeletingCategory(null);
+          if (wasActive) {
+            router.push(base);
+          }
+        }}
+      />
     </>
   );
 }
@@ -660,6 +713,8 @@ function SortableCategory({
   isAdmin,
   onEdit,
   onDelete,
+  onEditCategory,
+  onDeleteCategory,
   isDraggingChannel,
   mutedSet,
   onMuteToggle,
@@ -672,6 +727,8 @@ function SortableCategory({
   isAdmin: boolean;
   onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+  onEditCategory: () => void;
+  onDeleteCategory: () => void;
   isDraggingChannel: boolean;
   mutedSet: Set<Id<"channels">>;
   onMuteToggle: (channelId: Id<"channels">) => Promise<void>;
@@ -701,11 +758,11 @@ function SortableCategory({
     [category.channels]
   );
 
-  return (
-    <div ref={setNodeRef} style={style} className="mt-1">
+  const categoryHeader = (
+    <div className="group flex w-full items-center">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
+        className="flex flex-1 items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground"
         {...attributes}
         {...listeners}
       >
@@ -716,6 +773,56 @@ function SortableCategory({
         )}
         <span className="truncate">{category.name}</span>
       </button>
+      {isAdmin && (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="mr-3 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 text-muted-foreground hover:text-sidebar-foreground cursor-pointer">
+            <DotsThree size={14} weight="bold" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" sideOffset={4} align="start">
+            <DropdownMenuItem onClick={onEditCategory}>
+              <PencilSimple size={14} />
+              Edit category
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onDeleteCategory}
+            >
+              <Trash size={14} />
+              Delete category
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+
+  return (
+    <div ref={setNodeRef} style={style} className="mt-1">
+      {isAdmin ? (
+        <ContextMenu
+          content={
+            <>
+              <ContextMenuItem onClick={onEditCategory}>
+                <PencilSimple size={14} />
+                Edit category
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                className="text-destructive hover:text-destructive focus:text-destructive"
+                onClick={onDeleteCategory}
+              >
+                <Trash size={14} />
+                Delete category
+              </ContextMenuItem>
+            </>
+          }
+        >
+          {categoryHeader}
+        </ContextMenu>
+      ) : (
+        categoryHeader
+      )}
 
       {!isCollapsed && (
         <SortableContext
@@ -1209,6 +1316,136 @@ function EditChannelDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditCategoryDialog({
+  category,
+  onOpenChange,
+  onSave,
+}: {
+  category: { id: Id<"channelCategories">; name: string } | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (name: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (category) {
+      setName(category.name);
+    }
+  }, [category]);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onSave(name);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!category} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit category</DialogTitle>
+          <DialogDescription>
+            Rename this category.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Engineering, General"
+              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit();
+              }}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!name.trim() || isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteCategoryDialog({
+  category,
+  firstOtherCategoryName,
+  onOpenChange,
+  onConfirm,
+}: {
+  category: { id: Id<"channelCategories">; name: string } | null;
+  firstOtherCategoryName: string | null;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!category) {
+      setIsDeleting(false);
+    }
+  }, [category]);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={!!category} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete category</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will delete the <strong className="text-foreground">{category?.name}</strong> category.
+            {firstOtherCategoryName && (
+              <> Any channels in this category will be moved to <strong className="text-foreground">{firstOtherCategoryName}</strong>.</>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onOpenChange(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? "Deleting..." : "Delete category"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

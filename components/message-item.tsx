@@ -70,6 +70,8 @@ export interface MessageData {
   }[];
   threadReplyCount?: number;
   threadLatestRepliers?: { imageUrl?: string; name: string }[];
+  isSharedMember?: boolean;
+  sharedFromWorkspace?: string | null;
 }
 
 interface MessageItemProps {
@@ -513,6 +515,11 @@ function MessageItemInner({
         {showAvatar && (
           <div className="flex items-baseline gap-2">
             <span className="text-xs font-semibold">{message.userName}</span>
+            {message.isSharedMember && message.sharedFromWorkspace && (
+              <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground leading-none">
+                {message.sharedFromWorkspace}
+              </span>
+            )}
             <span
               className="text-[10px] text-muted-foreground"
               title={formatFullDate(message.createdAt)}

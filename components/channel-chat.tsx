@@ -15,8 +15,10 @@ import {
 import { MessageInput, type PendingMessage } from "@/components/message-input";
 import { PinnedMessages } from "@/components/pinned-messages";
 import { ChannelSettingsDialog } from "@/components/channel-settings-dialog";
+import { ShareChannelDialog } from "@/components/share-channel-dialog";
 import { ThreadSidebar } from "@/components/thread-sidebar";
 import { ThreadsList } from "@/components/threads-list";
+import { useWorkspace } from "@/components/workspace-context";
 import type { MessageData } from "@/components/message-item";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -45,9 +47,11 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeThread, setActiveThread] = useState<MessageData | null>(null);
   const [threadsListOpen, setThreadsListOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const messageListRef = useRef<MessageListHandle>(null);
   const { user } = useUser();
+  const workspace = useWorkspace();
 
   // Optimistic messages for instant feedback
   const [optimisticMessages, setOptimisticMessages] = useState<
@@ -201,6 +205,7 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
           role={channel.role}
           onOpenPinned={() => setPinnedOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onShareChannel={() => setShareOpen(true)}
           onSearch={setSearchQuery}
           searchQuery={searchQuery}
           onOpenThreads={() => setThreadsListOpen(true)}
@@ -280,6 +285,22 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
           channelName={channel.name}
           channelDescription={channel.description}
           slug={slug}
+        />
+      )}
+
+      {/* Share channel dialog */}
+      {isAdmin && (
+        <ShareChannelDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          channelId={channel._id}
+          channelName={channel.name}
+          workspaceName={workspace.name}
+          inviterName={
+            user
+              ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+              : "Unknown"
+          }
         />
       )}
 

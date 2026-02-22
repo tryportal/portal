@@ -14,6 +14,7 @@ import {
   GearSix,
   X,
   ChatCircle,
+  ShareNetwork,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ interface ChannelHeaderProps {
   onSearch: (query: string) => void;
   searchQuery: string;
   onOpenThreads?: () => void;
+  onShareChannel?: () => void;
 }
 
 export function ChannelHeader({
@@ -46,6 +48,7 @@ export function ChannelHeader({
   onSearch,
   searchQuery,
   onOpenThreads,
+  onShareChannel,
 }: ChannelHeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const muteChannel = useMutation(api.messages.muteChannel);
@@ -142,6 +145,12 @@ export function ChannelHeader({
               <PushPin size={14} />
               Pinned messages
             </DropdownMenuItem>
+            {isAdmin && onShareChannel && (
+              <DropdownMenuItem onClick={onShareChannel}>
+                <ShareNetwork size={14} />
+                Share channel
+              </DropdownMenuItem>
+            )}
             {isAdmin && onOpenSettings && (
               <>
                 <DropdownMenuSeparator />

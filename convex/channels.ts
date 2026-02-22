@@ -83,6 +83,97 @@ export const createCategory = mutation({
   },
 });
 
+export const updateCategory = mutation({
+  args: {
+    categoryId: v.id("channelCategories"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    await ctx.db.patch(args.categoryId, { name: args.name.trim() });
+  },
+});
+
+export const deleteCategory = mutation({
+  args: {
+    categoryId: v.id("channelCategories"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Get all categories for this org
+    const allCategories = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization_and_order", (q) =>
+        q.eq("organizationId", category.organizationId)
+      )
+      .collect();
+
+    if (allCategories.length <= 1) {
+      throw new Error("Cannot delete the only category");
+    }
+
+    // Find the first other category (lowest order that isn't this one)
+    const sortedCategories = allCategories.sort((a, b) => a.order - b.order);
+    const targetCategory = sortedCategories.find((c) => c._id !== args.categoryId);
+    if (!targetCategory) throw new Error("No target category found");
+
+    // Move all channels from this category to the target
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+      .collect();
+
+    // Get existing channels in target to calculate order offset
+    const targetChannels = await ctx.db
+      .query("channels")
+      .withIndex("by_category", (q) => q.eq("categoryId", targetCategory._id))
+      .collect();
+    const maxOrder = targetChannels.reduce((max, c) => Math.max(max, c.order), -1);
+
+    for (let i = 0; i < channels.length; i++) {
+      await ctx.db.patch(channels[i]._id, {
+        categoryId: targetCategory._id,
+        order: maxOrder + 1 + i,
+      });
+    }
+
+    // Delete the category
+    await ctx.db.delete(args.categoryId);
+  },
+});
+
 export const createChannel = mutation({
   args: {
     organizationId: v.id("organizations"),
