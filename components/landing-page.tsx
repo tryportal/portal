@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ChatCircleDots,
@@ -9,7 +10,6 @@ import {
   MagnifyingGlass,
   Lock,
   ArrowRight,
-  Play,
 } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
@@ -28,46 +28,6 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
 
-function ScreenPlaceholder({
-  label,
-  aspect = "video",
-  className = "",
-}: {
-  label: string;
-  aspect?: "video" | "square" | "wide";
-  className?: string;
-}) {
-  const aspectClass =
-    aspect === "square"
-      ? "aspect-square"
-      : aspect === "wide"
-        ? "aspect-[2/1]"
-        : "aspect-video";
-
-  return (
-    <div
-      className={`relative overflow-hidden border border-border bg-muted/50 ${aspectClass} ${className}`}
-    >
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <Play weight="fill" className="size-8 opacity-30" />
-          <span className="max-w-48 text-center text-xs font-medium opacity-50">
-            {label}
-          </span>
-        </div>
-      </div>
-      {/* Grid texture */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-    </div>
-  );
-}
 
 export function LandingPage() {
   return (
@@ -141,9 +101,13 @@ export function LandingPage() {
           className="relative mx-auto mt-20 max-w-5xl"
         >
           <div className="relative">
-            <ScreenPlaceholder
-              label="Full Portal workspace view — sidebar with channels, main chat area, thread panel open"
-              aspect="video"
+            <Image
+              src="/screenshots/hero-image.png"
+              alt="Full Portal workspace view — sidebar with channels, main chat area, thread panel open"
+              width={1920}
+              height={1080}
+              className="border border-border"
+              priority
             />
             {/* Shadow / depth */}
             <div className="absolute -inset-px -z-10 translate-y-2 bg-foreground/5 blur-xl" />
@@ -174,9 +138,12 @@ export function LandingPage() {
               Organize by project, team, or topic. Pin what matters. Archive
               what doesn&apos;t. Every conversation has a home.
             </p>
-            <ScreenPlaceholder
-              label="Channel list sidebar showing organized channels with unread counts, pins, and sections"
-              aspect="video"
+            <Image
+              src="/screenshots/channels.png"
+              alt="Channel list sidebar showing organized channels with unread counts, pins, and sections"
+              width={1920}
+              height={1080}
+              className="border border-border"
             />
           </motion.div>
 
@@ -194,9 +161,12 @@ export function LandingPage() {
               Discussions stay attached to the message that started them. Your
               main channel stays clean. Context stays intact.
             </p>
-            <ScreenPlaceholder
-              label="Thread panel open beside main chat — showing a focused conversation branching off a message"
-              aspect="video"
+            <Image
+              src="/screenshots/threads.png"
+              alt="Thread panel open beside main chat — showing a focused conversation branching off a message"
+              width={1920}
+              height={1080}
+              className="border border-border"
             />
           </motion.div>
         </motion.div>
@@ -226,9 +196,12 @@ export function LandingPage() {
           </motion.div>
 
           <motion.div variants={fadeUp} custom={1}>
-            <ScreenPlaceholder
-              label="Search modal — query at top, results showing messages, files, and channels with highlighted matches"
-              aspect="wide"
+            <Image
+              src="/screenshots/find-anything.png"
+              alt="Search modal — query at top, results showing messages, files, and channels with highlighted matches"
+              width={1920}
+              height={960}
+              className="border border-border"
             />
           </motion.div>
         </motion.div>
