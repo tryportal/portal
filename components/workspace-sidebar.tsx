@@ -76,7 +76,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 // Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
-const SIDEBAR_WIDTH = 224;
+const SIDEBAR_WIDTH = 280;
 
 interface WorkspaceSidebarProps {
   slug: string;
@@ -397,7 +397,7 @@ export function WorkspaceSidebar({
     <>
       <aside
         className={`flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground ${
-          isMobileDrawer ? "w-full" : ""
+          isMobileDrawer ? "w-full" : "w-[280px]"
         }`}
         style={isMobileDrawer ? undefined : { width: SIDEBAR_WIDTH }}
       >
