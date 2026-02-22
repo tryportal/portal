@@ -72,6 +72,7 @@ export interface MessageData {
   threadLatestRepliers?: { imageUrl?: string; name: string }[];
   isSharedMember?: boolean;
   sharedFromWorkspace?: string | null;
+  sharedFromWorkspaceLogoUrl?: string | null;
 }
 
 interface MessageItemProps {
@@ -485,20 +486,31 @@ function MessageItemInner({
       {/* Avatar column */}
       <div className="w-8 shrink-0 pt-0.5">
         {showAvatar ? (
-          message.userImageUrl ? (
-            <Image
-              src={message.userImageUrl}
-              alt={message.userName}
-              width={32}
-              height={32}
-              className="size-8 object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex size-8 items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground">
-              {message.userName.charAt(0).toUpperCase()}
-            </div>
-          )
+          <div className="relative size-8">
+            {message.userImageUrl ? (
+              <Image
+                src={message.userImageUrl}
+                alt={message.userName}
+                width={32}
+                height={32}
+                className="size-8 object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex size-8 items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground">
+                {message.userName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {message.isSharedMember && message.sharedFromWorkspaceLogoUrl && (
+              <Image
+                src={message.sharedFromWorkspaceLogoUrl}
+                alt={message.sharedFromWorkspace ?? ""}
+                width={16}
+                height={16}
+                className="absolute -bottom-1 -right-1 size-4 rounded border border-background object-cover"
+              />
+            )}
+          </div>
         ) : (
           <span
             className="flex h-5 items-center justify-end whitespace-nowrap text-[10px] leading-none text-muted-foreground opacity-0 group-hover:opacity-100"
@@ -515,11 +527,6 @@ function MessageItemInner({
         {showAvatar && (
           <div className="flex items-baseline gap-2">
             <span className="text-xs font-semibold">{message.userName}</span>
-            {message.isSharedMember && message.sharedFromWorkspace && (
-              <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground leading-none">
-                {message.sharedFromWorkspace}
-              </span>
-            )}
             <span
               className="text-[10px] text-muted-foreground"
               title={formatFullDate(message.createdAt)}

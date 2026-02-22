@@ -308,6 +308,7 @@ export const getMessages = query({
         threadLatestRepliers: threadMeta?.latestRepliers ?? [],
         isSharedMember: !!sharedInfo,
         sharedFromWorkspace: sharedInfo?.sourceOrgName ?? null,
+        sharedFromWorkspaceLogoUrl: sharedInfo?.sourceOrgLogoUrl ?? null,
       };
     });
 

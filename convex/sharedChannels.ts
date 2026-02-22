@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // ============================================================================
 // Mutations
@@ -428,13 +429,6 @@ export const getMySharedChannels = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const memberships = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .collect();
-
-    if (memberships.length === 0) return [];
-
     // Group by workspace
     const workspaceMap = new Map<
       string,
@@ -447,15 +441,18 @@ export const getMySharedChannels = query({
       }
     >();
 
-    for (const m of memberships) {
-      const channel = await ctx.db.get(m.channelId);
-      if (!channel) continue;
+    const seenChannels = new Set<string>();
+    const addChannel = async (channelId: Id<"channels">) => {
+      if (seenChannels.has(channelId as string)) return;
+      seenChannels.add(channelId as string);
+      const channel = await ctx.db.get(channelId);
+      if (!channel) return;
 
       const orgIdStr = channel.organizationId as string;
 
       if (!workspaceMap.has(orgIdStr)) {
         const org = await ctx.db.get(channel.organizationId);
-        if (!org) continue;
+        if (!org) return;
 
         let logoUrl: string | null = null;
         if (org.logoId) {
@@ -473,17 +470,53 @@ export const getMySharedChannels = query({
         });
       }
 
-      // Get category slug for URL
+      const existing = workspaceMap.get(orgIdStr)!.channels;
       const category = await ctx.db.get(channel.categoryId);
       const categorySlug = category
         ? category.name.toLowerCase().replace(/\s+/g, "-")
         : "general";
 
-      workspaceMap.get(orgIdStr)!.channels.push({
+      existing.push({
         _id: channel._id as string,
         name: channel.name,
         categorySlug,
       });
+    };
+
+    // 1. Channels shared WITH me (I'm a shared member)
+    const memberships = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+
+    for (const m of memberships) {
+      await addChannel(m.channelId);
+    }
+
+    // 2. Channels I own that have shared members (I'm a workspace member)
+    const myOrgs = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+
+    for (const org of myOrgs) {
+      // Get all channels in this org
+      const channels = await ctx.db
+        .query("channels")
+        .withIndex("by_organization", (q) => q.eq("organizationId", org.organizationId))
+        .collect();
+
+      for (const channel of channels) {
+        // Check if this channel has any shared members
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel", (q) => q.eq("channelId", channel._id))
+          .first();
+
+        if (sharedMember) {
+          await addChannel(channel._id);
+        }
+      }
     }
 
     return Array.from(workspaceMap.values());
