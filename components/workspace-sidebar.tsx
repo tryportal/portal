@@ -1402,12 +1402,14 @@ function CreateCategoryDialog({
   organizationId: Id<"organizations">;
 }) {
   const [name, setName] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createCategory = useMutation(api.channels.createCategory);
 
   const reset = () => {
     setName("");
+    setIsPrivate(false);
     setIsSubmitting(false);
   };
 
@@ -1419,6 +1421,7 @@ function CreateCategoryDialog({
       await createCategory({
         organizationId,
         name: name.trim(),
+        isPrivate: isPrivate || undefined,
       });
       reset();
       onOpenChange(false);
@@ -1458,6 +1461,27 @@ function CreateCategoryDialog({
               }}
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsPrivate(!isPrivate)}
+            className={`flex items-start gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
+              isPrivate
+                ? "border-foreground/30 bg-muted"
+                : "border-border hover:border-foreground/20 hover:bg-muted/50"
+            }`}
+          >
+            <LockSimple size={16} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <div className="grid gap-0.5">
+              <span className="text-xs font-medium">Private category</span>
+              <span className="text-[11px] text-muted-foreground">
+                All channels in this category will only be visible to selected members
+              </span>
+            </div>
+            {isPrivate && (
+              <Check size={14} className="ml-auto mt-0.5 flex-shrink-0" />
+            )}
+          </button>
         </div>
 
         <DialogFooter>
