@@ -144,6 +144,7 @@ export function WorkspaceSidebar({
   const [editingCategory, setEditingCategory] = useState<{
     id: Id<"channelCategories">;
     name: string;
+    isPrivate?: boolean;
   } | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<{
     id: Id<"channelCategories">;
@@ -493,7 +494,7 @@ export function WorkspaceSidebar({
                     isAdmin={isAdmin}
                     onEdit={(ch) => setEditingChannel(ch)}
                     onDelete={(ch) => setDeletingChannel(ch)}
-                    onEditCategory={() => setEditingCategory({ id: category._id, name: category.name })}
+                    onEditCategory={() => setEditingCategory({ id: category._id, name: category.name, isPrivate: category.isPrivate })}
                     onDeleteCategory={() => setDeletingCategory({ id: category._id, name: category.name })}
                     isDraggingChannel={activeType === "channel"}
                     mutedSet={mutedSet}
@@ -661,11 +662,17 @@ export function WorkspaceSidebar({
       {/* Edit Category Dialog */}
       <EditCategoryDialog
         category={editingCategory}
+        organizationId={organizationId}
         onOpenChange={(open) => !open && setEditingCategory(null)}
-        onSave={async (name) => {
+        onSave={async (name, isPrivate, memberIds) => {
           if (!editingCategory) return;
           const oldSlug = editingCategory.name.toLowerCase().replace(/\s+/g, "-");
-          await updateCategoryMutation({ categoryId: editingCategory.id, name });
+          await updateCategoryMutation({
+            categoryId: editingCategory.id,
+            name,
+            isPrivate: isPrivate || undefined,
+            memberIds,
+          });
           setEditingCategory(null);
           // If viewing a channel within the renamed category, redirect
           const newSlug = name.trim().toLowerCase().replace(/\s+/g, "-");
@@ -1043,11 +1050,9 @@ function CreateChannelDialog({
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [channelType, setChannelType] = useState<ChannelTypeOption>("open");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [memberSearch, setMemberSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createChannel = useMutation(api.channels.createChannel);
-  const members = useQuery(api.organizations.getWorkspaceMembers, { organizationId });
 
   const selectedCategoryData = categories.find((c) => c._id === selectedCategory);
   const isCategoryPrivate = selectedCategoryData?.isPrivate ?? false;
@@ -1061,7 +1066,6 @@ function CreateChannelDialog({
     setSelectedCategory("");
     setChannelType("open");
     setSelectedMemberIds([]);
-    setMemberSearch("");
     setIsSubmitting(false);
   };
 
@@ -1092,12 +1096,6 @@ function CreateChannelDialog({
 
   const canProceedFromDetails = name.trim().length > 0 && selectedCategory;
 
-  const filteredMembers = members?.filter((m) => {
-    if (!memberSearch.trim()) return true;
-    const search = memberSearch.toLowerCase();
-    const fullName = `${m.firstName ?? ""} ${m.lastName ?? ""}`.toLowerCase();
-    return fullName.includes(search) || (m.email?.toLowerCase().includes(search) ?? false);
-  });
 
   const toggleMember = (userId: string) => {
     setSelectedMemberIds((prev) =>
@@ -1263,77 +1261,11 @@ function CreateChannelDialog({
         )}
 
         {step === "members" && (
-          <div className="grid gap-3">
-            <div className="flex h-8 items-center border border-border bg-background text-xs">
-              <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
-                <MagnifyingGlass size={12} />
-              </span>
-              <input
-                type="text"
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Search members..."
-                className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-                autoFocus
-              />
-            </div>
-
-            <div className="max-h-48 overflow-y-auto rounded-md border border-border">
-              {filteredMembers?.map((member) => {
-                const isCreator = member.userId === members?.find(() => true)?.userId; // will be overridden below
-                const isSelected = selectedMemberIds.includes(member.userId);
-                const displayName = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email || "Unknown";
-
-                return (
-                  <button
-                    key={member.userId}
-                    onClick={() => toggleMember(member.userId)}
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-muted ${
-                      isSelected ? "bg-muted/50" : ""
-                    }`}
-                  >
-                    <div
-                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
-                        isSelected
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border"
-                      }`}
-                    >
-                      {isSelected && <Check size={10} />}
-                    </div>
-                    {member.imageUrl ? (
-                      <img
-                        src={member.imageUrl}
-                        alt=""
-                        className="h-5 w-5 flex-shrink-0 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
-                        {(member.firstName?.[0] ?? member.email?.[0] ?? "?").toUpperCase()}
-                      </div>
-                    )}
-                    <span className="min-w-0 flex-1 truncate">{displayName}</span>
-                    {member.role === "admin" && (
-                      <span className="flex-shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        Admin
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              {filteredMembers?.length === 0 && (
-                <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-                  No members found
-                </div>
-              )}
-            </div>
-
-            {selectedMemberIds.length > 0 && (
-              <p className="text-[11px] text-muted-foreground">
-                {selectedMemberIds.length} member{selectedMemberIds.length !== 1 ? "s" : ""} selected. Admins always have access.
-              </p>
-            )}
-          </div>
+          <MemberPicker
+            organizationId={organizationId}
+            selectedMemberIds={selectedMemberIds}
+            onToggle={toggleMember}
+          />
         )}
 
         <DialogFooter>
@@ -1392,6 +1324,88 @@ function CreateChannelDialog({
   );
 }
 
+function MemberPicker({
+  organizationId,
+  selectedMemberIds,
+  onToggle,
+}: {
+  organizationId: Id<"organizations">;
+  selectedMemberIds: string[];
+  onToggle: (userId: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const members = useQuery(api.organizations.getWorkspaceMembers, { organizationId });
+
+  const filtered = members?.filter((m) => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    const fullName = `${m.firstName ?? ""} ${m.lastName ?? ""}`.toLowerCase();
+    return fullName.includes(s) || (m.email?.toLowerCase().includes(s) ?? false);
+  });
+
+  return (
+    <div className="grid gap-2">
+      <label className="text-xs font-medium">Members</label>
+      <div className="flex h-8 items-center border border-border bg-background text-xs">
+        <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
+          <MagnifyingGlass size={12} />
+        </span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search members..."
+          className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto rounded-md border border-border">
+        {filtered?.map((member) => {
+          const isSelected = selectedMemberIds.includes(member.userId);
+          const displayName = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email || "Unknown";
+          return (
+            <button
+              key={member.userId}
+              onClick={() => onToggle(member.userId)}
+              className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-muted ${
+                isSelected ? "bg-muted/50" : ""
+              }`}
+            >
+              <div
+                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                  isSelected
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border"
+                }`}
+              >
+                {isSelected && <Check size={10} />}
+              </div>
+              {member.imageUrl ? (
+                <img src={member.imageUrl} alt="" className="h-5 w-5 flex-shrink-0 rounded-full object-cover" />
+              ) : (
+                <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+                  {(member.firstName?.[0] ?? member.email?.[0] ?? "?").toUpperCase()}
+                </div>
+              )}
+              <span className="min-w-0 flex-1 truncate">{displayName}</span>
+              {member.role === "admin" && (
+                <span className="flex-shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Admin</span>
+              )}
+            </button>
+          );
+        })}
+        {filtered?.length === 0 && (
+          <div className="px-3 py-4 text-center text-xs text-muted-foreground">No members found</div>
+        )}
+      </div>
+      {selectedMemberIds.length > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          {selectedMemberIds.length} member{selectedMemberIds.length !== 1 ? "s" : ""} selected. Admins always have access.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function CreateCategoryDialog({
   open,
   onOpenChange,
@@ -1403,6 +1417,7 @@ function CreateCategoryDialog({
 }) {
   const [name, setName] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createCategory = useMutation(api.channels.createCategory);
@@ -1410,7 +1425,14 @@ function CreateCategoryDialog({
   const reset = () => {
     setName("");
     setIsPrivate(false);
+    setSelectedMemberIds([]);
     setIsSubmitting(false);
+  };
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
   };
 
   const handleSubmit = async () => {
@@ -1422,6 +1444,7 @@ function CreateCategoryDialog({
         organizationId,
         name: name.trim(),
         isPrivate: isPrivate || undefined,
+        memberIds: isPrivate ? selectedMemberIds : undefined,
       });
       reset();
       onOpenChange(false);
@@ -1457,7 +1480,7 @@ function CreateCategoryDialog({
               className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
+                if (e.key === "Enter" && !isPrivate) handleSubmit();
               }}
             />
           </div>
@@ -1482,6 +1505,14 @@ function CreateCategoryDialog({
               <Check size={14} className="ml-auto mt-0.5 flex-shrink-0" />
             )}
           </button>
+
+          {isPrivate && (
+            <MemberPicker
+              organizationId={organizationId}
+              selectedMemberIds={selectedMemberIds}
+              onToggle={toggleMember}
+            />
+          )}
         </div>
 
         <DialogFooter>
@@ -1602,27 +1633,50 @@ function EditChannelDialog({
 
 function EditCategoryDialog({
   category,
+  organizationId,
   onOpenChange,
   onSave,
 }: {
-  category: { id: Id<"channelCategories">; name: string } | null;
+  category: { id: Id<"channelCategories">; name: string; isPrivate?: boolean } | null;
+  organizationId: Id<"organizations">;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string) => Promise<void>;
+  onSave: (name: string, isPrivate: boolean, memberIds: string[]) => Promise<void>;
 }) {
   const [name, setName] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const existingMembers = useQuery(
+    api.channels.getCategoryMembers,
+    category ? { categoryId: category.id } : "skip"
+  );
 
   useEffect(() => {
     if (category) {
       setName(category.name);
+      setIsPrivate(category.isPrivate ?? false);
     }
   }, [category]);
+
+  // Sync existing members when loaded
+  useEffect(() => {
+    if (existingMembers) {
+      setSelectedMemberIds(existingMembers);
+    }
+  }, [existingMembers]);
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
     setIsSubmitting(true);
     try {
-      await onSave(name);
+      await onSave(name, isPrivate, isPrivate ? selectedMemberIds : []);
     } finally {
       setIsSubmitting(false);
     }
@@ -1634,7 +1688,7 @@ function EditCategoryDialog({
         <DialogHeader>
           <DialogTitle>Edit category</DialogTitle>
           <DialogDescription>
-            Rename this category.
+            Update this category&apos;s name and privacy settings.
           </DialogDescription>
         </DialogHeader>
 
@@ -1649,10 +1703,39 @@ function EditCategoryDialog({
               className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
+                if (e.key === "Enter" && !isPrivate) handleSubmit();
               }}
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsPrivate(!isPrivate)}
+            className={`flex items-start gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
+              isPrivate
+                ? "border-foreground/30 bg-muted"
+                : "border-border hover:border-foreground/20 hover:bg-muted/50"
+            }`}
+          >
+            <LockSimple size={16} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <div className="grid gap-0.5">
+              <span className="text-xs font-medium">Private category</span>
+              <span className="text-[11px] text-muted-foreground">
+                All channels in this category will only be visible to selected members
+              </span>
+            </div>
+            {isPrivate && (
+              <Check size={14} className="ml-auto mt-0.5 flex-shrink-0" />
+            )}
+          </button>
+
+          {isPrivate && (
+            <MemberPicker
+              organizationId={organizationId}
+              selectedMemberIds={selectedMemberIds}
+              onToggle={toggleMember}
+            />
+          )}
         </div>
 
         <DialogFooter>

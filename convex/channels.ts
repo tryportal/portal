@@ -32,29 +32,42 @@ export const getChannelsAndCategories = query({
       )
       .collect();
 
-    // For non-admins, get their private channel memberships to filter
+    // For non-admins, get their private channel and category memberships to filter
     let accessibleChannelIds: Set<string> | null = null;
+    let accessibleCategoryIds: Set<string> | null = null;
     if (!isAdmin) {
       const myChannelMemberships = await ctx.db
         .query("channelMembers")
         .withIndex("by_user", (q) => q.eq("userId", identity.subject))
         .collect();
       accessibleChannelIds = new Set(myChannelMemberships.map((m) => m.channelId));
+
+      const myCategoryMemberships = await ctx.db
+        .query("categoryMembers")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      accessibleCategoryIds = new Set(myCategoryMemberships.map((m) => m.categoryId));
     }
 
     // Group channels by category and sort by order
     const grouped = categories
       .sort((a, b) => a.order - b.order)
+      .filter((category) => {
+        if (isAdmin) return true;
+        // Hide private categories the user isn't a member of
+        if (category.isPrivate) {
+          return accessibleCategoryIds!.has(category._id);
+        }
+        return true;
+      })
       .map((category) => ({
         ...category,
         channels: channels
           .filter((ch) => {
             if (ch.categoryId !== category._id) return false;
-            // Admins see everything
             if (isAdmin) return true;
-            // Check if channel or its category is private
-            const isChannelPrivate = ch.isPrivate || category.isPrivate;
-            if (isChannelPrivate) {
+            // For private channels (not from category privacy), check channel members
+            if (ch.isPrivate) {
               return accessibleChannelIds!.has(ch._id);
             }
             return true;
@@ -71,6 +84,7 @@ export const createCategory = mutation({
     organizationId: v.id("organizations"),
     name: v.string(),
     isPrivate: v.optional(v.boolean()),
+    memberIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -97,20 +111,47 @@ export const createCategory = mutation({
 
     const maxOrder = existing.reduce((max, c) => Math.max(max, c.order), -1);
 
-    return ctx.db.insert("channelCategories", {
+    const categoryId = await ctx.db.insert("channelCategories", {
       organizationId: args.organizationId,
       name: args.name,
       order: maxOrder + 1,
       isPrivate: args.isPrivate || undefined,
       createdAt: Date.now(),
     });
+
+    // Add category members for private categories
+    if (args.isPrivate) {
+      const now = Date.now();
+      // Always add the creator
+      await ctx.db.insert("categoryMembers", {
+        categoryId,
+        userId: identity.subject,
+        addedAt: now,
+        addedBy: identity.subject,
+      });
+      if (args.memberIds) {
+        for (const userId of args.memberIds) {
+          if (userId === identity.subject) continue;
+          await ctx.db.insert("categoryMembers", {
+            categoryId,
+            userId,
+            addedAt: now,
+            addedBy: identity.subject,
+          });
+        }
+      }
+    }
+
+    return categoryId;
   },
 });
 
 export const updateCategory = mutation({
   args: {
     categoryId: v.id("channelCategories"),
-    name: v.string(),
+    name: v.optional(v.string()),
+    isPrivate: v.optional(v.boolean()),
+    memberIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -130,7 +171,64 @@ export const updateCategory = mutation({
       throw new Error("Not authorized");
     }
 
-    await ctx.db.patch(args.categoryId, { name: args.name.trim() });
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name.trim();
+    if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate || undefined;
+    await ctx.db.patch(args.categoryId, updates);
+
+    // Sync category members if memberIds provided
+    if (args.memberIds !== undefined) {
+      // Remove all existing category members
+      const existingMembers = await ctx.db
+        .query("categoryMembers")
+        .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+        .collect();
+      for (const m of existingMembers) {
+        await ctx.db.delete(m._id);
+      }
+
+      // Add new members (always include the caller)
+      if (args.isPrivate !== false) {
+        const now = Date.now();
+        const memberSet = new Set(args.memberIds);
+        memberSet.add(identity.subject); // Always include admin
+
+        for (const userId of memberSet) {
+          await ctx.db.insert("categoryMembers", {
+            categoryId: args.categoryId,
+            userId,
+            addedAt: now,
+            addedBy: identity.subject,
+          });
+        }
+      }
+    }
+  },
+});
+
+export const getCategoryMembers = query({
+  args: { categoryId: v.id("channelCategories") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) return [];
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return [];
+
+    const members = await ctx.db
+      .query("categoryMembers")
+      .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+      .collect();
+
+    return members.map((m) => m.userId);
   },
 });
 
@@ -252,24 +350,27 @@ export const createChannel = mutation({
     // Add channel members for private channels
     if (isPrivate) {
       const now = Date.now();
-      // Always add the creator
-      await ctx.db.insert("channelMembers", {
-        channelId,
-        userId: identity.subject,
-        addedAt: now,
-        addedBy: identity.subject,
-      });
-      // Add selected members
+      // Collect all member IDs: explicit picks + category members (for private categories)
+      const allMemberIds = new Set<string>([identity.subject]);
       if (args.memberIds) {
-        for (const userId of args.memberIds) {
-          if (userId === identity.subject) continue; // Already added
-          await ctx.db.insert("channelMembers", {
-            channelId,
-            userId,
-            addedAt: now,
-            addedBy: identity.subject,
-          });
-        }
+        for (const id of args.memberIds) allMemberIds.add(id);
+      }
+      // If category is private, auto-include all category members
+      if (category.isPrivate) {
+        const catMembers = await ctx.db
+          .query("categoryMembers")
+          .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+          .collect();
+        for (const m of catMembers) allMemberIds.add(m.userId);
+      }
+
+      for (const userId of allMemberIds) {
+        await ctx.db.insert("channelMembers", {
+          channelId,
+          userId,
+          addedAt: now,
+          addedBy: identity.subject,
+        });
       }
     }
 

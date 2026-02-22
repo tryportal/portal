@@ -65,6 +65,17 @@ export default defineSchema({
     .index("by_category", ["categoryId"])
     .index("by_category_and_order", ["categoryId", "order"]),
 
+  // Members of private categories - only users in this table can access channels in a private category
+  categoryMembers: defineTable({
+    categoryId: v.id("channelCategories"),
+    userId: v.string(), // Clerk user ID
+    addedAt: v.number(),
+    addedBy: v.string(), // Clerk user ID of who added this member
+  })
+    .index("by_category", ["categoryId"])
+    .index("by_user", ["userId"])
+    .index("by_category_and_user", ["categoryId", "userId"]),
+
   // Members of private channels - only users in this table can access a private channel
   channelMembers: defineTable({
     channelId: v.id("channels"),
