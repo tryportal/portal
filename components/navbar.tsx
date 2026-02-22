@@ -6,7 +6,7 @@ import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { UserMenu } from "@/components/user-menu";
-import { CaretDown } from "@phosphor-icons/react";
+
 
 export function Navbar() {
   const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
@@ -28,19 +28,14 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
-            Products
-            <CaretDown className="h-3.5 w-3.5 text-muted-foreground" weight="bold" />
-          </button>
-          <button className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
-            Resources
-            <CaretDown className="h-3.5 w-3.5 text-muted-foreground" weight="bold" />
-          </button>
-          <Link
-            href="/integration"
-            className="flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-          >
-            Integration
+          <Link href="/home" className="flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+            Home
+          </Link>
+          <Link href="/features" className="flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+            Features
+          </Link>
+          <Link href="/pricing" className="flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+            Pricing
           </Link>
         </nav>
 
@@ -60,7 +55,7 @@ export function Navbar() {
               href={dashboardHref}
               className="mr-2 rounded-full border border-border bg-background px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
-              Dashboard
+              Go to workspace
             </Link>
             <UserMenu />
           </SignedIn>
