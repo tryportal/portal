@@ -145,7 +145,7 @@ export function LandingPage() {
                 src="/screenshots/channels.png"
                 alt="Channel list sidebar showing organized channels with unread counts, pins, and sections"
                 fill
-                className="object-cover object-top"
+                className="object-cover object-center"
               />
             </div>
           </motion.div>
