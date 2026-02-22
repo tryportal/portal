@@ -315,7 +315,7 @@ export function LandingPage() {
             &copy; {new Date().getFullYear()} Portal. All rights reserved.
           </p>
           <nav className="flex gap-6">
-            {["Privacy", "Terms", "Docs"].map((link) => (
+            {["Privacy", "Docs"].map((link) => (
               <Link
                 key={link}
                 href={`/${link.toLowerCase()}`}
