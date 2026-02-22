@@ -50,7 +50,7 @@ export default function RootLayout({
               {children}
             </ConvexClientProvider>
           </ThemeProvider>
-          {process.env.NODE_ENV === "development" && <Agentation />}
+          {process.env.NEXT_PUBLIC_AGENTATION === "true" && <Agentation />}
         </body>
       </html>
     </ClerkProvider>
