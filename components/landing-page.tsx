@@ -151,27 +151,6 @@ export function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ===================== LOGO BAR ===================== */}
-      <section className="border-y border-border px-6 py-12">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Trusted by teams building what&apos;s next
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-12 opacity-30">
-            {["Acme Co", "Globex", "Initech", "Umbrella", "Stark"].map(
-              (name) => (
-                <span
-                  key={name}
-                  className="text-sm font-semibold tracking-wide text-foreground"
-                >
-                  {name}
-                </span>
-              )
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* ===================== FEATURE PAIR — TWO CARDS ===================== */}
       <section className="px-6 py-24 md:py-32">
         <motion.div
