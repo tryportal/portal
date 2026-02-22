@@ -13,6 +13,7 @@ import {
   PushPin,
   GearSix,
   X,
+  ChatCircle,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ interface ChannelHeaderProps {
   onOpenSettings?: () => void;
   onSearch: (query: string) => void;
   searchQuery: string;
+  onOpenThreads?: () => void;
 }
 
 export function ChannelHeader({
@@ -43,6 +45,7 @@ export function ChannelHeader({
   onOpenSettings,
   onSearch,
   searchQuery,
+  onOpenThreads,
 }: ChannelHeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const muteChannel = useMutation(api.messages.muteChannel);
@@ -75,6 +78,17 @@ export function ChannelHeader({
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-0.5">
+        {onOpenThreads && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onOpenThreads}
+            title="Threads"
+          >
+            <ChatCircle size={14} />
+          </Button>
+        )}
+
         {searchOpen ? (
           <div className="flex h-8 items-center border border-border bg-background md:h-7">
             <MagnifyingGlass

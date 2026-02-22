@@ -168,12 +168,53 @@ export const getMessages = query({
       }
     }
 
+    // Filter out thread replies from main feed
+    const mainMessages = results.page.filter((msg) => !msg.parentMessageId);
+
+    // Count thread replies and get latest repliers for each main message
+    const threadMetaMap = new Map<Id<"messages">, { count: number; latestRepliers: { imageUrl?: string; name: string }[] }>();
+    for (const msg of mainMessages) {
+      const replies = await ctx.db
+        .query("messages")
+        .withIndex("by_parent_message", (q) => q.eq("parentMessageId", msg._id))
+        .collect();
+      if (replies.length > 0) {
+        // Get last 3 unique repliers
+        const seen = new Set<string>();
+        const latestRepliers: { imageUrl?: string; name: string }[] = [];
+        for (let i = replies.length - 1; i >= 0 && latestRepliers.length < 3; i--) {
+          const r = replies[i];
+          if (seen.has(r.userId)) continue;
+          seen.add(r.userId);
+          const u = userMap.get(r.userId) ?? await (async () => {
+            const user = await ctx.db
+              .query("users")
+              .withIndex("by_clerk_id", (q) => q.eq("clerkId", r.userId))
+              .unique();
+            if (user) {
+              userMap.set(r.userId, { firstName: user.firstName, lastName: user.lastName, imageUrl: user.imageUrl, clerkId: user.clerkId });
+              return userMap.get(r.userId)!;
+            }
+            return null;
+          })();
+          if (u) {
+            latestRepliers.push({
+              imageUrl: u.imageUrl,
+              name: [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unknown",
+            });
+          }
+        }
+        threadMetaMap.set(msg._id, { count: replies.length, latestRepliers });
+      }
+    }
+
     // Enrich messages
-    const enrichedPage = results.page.map((msg) => {
+    const enrichedPage = mainMessages.map((msg) => {
       const user = userMap.get(msg.userId);
       const parentMessage = msg.parentMessageId
         ? parentMap.get(msg.parentMessageId) ?? null
         : null;
+      const threadMeta = threadMetaMap.get(msg._id);
 
       return {
         ...msg,
@@ -188,6 +229,8 @@ export const getMessages = query({
           ...att,
           url: attachmentUrlMap.get(att.storageId) ?? null,
         })),
+        threadReplyCount: threadMeta?.count ?? 0,
+        threadLatestRepliers: threadMeta?.latestRepliers ?? [],
       };
     });
 
@@ -326,6 +369,227 @@ export const searchMessages = query({
           ...att,
           url: attachmentUrlMap.get(att.storageId) ?? null,
         })),
+      };
+    });
+  },
+});
+
+/**
+ * Get a single message by ID, enriched with user data.
+ */
+export const getMessage = query({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const msg = await ctx.db.get(args.messageId);
+    if (!msg) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", msg.userId))
+      .unique();
+
+    const saved = await ctx.db
+      .query("savedMessages")
+      .withIndex("by_user_and_message", (q) =>
+        q.eq("userId", identity.subject).eq("messageId", args.messageId)
+      )
+      .unique();
+
+    // Resolve attachment URLs
+    const attachments = msg.attachments
+      ? await Promise.all(
+          msg.attachments.map(async (att) => ({
+            ...att,
+            url: (await ctx.storage.getUrl(att.storageId)) ?? null,
+          }))
+        )
+      : undefined;
+
+    return {
+      ...msg,
+      userName: user
+        ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+        : "Unknown",
+      userImageUrl: user?.imageUrl ?? null,
+      parentMessage: null as { content: string; userId: string; userName: string } | null,
+      isSaved: !!saved,
+      isOwn: msg.userId === identity.subject,
+      attachments,
+      threadReplyCount: 0,
+      threadLatestRepliers: [] as { imageUrl?: string; name: string }[],
+    };
+  },
+});
+
+/**
+ * Get all replies for a thread (by parent message ID).
+ */
+export const getThreadReplies = query({
+  args: { parentMessageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const replies = await ctx.db
+      .query("messages")
+      .withIndex("by_parent_message", (q) =>
+        q.eq("parentMessageId", args.parentMessageId)
+      )
+      .collect();
+
+    // Sort ascending (oldest first)
+    replies.sort((a, b) => a.createdAt - b.createdAt);
+
+    // Batch fetch user profiles
+    const userIds = new Set<string>();
+    for (const msg of replies) {
+      userIds.add(msg.userId);
+    }
+
+    const userMap = new Map<string, { firstName?: string; lastName?: string; imageUrl?: string; clerkId: string }>();
+    for (const userId of userIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+        .unique();
+      if (user) {
+        userMap.set(userId, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl,
+          clerkId: user.clerkId,
+        });
+      }
+    }
+
+    // Check saved status
+    const savedMessages = await ctx.db
+      .query("savedMessages")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const savedMessageIds = new Set(savedMessages.map((s) => s.messageId));
+
+    // Resolve attachment URLs
+    const attachmentUrlMap = new Map<string, string>();
+    for (const msg of replies) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          if (!attachmentUrlMap.has(att.storageId)) {
+            const url = await ctx.storage.getUrl(att.storageId);
+            if (url) attachmentUrlMap.set(att.storageId, url);
+          }
+        }
+      }
+    }
+
+    return replies.map((msg) => {
+      const user = userMap.get(msg.userId);
+      return {
+        ...msg,
+        userName: user
+          ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown",
+        userImageUrl: user?.imageUrl ?? null,
+        parentMessage: null as { content: string; userId: string; userName: string } | null,
+        isSaved: savedMessageIds.has(msg._id),
+        isOwn: msg.userId === identity.subject,
+        attachments: msg.attachments?.map((att) => ({
+          ...att,
+          url: attachmentUrlMap.get(att.storageId) ?? null,
+        })),
+        threadReplyCount: 0,
+        threadLatestRepliers: [] as { imageUrl?: string; name: string }[],
+      };
+    });
+  },
+});
+
+/**
+ * Get all threads (parent messages with replies) in a channel.
+ */
+export const getChannelThreads = query({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    // Get all messages in channel
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_channel_and_created", (q) =>
+        q.eq("channelId", args.channelId)
+      )
+      .order("desc")
+      .collect();
+
+    // Find parent messages that have at least 1 reply
+    const parentIds = new Set<Id<"messages">>();
+    for (const msg of messages) {
+      if (msg.parentMessageId) {
+        parentIds.add(msg.parentMessageId);
+      }
+    }
+
+    // Get the parent messages and their thread metadata
+    const threads: {
+      parentMessage: typeof messages[0];
+      replyCount: number;
+      lastReplyAt: number;
+    }[] = [];
+
+    for (const parentId of parentIds) {
+      const parent = messages.find((m) => m._id === parentId) ?? await ctx.db.get(parentId);
+      if (!parent) continue;
+
+      const replies = messages.filter((m) => m.parentMessageId === parentId);
+      const lastReply = replies.length > 0
+        ? Math.max(...replies.map((r) => r.createdAt))
+        : parent.createdAt;
+
+      threads.push({
+        parentMessage: parent,
+        replyCount: replies.length,
+        lastReplyAt: lastReply,
+      });
+    }
+
+    // Sort by most recent activity
+    threads.sort((a, b) => b.lastReplyAt - a.lastReplyAt);
+
+    // Enrich with user data
+    const userIds = new Set(threads.map((t) => t.parentMessage.userId));
+    const userMap = new Map<string, { firstName?: string; lastName?: string; imageUrl?: string }>();
+    for (const userId of userIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+        .unique();
+      if (user) {
+        userMap.set(userId, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl,
+        });
+      }
+    }
+
+    return threads.map((t) => {
+      const user = userMap.get(t.parentMessage.userId);
+      return {
+        _id: t.parentMessage._id,
+        content: t.parentMessage.content,
+        userId: t.parentMessage.userId,
+        createdAt: t.parentMessage.createdAt,
+        channelId: t.parentMessage.channelId,
+        userName: user
+          ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown",
+        userImageUrl: user?.imageUrl ?? null,
+        replyCount: t.replyCount,
+        lastReplyAt: t.lastReplyAt,
       };
     });
   },

@@ -21,6 +21,7 @@ import {
   Link,
   File,
   X,
+  ChatCircle,
 } from "@phosphor-icons/react";
 import {
   DropdownMenu,
@@ -67,6 +68,8 @@ export interface MessageData {
     url?: string | null;
     previewUrl?: string;
   }[];
+  threadReplyCount?: number;
+  threadLatestRepliers?: { imageUrl?: string; name: string }[];
 }
 
 interface MessageItemProps {
@@ -76,6 +79,8 @@ interface MessageItemProps {
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
   showAvatar: boolean;
   pending?: boolean;
+  onOpenThread?: (message: MessageData) => void;
+  hideThreadIndicator?: boolean;
 }
 
 function formatTime(timestamp: number): string {
@@ -356,6 +361,8 @@ function MessageItemInner({
   onEmojiPickerOpen,
   showAvatar,
   pending,
+  onOpenThread,
+  hideThreadIndicator,
 }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -420,10 +427,17 @@ function MessageItemInner({
         <Copy size={14} />
         Copy text
       </ContextMenuItem>
-      <ContextMenuItem onClick={() => onReply(message)}>
-        <ArrowBendUpLeft size={14} />
-        Reply
-      </ContextMenuItem>
+      {onOpenThread ? (
+        <ContextMenuItem onClick={() => onOpenThread(message)}>
+          <ChatCircle size={14} />
+          Reply in Thread
+        </ContextMenuItem>
+      ) : (
+        <ContextMenuItem onClick={() => onReply(message)}>
+          <ArrowBendUpLeft size={14} />
+          Reply
+        </ContextMenuItem>
+      )}
       <ContextMenuSeparator />
       {isAdmin && (
         <ContextMenuItem onClick={handlePin}>
@@ -653,17 +667,50 @@ function MessageItemInner({
             ))}
           </div>
         )}
+
+        {/* Thread reply count indicator */}
+        {!hideThreadIndicator && (message.threadReplyCount ?? 0) > 0 && (
+          <button
+            onClick={() => onOpenThread?.(message)}
+            className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+          >
+            <div className="flex -space-x-1.5">
+              {message.threadLatestRepliers?.slice(0, 3).map((r, i) =>
+                r.imageUrl ? (
+                  <Image
+                    key={i}
+                    src={r.imageUrl}
+                    alt={r.name}
+                    width={16}
+                    height={16}
+                    className="size-4 border border-background object-cover"
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="flex size-4 items-center justify-center border border-background bg-muted text-[7px] font-medium text-muted-foreground"
+                  >
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                )
+              )}
+            </div>
+            <span className="font-medium">
+              {message.threadReplyCount} {message.threadReplyCount === 1 ? "reply" : "replies"}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Action toolbar - hover on desktop, always-visible dots on mobile */}
       {!editing && (
         <div className="absolute -top-3 right-3 flex items-center border border-border bg-background shadow-sm opacity-0 transition-opacity group-hover:opacity-100 md:right-4 max-md:opacity-0 max-md:group-active:opacity-100 max-md:has-[*[data-state=open]]:opacity-100">
           <button
-            onClick={() => onReply(message)}
+            onClick={() => onOpenThread ? onOpenThread(message) : onReply(message)}
             className="hidden size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors md:flex"
-            title="Reply"
+            title={onOpenThread ? "Reply in Thread" : "Reply"}
           >
-            <ArrowBendUpLeft size={14} />
+            {onOpenThread ? <ChatCircle size={14} /> : <ArrowBendUpLeft size={14} />}
           </button>
           <button
             onClick={(e) => {
@@ -685,10 +732,17 @@ function MessageItemInner({
                 <Copy size={14} />
                 Copy text
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onReply(message)}>
-                <ArrowBendUpLeft size={14} />
-                Reply
-              </DropdownMenuItem>
+              {onOpenThread ? (
+                <DropdownMenuItem onClick={() => onOpenThread(message)}>
+                  <ChatCircle size={14} />
+                  Reply in Thread
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onReply(message)}>
+                  <ArrowBendUpLeft size={14} />
+                  Reply
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={(e) => {
                   const rect = (

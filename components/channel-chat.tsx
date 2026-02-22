@@ -15,6 +15,8 @@ import {
 import { MessageInput, type PendingMessage } from "@/components/message-input";
 import { PinnedMessages } from "@/components/pinned-messages";
 import { ChannelSettingsDialog } from "@/components/channel-settings-dialog";
+import { ThreadSidebar } from "@/components/thread-sidebar";
+import { ThreadsList } from "@/components/threads-list";
 import type { MessageData } from "@/components/message-item";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -41,6 +43,8 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeThread, setActiveThread] = useState<MessageData | null>(null);
+  const [threadsListOpen, setThreadsListOpen] = useState(false);
 
   const messageListRef = useRef<MessageListHandle>(null);
   const { user } = useUser();
@@ -139,6 +143,28 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
     setReplyTo(null);
   }, []);
 
+  const handleOpenThread = useCallback((message: MessageData) => {
+    setActiveThread(message);
+  }, []);
+
+  const handleSelectThread = useCallback(
+    (threadId: Id<"messages">) => {
+      // Set a minimal MessageData - ThreadSidebar will fetch full data via query
+      setActiveThread({
+        _id: threadId,
+        userId: "",
+        content: "",
+        createdAt: 0,
+        userName: "",
+        userImageUrl: null,
+        parentMessage: null,
+        isSaved: false,
+        isOwn: false,
+      });
+    },
+    []
+  );
+
   const handleEmojiPickerOpen = useCallback(
     (messageId: Id<"messages">, rect: DOMRect) => {
       setEmojiPickerState({
@@ -165,50 +191,67 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
   );
 
   return (
-    <div className="flex h-full flex-col">
-      <ChannelHeader
-        channelName={channel.name}
-        channelId={channel._id}
-        isMuted={channel.isMuted}
-        role={channel.role}
-        onOpenPinned={() => setPinnedOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onSearch={setSearchQuery}
-        searchQuery={searchQuery}
-      />
-
-      <MessageList
-        ref={messageListRef}
-        channelId={channel._id}
-        isAdmin={isAdmin}
-        onReply={handleReply}
-        onEmojiPickerOpen={handleEmojiPickerOpen}
-        searchResults={
-          debouncedSearch.trim() && searchResults
-            ? (searchResults as MessageData[])
-            : null
-        }
-        optimisticMessages={optimisticMessages}
-        onOptimisticClear={clearOptimistic}
-      />
-
-      {!isReadOnly && (
-        <MessageInput
+    <div className="flex h-full flex-row">
+      {/* Main chat area */}
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        <ChannelHeader
+          channelName={channel.name}
           channelId={channel._id}
-          replyTo={replyTo}
-          onCancelReply={handleCancelReply}
-          onMessageSending={handleMessageSending}
+          isMuted={channel.isMuted}
+          role={channel.role}
+          onOpenPinned={() => setPinnedOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onSearch={setSearchQuery}
+          searchQuery={searchQuery}
+          onOpenThreads={() => setThreadsListOpen(true)}
         />
-      )}
 
-      {isReadOnly && (
-        <div className="shrink-0 px-4 pb-4">
-          <div className="border border-border bg-muted/30 px-4 py-3 text-center">
-            <p className="text-xs text-muted-foreground">
-              This channel is read-only. Only admins can send messages.
-            </p>
+        <MessageList
+          ref={messageListRef}
+          channelId={channel._id}
+          isAdmin={isAdmin}
+          onReply={handleReply}
+          onEmojiPickerOpen={handleEmojiPickerOpen}
+          searchResults={
+            debouncedSearch.trim() && searchResults
+              ? (searchResults as MessageData[])
+              : null
+          }
+          optimisticMessages={optimisticMessages}
+          onOptimisticClear={clearOptimistic}
+          onOpenThread={handleOpenThread}
+        />
+
+        {!isReadOnly && (
+          <MessageInput
+            channelId={channel._id}
+            replyTo={replyTo}
+            onCancelReply={handleCancelReply}
+            onMessageSending={handleMessageSending}
+          />
+        )}
+
+        {isReadOnly && (
+          <div className="shrink-0 px-4 pb-4">
+            <div className="border border-border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-xs text-muted-foreground">
+                This channel is read-only. Only admins can send messages.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Thread sidebar */}
+      {activeThread && (
+        <ThreadSidebar
+          parentMessage={activeThread.userName ? activeThread : undefined}
+          parentMessageId={activeThread._id}
+          channelId={channel._id}
+          isAdmin={isAdmin}
+          onClose={() => setActiveThread(null)}
+          onEmojiPickerOpen={handleEmojiPickerOpen}
+        />
       )}
 
       {/* Pinned messages dialog */}
@@ -217,6 +260,15 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
         onOpenChange={setPinnedOpen}
         channelId={channel._id}
         channelName={channel.name}
+      />
+
+      {/* Threads list dialog */}
+      <ThreadsList
+        open={threadsListOpen}
+        onOpenChange={setThreadsListOpen}
+        channelId={channel._id}
+        channelName={channel.name}
+        onSelectThread={handleSelectThread}
       />
 
       {/* Channel settings dialog */}

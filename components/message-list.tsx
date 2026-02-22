@@ -44,6 +44,7 @@ interface MessageListProps {
   searchResults: MessageData[] | null;
   optimisticMessages?: OptimisticMessage[];
   onOptimisticClear?: () => void;
+  onOpenThread?: (message: MessageData) => void;
 }
 
 const BATCH_SIZE = 50;
@@ -86,7 +87,7 @@ function formatDateSeparator(timestamp: number): string {
 
 export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
   function MessageList(
-    { channelId, isAdmin, onReply, onEmojiPickerOpen, searchResults, optimisticMessages, onOptimisticClear },
+    { channelId, isAdmin, onReply, onEmojiPickerOpen, searchResults, optimisticMessages, onOptimisticClear, onOpenThread },
     ref
   ) {
   const { results, status, loadMore } = usePaginatedQuery(
@@ -325,6 +326,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
                     showAvatar={
                       showDateSeparator || !shouldGroupMessages(msg, prevMsg)
                     }
+                    onOpenThread={onOpenThread}
                   />
                 </div>
               );

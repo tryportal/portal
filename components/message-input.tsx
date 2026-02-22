@@ -47,6 +47,7 @@ interface MessageInputProps {
   replyTo: MessageData | null;
   onCancelReply: () => void;
   onMessageSending?: (pending: PendingMessage) => void;
+  parentMessageId?: Id<"messages">;
 }
 
 function getContentFromEditor(editor: ReturnType<typeof useEditor>): {
@@ -82,6 +83,7 @@ export function MessageInput({
   replyTo,
   onCancelReply,
   onMessageSending,
+  parentMessageId,
 }: MessageInputProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -235,6 +237,8 @@ export function MessageInput({
     setPendingFiles([]);
     onCancelReply();
 
+    const effectiveParentId = parentMessageId ?? replyTo?._id;
+
     onMessageSending?.({
       id: pendingId,
       content:
@@ -242,7 +246,7 @@ export function MessageInput({
         (hasFiles
           ? `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`
           : ""),
-      parentMessageId: replyTo?._id,
+      parentMessageId: effectiveParentId,
       replyTo,
       attachments: hasFiles ? optimisticAttachments : undefined,
     });
@@ -259,7 +263,7 @@ export function MessageInput({
           trimmed ||
           `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`,
         attachments,
-        parentMessageId: replyTo?._id,
+        parentMessageId: effectiveParentId,
         mentions: mentions.length > 0 ? mentions : undefined,
       });
     } finally {
@@ -278,6 +282,7 @@ export function MessageInput({
     onCancelReply,
     onMessageSending,
     uploadFiles,
+    parentMessageId,
   ]);
 
   // Keep ref in sync
