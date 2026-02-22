@@ -128,46 +128,52 @@ export function LandingPage() {
           <motion.div
             variants={fadeUp}
             custom={0}
-            className="group border border-border p-6 md:p-8"
+            className="group overflow-hidden border border-border"
           >
-            <div className="mb-1 flex items-center gap-2">
-              <ChatCircleDots weight="bold" className="size-5" />
-              <h3 className="text-lg font-semibold">Channels that make sense</h3>
+            <div className="p-6 md:p-8">
+              <div className="mb-1 flex items-center gap-2">
+                <ChatCircleDots weight="bold" className="size-5" />
+                <h3 className="text-lg font-semibold">Channels that make sense</h3>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Organize by project, team, or topic. Pin what matters. Archive
+                what doesn&apos;t. Every conversation has a home.
+              </p>
             </div>
-            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-              Organize by project, team, or topic. Pin what matters. Archive
-              what doesn&apos;t. Every conversation has a home.
-            </p>
-            <Image
-              src="/screenshots/channels.png"
-              alt="Channel list sidebar showing organized channels with unread counts, pins, and sections"
-              width={1920}
-              height={1080}
-              className="border border-border"
-            />
+            <div className="relative aspect-[4/3] overflow-hidden border-t border-border bg-muted/30">
+              <Image
+                src="/screenshots/channels.png"
+                alt="Channel list sidebar showing organized channels with unread counts, pins, and sections"
+                fill
+                className="object-cover object-top"
+              />
+            </div>
           </motion.div>
 
           {/* Card 2 */}
           <motion.div
             variants={fadeUp}
             custom={1}
-            className="group border border-border p-6 md:p-8"
+            className="group overflow-hidden border border-border"
           >
-            <div className="mb-1 flex items-center gap-2">
-              <Lightning weight="bold" className="size-5" />
-              <h3 className="text-lg font-semibold">Threads, not noise</h3>
+            <div className="p-6 md:p-8">
+              <div className="mb-1 flex items-center gap-2">
+                <Lightning weight="bold" className="size-5" />
+                <h3 className="text-lg font-semibold">Threads, not noise</h3>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Discussions stay attached to the message that started them. Your
+                main channel stays clean. Context stays intact.
+              </p>
             </div>
-            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-              Discussions stay attached to the message that started them. Your
-              main channel stays clean. Context stays intact.
-            </p>
-            <Image
-              src="/screenshots/threads.png"
-              alt="Thread panel open beside main chat — showing a focused conversation branching off a message"
-              width={1920}
-              height={1080}
-              className="border border-border"
-            />
+            <div className="relative aspect-[4/3] overflow-hidden border-t border-border bg-muted/30">
+              <Image
+                src="/screenshots/threads.png"
+                alt="Thread panel open beside main chat — showing a focused conversation branching off a message"
+                fill
+                className="object-cover object-top"
+              />
+            </div>
           </motion.div>
         </motion.div>
       </section>
