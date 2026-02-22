@@ -21,6 +21,13 @@ import {
   Trash,
   Bell,
   BellSlash,
+  LockSimple,
+  Megaphone,
+  Globe,
+  ArrowLeft,
+  Check,
+  Info,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -534,6 +541,7 @@ export function WorkspaceSidebar({
                       <CaretDown size={12} weight="bold" />
                     )}
                     <span className="truncate">{category.name}</span>
+                    {category.isPrivate && <LockSimple size={10} className="flex-shrink-0 opacity-60" />}
                   </button>
                   {!isCollapsed && (
                     <div className="flex flex-col gap-px">
@@ -541,8 +549,11 @@ export function WorkspaceSidebar({
                         const categorySlug = category.name.toLowerCase().replace(/\s+/g, "-");
                         const channelHref = `${base}/c/${categorySlug}/${channel.name}`;
                         const isChannelActive = pathname === channelHref;
-                        const IconComponent =
-                          channel.channelType === "forum" ? ChatCircle : Hash;
+                        const IconComponent = channel.isPrivate
+                          ? LockSimple
+                          : channel.channelType === "forum"
+                            ? ChatCircle
+                            : Hash;
                         const isMuted = mutedSet.has(channel._id);
                         return (
                           <ContextMenu
@@ -696,11 +707,14 @@ interface ChannelItem {
   name: string;
   description?: string;
   channelType?: "chat" | "forum";
+  isPrivate?: boolean;
+  permissions?: "open" | "readOnly";
 }
 
 interface CategoryItem {
   _id: Id<"channelCategories">;
   name: string;
+  isPrivate?: boolean;
   channels: ChannelItem[];
 }
 
@@ -772,6 +786,7 @@ function SortableCategory({
           <CaretDown size={12} weight="bold" />
         )}
         <span className="truncate">{category.name}</span>
+        {category.isPrivate && <LockSimple size={10} className="flex-shrink-0 opacity-60" />}
       </button>
       {isAdmin && (
         <DropdownMenu>
@@ -892,7 +907,11 @@ function SortableChannel({
 
   const channelHref = `${base}/c/${categorySlug}/${channel.name}`;
   const isChannelActive = pathname === channelHref;
-  const IconComponent = channel.channelType === "forum" ? ChatCircle : Hash;
+  const IconComponent = channel.isPrivate
+    ? LockSimple
+    : channel.channelType === "forum"
+      ? ChatCircle
+      : Hash;
 
   const muteMenuItem = (
     <ContextMenuItem onClick={onMuteToggle}>
@@ -1004,6 +1023,9 @@ function SortableChannel({
   return <ContextMenu content={channelContextMenu}>{inner}</ContextMenu>;
 }
 
+type CreateChannelStep = "details" | "type" | "members";
+type ChannelTypeOption = "open" | "readOnly" | "private";
+
 function CreateChannelDialog({
   open,
   onOpenChange,
@@ -1013,19 +1035,33 @@ function CreateChannelDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: Id<"organizations">;
-  categories: { _id: Id<"channelCategories">; name: string }[];
+  categories: { _id: Id<"channelCategories">; name: string; isPrivate?: boolean }[];
 }) {
+  const [step, setStep] = useState<CreateChannelStep>("details");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [channelType, setChannelType] = useState<ChannelTypeOption>("open");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createChannel = useMutation(api.channels.createChannel);
+  const members = useQuery(api.organizations.getWorkspaceMembers, { organizationId });
+
+  const selectedCategoryData = categories.find((c) => c._id === selectedCategory);
+  const isCategoryPrivate = selectedCategoryData?.isPrivate ?? false;
+
+  const totalSteps = channelType === "private" || isCategoryPrivate ? 3 : 2;
 
   const reset = () => {
+    setStep("details");
     setName("");
     setDescription("");
     setSelectedCategory("");
+    setChannelType("open");
+    setSelectedMemberIds([]);
+    setMemberSearch("");
     setIsSubmitting(false);
   };
 
@@ -1033,12 +1069,19 @@ function CreateChannelDialog({
     if (!name.trim() || !selectedCategory) return;
     setIsSubmitting(true);
 
+    const isPrivate = channelType === "private" || isCategoryPrivate;
+    const permissions: "open" | "readOnly" =
+      channelType === "readOnly" ? "readOnly" : "open";
+
     try {
       await createChannel({
         organizationId,
         categoryId: selectedCategory as Id<"channelCategories">,
         name: name.trim().toLowerCase().replace(/\s+/g, "-"),
         description: description.trim() || undefined,
+        permissions,
+        isPrivate: isPrivate || undefined,
+        memberIds: isPrivate ? selectedMemberIds : undefined,
       });
       reset();
       onOpenChange(false);
@@ -1046,6 +1089,25 @@ function CreateChannelDialog({
       setIsSubmitting(false);
     }
   };
+
+  const canProceedFromDetails = name.trim().length > 0 && selectedCategory;
+
+  const filteredMembers = members?.filter((m) => {
+    if (!memberSearch.trim()) return true;
+    const search = memberSearch.toLowerCase();
+    const fullName = `${m.firstName ?? ""} ${m.lastName ?? ""}`.toLowerCase();
+    return fullName.includes(search) || (m.email?.toLowerCase().includes(search) ?? false);
+  });
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const stepNumber = step === "details" ? 1 : step === "type" ? 2 : 3;
 
   return (
     <Dialog
@@ -1059,76 +1121,271 @@ function CreateChannelDialog({
         <DialogHeader>
           <DialogTitle>Create channel</DialogTitle>
           <DialogDescription>
-            Channels are where conversations happen. Create one for a topic or
-            project.
+            Step {stepNumber} of {totalSteps}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <label className="text-xs font-medium">Name</label>
-            <div className="flex h-8 items-center border border-border bg-background text-xs">
-              <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
-                #
-              </span>
+        {step === "details" && (
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Name</label>
+              <div className="flex h-8 items-center border border-border bg-background text-xs">
+                <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
+                  #
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. design, marketing"
+                  className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canProceedFromDetails) setStep("type");
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Category</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
+              >
+                <option value="">Select a category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}{cat.isPrivate ? " (Private)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">
+                Description{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. design, marketing"
-                className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSubmit();
-                }}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What's this channel about?"
+                className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
               />
             </div>
           </div>
+        )}
 
-          <div className="grid gap-1.5">
-            <label className="text-xs font-medium">Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-ring"
-            >
-              <option value="">Select a category</option>
-              {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+        {step === "type" && (
+          <div className="grid gap-3">
+            {isCategoryPrivate && (
+              <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
+                <Info size={14} className="mt-0.5 flex-shrink-0" />
+                <span>This category is private. All channels in it are only visible to members with access.</span>
+              </div>
+            )}
+
+            <div className="grid gap-2">
+              {([
+                {
+                  value: "open" as const,
+                  label: "Open",
+                  desc: "Everyone can read and write messages",
+                  icon: Globe,
+                },
+                {
+                  value: "readOnly" as const,
+                  label: "Read-only",
+                  desc: "Everyone can read, only admins can post",
+                  icon: Megaphone,
+                },
+                {
+                  value: "private" as const,
+                  label: "Private",
+                  desc: "Only selected members can access",
+                  icon: LockSimple,
+                },
+              ] as const).map((option) => {
+                const isDisabled = isCategoryPrivate && option.value !== "private" && option.value !== "readOnly";
+
+                // For private categories, allow selecting readOnly as an additional permission
+                const isActive = isCategoryPrivate
+                  ? (option.value === "private") || (option.value === "readOnly" && channelType === "readOnly")
+                  : channelType === (option.value as ChannelTypeOption);
+
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      if (isCategoryPrivate) {
+                        // In private categories, toggle readOnly on/off (channel is always private)
+                        if (option.value === "readOnly") {
+                          setChannelType(channelType === "readOnly" ? "private" : "readOnly");
+                        }
+                        // Can't deselect private when category is private
+                        return;
+                      }
+                      setChannelType(option.value);
+                    }}
+                    disabled={isDisabled}
+                    className={`flex items-start gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
+                      isActive
+                        ? "border-foreground/30 bg-muted"
+                        : isDisabled
+                          ? "cursor-not-allowed border-border opacity-40"
+                          : "border-border hover:border-foreground/20 hover:bg-muted/50"
+                    }`}
+                  >
+                    <option.icon size={16} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
+                    <div className="grid gap-0.5">
+                      <span className="text-xs font-medium">{option.label}</span>
+                      <span className="text-[11px] text-muted-foreground">{option.desc}</span>
+                    </div>
+                    {isActive && (
+                      <Check size={14} className="ml-auto mt-0.5 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {isCategoryPrivate && (
+              <p className="text-[11px] text-muted-foreground">
+                You can additionally make this channel read-only within the private category.
+              </p>
+            )}
           </div>
+        )}
 
-          <div className="grid gap-1.5">
-            <label className="text-xs font-medium">
-              Description{" "}
-              <span className="font-normal text-muted-foreground">
-                (optional)
+        {step === "members" && (
+          <div className="grid gap-3">
+            <div className="flex h-8 items-center border border-border bg-background text-xs">
+              <span className="flex h-full items-center border-r border-border bg-muted px-2 text-muted-foreground">
+                <MagnifyingGlass size={12} />
               </span>
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this channel about?"
-              className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
-            />
+              <input
+                type="text"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                placeholder="Search members..."
+                className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+
+            <div className="max-h-48 overflow-y-auto rounded-md border border-border">
+              {filteredMembers?.map((member) => {
+                const isCreator = member.userId === members?.find(() => true)?.userId; // will be overridden below
+                const isSelected = selectedMemberIds.includes(member.userId);
+                const displayName = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email || "Unknown";
+
+                return (
+                  <button
+                    key={member.userId}
+                    onClick={() => toggleMember(member.userId)}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-muted ${
+                      isSelected ? "bg-muted/50" : ""
+                    }`}
+                  >
+                    <div
+                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                        isSelected
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border"
+                      }`}
+                    >
+                      {isSelected && <Check size={10} />}
+                    </div>
+                    {member.imageUrl ? (
+                      <img
+                        src={member.imageUrl}
+                        alt=""
+                        className="h-5 w-5 flex-shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+                        {(member.firstName?.[0] ?? member.email?.[0] ?? "?").toUpperCase()}
+                      </div>
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{displayName}</span>
+                    {member.role === "admin" && (
+                      <span className="flex-shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        Admin
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {filteredMembers?.length === 0 && (
+                <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                  No members found
+                </div>
+              )}
+            </div>
+
+            {selectedMemberIds.length > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                {selectedMemberIds.length} member{selectedMemberIds.length !== 1 ? "s" : ""} selected. Admins always have access.
+              </p>
+            )}
           </div>
-        </div>
+        )}
 
         <DialogFooter>
+          {step !== "details" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mr-auto"
+              onClick={() => setStep(step === "members" ? "type" : "details")}
+            >
+              <ArrowLeft size={14} />
+              Back
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={!name.trim() || !selectedCategory || isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : "Create channel"}
-          </Button>
+          {step === "details" && (
+            <Button
+              size="sm"
+              onClick={() => setStep("type")}
+              disabled={!canProceedFromDetails}
+            >
+              Next
+            </Button>
+          )}
+          {step === "type" && (
+            <>
+              {channelType === "private" || isCategoryPrivate ? (
+                <Button size="sm" onClick={() => setStep("members")}>
+                  Next
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Creating..." : "Create channel"}
+                </Button>
+              )}
+            </>
+          )}
+          {step === "members" && (
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create channel"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

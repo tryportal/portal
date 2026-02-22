@@ -108,6 +108,18 @@ export const getChannelByName = query({
     );
     if (!channel) return null;
 
+    // Check private channel access
+    const isChannelPrivate = channel.isPrivate || category.isPrivate;
+    if (isChannelPrivate && membership.role !== "admin") {
+      const channelMember = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", channel._id).eq("userId", identity.subject)
+        )
+        .unique();
+      if (!channelMember) return null;
+    }
+
     // Check mute status
     const muted = await ctx.db
       .query("mutedChannels")
@@ -139,6 +151,30 @@ export const getMessages = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { page: [], isDone: true, continueCursor: "" };
+
+    // Check private channel access
+    const channel = await ctx.db.get(args.channelId);
+    if (channel) {
+      const category = await ctx.db.get(channel.categoryId);
+      const isChannelPrivate = channel.isPrivate || category?.isPrivate;
+      if (isChannelPrivate) {
+        const membership = await ctx.db
+          .query("organizationMembers")
+          .withIndex("by_organization_and_user", (q) =>
+            q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+          )
+          .unique();
+        if (!membership || membership.role !== "admin") {
+          const channelMember = await ctx.db
+            .query("channelMembers")
+            .withIndex("by_channel_and_user", (q) =>
+              q.eq("channelId", args.channelId).eq("userId", identity.subject)
+            )
+            .unique();
+          if (!channelMember) return { page: [], isDone: true, continueCursor: "" };
+        }
+      }
+    }
 
     const results = await ctx.db
       .query("messages")
@@ -729,6 +765,21 @@ export const sendMessage = mutation({
         throw new Error("This channel is read-only");
       }
     } else {
+      // Check private channel access for workspace members
+      const category = await ctx.db.get(channel.categoryId);
+      const isChannelPrivate = channel.isPrivate || category?.isPrivate;
+      if (isChannelPrivate && membership.role !== "admin") {
+        const channelMember = await ctx.db
+          .query("channelMembers")
+          .withIndex("by_channel_and_user", (q) =>
+            q.eq("channelId", args.channelId).eq("userId", identity.subject)
+          )
+          .unique();
+        if (!channelMember) {
+          throw new Error("Not a member of this private channel");
+        }
+      }
+
       // Check channel permissions for workspace members
       if (channel.permissions === "readOnly" && membership.role !== "admin") {
         throw new Error("This channel is read-only");

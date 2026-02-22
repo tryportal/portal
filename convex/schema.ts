@@ -38,6 +38,7 @@ export default defineSchema({
     organizationId: v.id("organizations"),
     name: v.string(),
     order: v.number(),
+    isPrivate: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_organization", ["organizationId"])

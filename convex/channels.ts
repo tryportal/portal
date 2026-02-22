@@ -16,6 +16,8 @@ export const getChannelsAndCategories = query({
       .unique();
     if (!membership) return null;
 
+    const isAdmin = membership.role === "admin";
+
     const categories = await ctx.db
       .query("channelCategories")
       .withIndex("by_organization_and_order", (q) =>
@@ -30,13 +32,33 @@ export const getChannelsAndCategories = query({
       )
       .collect();
 
+    // For non-admins, get their private channel memberships to filter
+    let accessibleChannelIds: Set<string> | null = null;
+    if (!isAdmin) {
+      const myChannelMemberships = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      accessibleChannelIds = new Set(myChannelMemberships.map((m) => m.channelId));
+    }
+
     // Group channels by category and sort by order
     const grouped = categories
       .sort((a, b) => a.order - b.order)
       .map((category) => ({
         ...category,
         channels: channels
-          .filter((ch) => ch.categoryId === category._id)
+          .filter((ch) => {
+            if (ch.categoryId !== category._id) return false;
+            // Admins see everything
+            if (isAdmin) return true;
+            // Check if channel or its category is private
+            const isChannelPrivate = ch.isPrivate || category.isPrivate;
+            if (isChannelPrivate) {
+              return accessibleChannelIds!.has(ch._id);
+            }
+            return true;
+          })
           .sort((a, b) => a.order - b.order),
       }));
 
@@ -48,6 +70,7 @@ export const createCategory = mutation({
   args: {
     organizationId: v.id("organizations"),
     name: v.string(),
+    isPrivate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -78,6 +101,7 @@ export const createCategory = mutation({
       organizationId: args.organizationId,
       name: args.name,
       order: maxOrder + 1,
+      isPrivate: args.isPrivate || undefined,
       createdAt: Date.now(),
     });
   },
@@ -180,6 +204,9 @@ export const createChannel = mutation({
     categoryId: v.id("channelCategories"),
     name: v.string(),
     description: v.optional(v.string()),
+    permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
+    isPrivate: v.optional(v.boolean()),
+    memberIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -196,6 +223,11 @@ export const createChannel = mutation({
       throw new Error("Not authorized");
     }
 
+    // Check if category is private — force channel to be private too
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
+    const isPrivate = category.isPrivate ? true : (args.isPrivate ?? false);
+
     // Get next order within category
     const existing = await ctx.db
       .query("channels")
@@ -204,17 +236,44 @@ export const createChannel = mutation({
 
     const maxOrder = existing.reduce((max, c) => Math.max(max, c.order), -1);
 
-    return ctx.db.insert("channels", {
+    const channelId = await ctx.db.insert("channels", {
       organizationId: args.organizationId,
       categoryId: args.categoryId,
       name: args.name,
       description: args.description,
       icon: "Hash",
-      permissions: "open",
+      permissions: args.permissions ?? "open",
+      isPrivate: isPrivate || undefined,
       order: maxOrder + 1,
       createdAt: Date.now(),
       createdBy: identity.subject,
     });
+
+    // Add channel members for private channels
+    if (isPrivate) {
+      const now = Date.now();
+      // Always add the creator
+      await ctx.db.insert("channelMembers", {
+        channelId,
+        userId: identity.subject,
+        addedAt: now,
+        addedBy: identity.subject,
+      });
+      // Add selected members
+      if (args.memberIds) {
+        for (const userId of args.memberIds) {
+          if (userId === identity.subject) continue; // Already added
+          await ctx.db.insert("channelMembers", {
+            channelId,
+            userId,
+            addedAt: now,
+            addedBy: identity.subject,
+          });
+        }
+      }
+    }
+
+    return channelId;
   },
 });
 
@@ -223,6 +282,8 @@ export const updateChannel = mutation({
     channelId: v.id("channels"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
+    isPrivate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -245,6 +306,8 @@ export const updateChannel = mutation({
     const updates: Record<string, unknown> = {};
     if (args.name !== undefined) updates.name = args.name.trim().toLowerCase().replace(/\s+/g, "-");
     if (args.description !== undefined) updates.description = args.description;
+    if (args.permissions !== undefined) updates.permissions = args.permissions;
+    if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate || undefined;
 
     await ctx.db.patch(args.channelId, updates);
   },
@@ -384,5 +447,111 @@ export const reorderChannels = mutation({
         order: i,
       });
     }
+  },
+});
+
+export const addChannelMembers = mutation({
+  args: {
+    channelId: v.id("channels"),
+    userIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const now = Date.now();
+    for (const userId of args.userIds) {
+      // Skip if already a member
+      const existing = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", userId)
+        )
+        .unique();
+      if (existing) continue;
+
+      await ctx.db.insert("channelMembers", {
+        channelId: args.channelId,
+        userId,
+        addedAt: now,
+        addedBy: identity.subject,
+      });
+    }
+  },
+});
+
+export const removeChannelMember = mutation({
+  args: {
+    channelId: v.id("channels"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const channelMember = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel_and_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", args.userId)
+      )
+      .unique();
+    if (channelMember) {
+      await ctx.db.delete(channelMember._id);
+    }
+  },
+});
+
+export const getChannelMembers = query({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) return [];
+
+    // Verify workspace membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return [];
+
+    const members = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+
+    return members.map((m) => m.userId);
   },
 });
