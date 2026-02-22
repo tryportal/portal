@@ -14,7 +14,7 @@ import { useMentionNotifications } from "@/components/use-mention-notifications"
 import { CommandPalette } from "@/components/command-palette";
 
 /** Routes that do NOT show the sidebar */
-const NO_SIDEBAR_ROUTES = ["/inbox", "/saved"];
+const NO_SIDEBAR_ROUTES = ["/inbox", "/saved", "/shared"];
 
 export function WorkspaceShell({
   slug,
