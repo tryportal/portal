@@ -370,32 +370,39 @@ function MessageItemInner({
     navigator.clipboard.writeText(message.content);
   }, [message.content]);
 
+  const isPending = (message._id as string).startsWith("pending-");
+
   const handleDelete = useCallback(async () => {
+    if (isPending) return;
     await deleteMessage({ messageId: message._id });
-  }, [deleteMessage, message._id]);
+  }, [deleteMessage, message._id, isPending]);
 
   const handlePin = useCallback(async () => {
+    if (isPending) return;
     await pinMessage({ messageId: message._id });
-  }, [pinMessage, message._id]);
+  }, [pinMessage, message._id, isPending]);
 
   const handleSave = useCallback(async () => {
+    if (isPending) return;
     await toggleSaveMessage({ messageId: message._id });
-  }, [toggleSaveMessage, message._id]);
+  }, [toggleSaveMessage, message._id, isPending]);
 
   const handleEditSubmit = useCallback(async () => {
+    if (isPending) return;
     if (!editContent.trim() || editContent === message.content) {
       setEditing(false);
       return;
     }
     await editMessage({ messageId: message._id, content: editContent });
     setEditing(false);
-  }, [editMessage, message._id, editContent, message.content]);
+  }, [editMessage, message._id, editContent, message.content, isPending]);
 
   const handleReactionClick = useCallback(
     async (emoji: string) => {
+      if (isPending) return;
       await toggleReaction({ messageId: message._id, emoji });
     },
-    [toggleReaction, message._id]
+    [toggleReaction, message._id, isPending]
   );
 
   const reactions = message.reactions ? groupReactions(message.reactions) : [];
