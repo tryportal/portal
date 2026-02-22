@@ -18,7 +18,7 @@ const themeOptions = [
   { value: "dark", icon: Moon },
 ] as const;
 
-export function UserMenu() {
+export function UserMenu({ compact }: { compact?: boolean } = {}) {
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -28,11 +28,17 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center justify-center rounded-full cursor-pointer outline-none">
+      <DropdownMenuTrigger
+        className={
+          compact
+            ? "flex items-center justify-center cursor-pointer outline-none"
+            : "flex w-14 items-center justify-center border-l border-border hover:bg-muted cursor-pointer outline-none"
+        }
+      >
         <img
           src={user.imageUrl}
           alt={user.fullName ?? "Profile"}
-          className="size-7 rounded-full object-cover"
+          className={compact ? "size-7 rounded-full object-cover" : "size-6 object-cover"}
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={0} className="w-44">

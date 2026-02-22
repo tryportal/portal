@@ -57,7 +57,7 @@ export function Navbar() {
             >
               Go to workspace
             </Link>
-            <UserMenu />
+            <UserMenu compact />
           </SignedIn>
         </div>
       </div>
