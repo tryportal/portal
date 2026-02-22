@@ -15,8 +15,8 @@ export function Navbar() {
     : "/onboarding";
 
   return (
-    <header className="sticky top-0 z-50 flex justify-center px-4 pt-0 backdrop-blur-md">
-      <div className="flex h-14 w-full max-w-3xl items-center gap-1 rounded-b-2xl bg-muted/60 px-5 shadow-sm">
+    <header className="sticky top-0 z-50 flex justify-center px-4 pt-0">
+      <div className="flex h-14 w-full max-w-3xl items-center gap-1 rounded-b-2xl bg-muted/60 px-5 shadow-sm backdrop-blur-md">
         <Link href="/" className="mr-4 flex items-center">
           <Image
             src="/portal.svg"
