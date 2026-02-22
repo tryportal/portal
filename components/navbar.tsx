@@ -41,7 +41,7 @@ export function Navbar() {
 
         <div className="flex-1" />
 
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <SignedOut>
             <Link
               href="/sign-in"
@@ -53,7 +53,7 @@ export function Navbar() {
           <SignedIn>
             <Link
               href={dashboardHref}
-              className="mr-2 rounded-full border border-border bg-background px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="rounded-full border border-border bg-background px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               Go to workspace
             </Link>
