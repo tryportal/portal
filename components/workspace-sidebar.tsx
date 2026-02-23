@@ -29,6 +29,7 @@ import {
   Info,
   MagnifyingGlass,
   LinkSimple,
+  ShareNetwork,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,10 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useUser } from "@clerk/nextjs";
+import { useWorkspace } from "@/components/workspace-context";
+import { ShareChannelDialog } from "@/components/share-channel-dialog";
+import { ThreadsList } from "@/components/threads-list";
 
 // Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
 const SIDEBAR_WIDTH = 280;
@@ -130,6 +135,12 @@ export function WorkspaceSidebar({
     null
   );
   const [defaultCategoryId, setDefaultCategoryId] = useState<Id<"channelCategories"> | undefined>();
+
+  // Share & threads state
+  const [sharingChannel, setSharingChannel] = useState<{ id: Id<"channels">; name: string } | null>(null);
+  const [threadsChannel, setThreadsChannel] = useState<{ id: Id<"channels">; name: string } | null>(null);
+  const workspace = useWorkspace();
+  const { user } = useUser();
 
   // Channel edit/delete state
   const [editingChannel, setEditingChannel] = useState<{
@@ -496,6 +507,8 @@ export function WorkspaceSidebar({
                     isAdmin={isAdmin}
                     onEdit={(ch) => setEditingChannel(ch)}
                     onDelete={(ch) => setDeletingChannel(ch)}
+                    onShare={(ch) => setSharingChannel(ch)}
+                    onViewThreads={(ch) => setThreadsChannel(ch)}
                     onEditCategory={() => setEditingCategory({ id: category._id, name: category.name, isPrivate: category.isPrivate })}
                     onDeleteCategory={() => setDeletingCategory({ id: category._id, name: category.name })}
                     onCreateChannel={() => {
@@ -578,6 +591,12 @@ export function WorkspaceSidebar({
                                 >
                                   {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
                                   {isMuted ? "Unmute channel" : "Mute channel"}
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                  onClick={() => setThreadsChannel({ id: channel._id, name: channel.name })}
+                                >
+                                  <ChatCircle size={14} />
+                                  View threads
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                   onClick={() => {
@@ -726,6 +745,42 @@ export function WorkspaceSidebar({
           }
         }}
       />
+
+      {/* Share Channel Dialog */}
+      {isAdmin && sharingChannel && (
+        <ShareChannelDialog
+          open={!!sharingChannel}
+          onOpenChange={(open) => !open && setSharingChannel(null)}
+          channelId={sharingChannel.id}
+          channelName={sharingChannel.name}
+          workspaceName={workspace.name}
+          inviterName={
+            user
+              ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+              : "Unknown"
+          }
+        />
+      )}
+
+      {/* Threads List Dialog */}
+      {threadsChannel && (
+        <ThreadsList
+          open={!!threadsChannel}
+          onOpenChange={(open) => !open && setThreadsChannel(null)}
+          channelId={threadsChannel.id}
+          channelName={threadsChannel.name}
+          onSelectThread={() => {
+            // Navigate to the channel — thread will be opened from there
+            const cat = data?.find((c) => c.channels.some((ch) => ch._id === threadsChannel.id));
+            if (cat) {
+              const categorySlug = cat.name.toLowerCase().replace(/\s+/g, "-");
+              const ch = cat.channels.find((ch) => ch._id === threadsChannel.id);
+              if (ch) router.push(`${base}/c/${categorySlug}/${ch.name}`);
+            }
+            setThreadsChannel(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -757,6 +812,8 @@ function SortableCategory({
   isAdmin,
   onEdit,
   onDelete,
+  onShare,
+  onViewThreads,
   onEditCategory,
   onDeleteCategory,
   onCreateChannel,
@@ -772,6 +829,8 @@ function SortableCategory({
   isAdmin: boolean;
   onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+  onShare: (ch: { id: Id<"channels">; name: string }) => void;
+  onViewThreads: (ch: { id: Id<"channels">; name: string }) => void;
   onEditCategory: () => void;
   onDeleteCategory: () => void;
   onCreateChannel: () => void;
@@ -897,6 +956,8 @@ function SortableCategory({
                 isAdmin={isAdmin}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onShare={onShare}
+                onViewThreads={onViewThreads}
                 isMuted={mutedSet.has(channel._id)}
                 onMuteToggle={() => onMuteToggle(channel._id)}
               />
@@ -916,6 +977,8 @@ function SortableChannel({
   isAdmin,
   onEdit,
   onDelete,
+  onShare,
+  onViewThreads,
   isMuted,
   onMuteToggle,
 }: {
@@ -926,6 +989,8 @@ function SortableChannel({
   isAdmin: boolean;
   onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
+  onShare: (ch: { id: Id<"channels">; name: string }) => void;
+  onViewThreads: (ch: { id: Id<"channels">; name: string }) => void;
   isMuted: boolean;
   onMuteToggle: () => Promise<void>;
 }) {
@@ -967,14 +1032,28 @@ function SortableChannel({
     </ContextMenuItem>
   );
 
-  const channelContextMenu = isAdmin ? (
+  const commonMenuItems = (
     <>
       {muteMenuItem}
+      <ContextMenuItem onClick={() => onViewThreads({ id: channel._id, name: channel.name })}>
+        <ChatCircle size={14} />
+        View threads
+      </ContextMenuItem>
       <ContextMenuItem onClick={handleCopyLink}>
         <LinkSimple size={14} />
         Copy link
       </ContextMenuItem>
+    </>
+  );
+
+  const channelContextMenu = isAdmin ? (
+    <>
+      {commonMenuItems}
       <ContextMenuSeparator />
+      <ContextMenuItem onClick={() => onShare({ id: channel._id, name: channel.name })}>
+        <ShareNetwork size={14} />
+        Share externally
+      </ContextMenuItem>
       <ContextMenuItem
         onClick={() =>
           onEdit({
@@ -1002,13 +1081,7 @@ function SortableChannel({
       </ContextMenuItem>
     </>
   ) : (
-    <>
-      {muteMenuItem}
-      <ContextMenuItem onClick={handleCopyLink}>
-        <LinkSimple size={14} />
-        Copy link
-      </ContextMenuItem>
-    </>
+    commonMenuItems
   );
 
   const inner = (
@@ -1049,6 +1122,10 @@ function SortableChannel({
             {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
             {isMuted ? "Unmute channel" : "Mute channel"}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onViewThreads({ id: channel._id, name: channel.name })}>
+            <ChatCircle size={14} />
+            View threads
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleCopyLink}>
             <LinkSimple size={14} />
             Copy link
@@ -1056,6 +1133,10 @@ function SortableChannel({
           {isAdmin && (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onShare({ id: channel._id, name: channel.name })}>
+                <ShareNetwork size={14} />
+                Share externally
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
                   onEdit({
