@@ -28,6 +28,7 @@ import {
   Check,
   Info,
   MagnifyingGlass,
+  LinkSimple,
 } from "@phosphor-icons/react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,7 @@ export function WorkspaceSidebar({
   const [dialogMode, setDialogMode] = useState<"channel" | "category" | null>(
     null
   );
+  const [defaultCategoryId, setDefaultCategoryId] = useState<Id<"channelCategories"> | undefined>();
 
   // Channel edit/delete state
   const [editingChannel, setEditingChannel] = useState<{
@@ -496,6 +498,10 @@ export function WorkspaceSidebar({
                     onDelete={(ch) => setDeletingChannel(ch)}
                     onEditCategory={() => setEditingCategory({ id: category._id, name: category.name, isPrivate: category.isPrivate })}
                     onDeleteCategory={() => setDeletingCategory({ id: category._id, name: category.name })}
+                    onCreateChannel={() => {
+                      setDefaultCategoryId(category._id);
+                      setDialogMode("channel");
+                    }}
                     isDraggingChannel={activeType === "channel"}
                     mutedSet={mutedSet}
                     onMuteToggle={async (channelId) => {
@@ -560,18 +566,29 @@ export function WorkspaceSidebar({
                           <ContextMenu
                             key={channel._id}
                             content={
-                              <ContextMenuItem
-                                onClick={async () => {
-                                  if (isMuted) {
-                                    await unmuteChannel({ channelId: channel._id });
-                                  } else {
-                                    await muteChannel({ channelId: channel._id });
-                                  }
-                                }}
-                              >
-                                {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
-                                {isMuted ? "Unmute channel" : "Mute channel"}
-                              </ContextMenuItem>
+                              <>
+                                <ContextMenuItem
+                                  onClick={async () => {
+                                    if (isMuted) {
+                                      await unmuteChannel({ channelId: channel._id });
+                                    } else {
+                                      await muteChannel({ channelId: channel._id });
+                                    }
+                                  }}
+                                >
+                                  {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
+                                  {isMuted ? "Unmute channel" : "Mute channel"}
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                  onClick={() => {
+                                    const url = `${window.location.origin}${channelHref}`;
+                                    navigator.clipboard.writeText(url);
+                                  }}
+                                >
+                                  <LinkSimple size={14} />
+                                  Copy link
+                                </ContextMenuItem>
+                              </>
                             }
                           >
                             <Link
@@ -610,9 +627,15 @@ export function WorkspaceSidebar({
       {/* Create Channel Dialog */}
       <CreateChannelDialog
         open={dialogMode === "channel"}
-        onOpenChange={(open) => !open && setDialogMode(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDialogMode(null);
+            setDefaultCategoryId(undefined);
+          }
+        }}
         organizationId={organizationId}
         categories={data ?? []}
+        defaultCategoryId={defaultCategoryId}
       />
 
       {/* Create Category Dialog */}
@@ -736,6 +759,7 @@ function SortableCategory({
   onDelete,
   onEditCategory,
   onDeleteCategory,
+  onCreateChannel,
   isDraggingChannel,
   mutedSet,
   onMuteToggle,
@@ -750,6 +774,7 @@ function SortableCategory({
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
   onEditCategory: () => void;
   onDeleteCategory: () => void;
+  onCreateChannel: () => void;
   isDraggingChannel: boolean;
   mutedSet: Set<Id<"channels">>;
   onMuteToggle: (channelId: Id<"channels">) => Promise<void>;
@@ -801,6 +826,11 @@ function SortableCategory({
             <DotsThree size={14} weight="bold" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" sideOffset={4} align="start">
+            <DropdownMenuItem onClick={onCreateChannel}>
+              <Plus size={14} />
+              Create channel
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onEditCategory}>
               <PencilSimple size={14} />
               Edit category
@@ -825,6 +855,11 @@ function SortableCategory({
         <ContextMenu
           content={
             <>
+              <ContextMenuItem onClick={onCreateChannel}>
+                <Plus size={14} />
+                Create channel
+              </ContextMenuItem>
+              <ContextMenuSeparator />
               <ContextMenuItem onClick={onEditCategory}>
                 <PencilSimple size={14} />
                 Edit category
@@ -920,6 +955,11 @@ function SortableChannel({
       ? ChatCircle
       : Hash;
 
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}${channelHref}`;
+    navigator.clipboard.writeText(url);
+  };
+
   const muteMenuItem = (
     <ContextMenuItem onClick={onMuteToggle}>
       {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
@@ -930,6 +970,10 @@ function SortableChannel({
   const channelContextMenu = isAdmin ? (
     <>
       {muteMenuItem}
+      <ContextMenuItem onClick={handleCopyLink}>
+        <LinkSimple size={14} />
+        Copy link
+      </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem
         onClick={() =>
@@ -958,7 +1002,13 @@ function SortableChannel({
       </ContextMenuItem>
     </>
   ) : (
-    muteMenuItem
+    <>
+      {muteMenuItem}
+      <ContextMenuItem onClick={handleCopyLink}>
+        <LinkSimple size={14} />
+        Copy link
+      </ContextMenuItem>
+    </>
   );
 
   const inner = (
@@ -984,46 +1034,57 @@ function SortableChannel({
       />
       <IconComponent size={14} className="flex-shrink-0" />
       <span className="min-w-0 flex-1 truncate">{channel.name}</span>
-      {isAdmin && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={`relative z-10 mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
-              isChannelActive
-                ? "text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                : "text-muted-foreground hover:text-sidebar-foreground"
-            }`}
-          >
-            <DotsThree size={16} weight="bold" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" sideOffset={4} align="start">
-            <DropdownMenuItem
-              onClick={() =>
-                onEdit({
-                  id: channel._id,
-                  name: channel.name,
-                  description: channel.description,
-                })
-              }
-            >
-              <PencilSimple size={14} />
-              Edit channel
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() =>
-                onDelete({
-                  id: channel._id,
-                  name: channel.name,
-                })
-              }
-            >
-              <Trash size={14} />
-              Delete channel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={`relative z-10 mr-1 flex-shrink-0 opacity-0 outline-none group-hover:opacity-100 ${
+            isChannelActive
+              ? "text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              : "text-muted-foreground hover:text-sidebar-foreground"
+          }`}
+        >
+          <DotsThree size={16} weight="bold" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" sideOffset={4} align="start">
+          <DropdownMenuItem onClick={onMuteToggle}>
+            {isMuted ? <Bell size={14} /> : <BellSlash size={14} />}
+            {isMuted ? "Unmute channel" : "Mute channel"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleCopyLink}>
+            <LinkSimple size={14} />
+            Copy link
+          </DropdownMenuItem>
+          {isAdmin && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() =>
+                  onEdit({
+                    id: channel._id,
+                    name: channel.name,
+                    description: channel.description,
+                  })
+                }
+              >
+                <PencilSimple size={14} />
+                Edit channel
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() =>
+                  onDelete({
+                    id: channel._id,
+                    name: channel.name,
+                  })
+                }
+              >
+                <Trash size={14} />
+                Delete channel
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 
@@ -1038,16 +1099,18 @@ function CreateChannelDialog({
   onOpenChange,
   organizationId,
   categories,
+  defaultCategoryId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: Id<"organizations">;
   categories: { _id: Id<"channelCategories">; name: string; isPrivate?: boolean }[];
+  defaultCategoryId?: Id<"channelCategories">;
 }) {
   const [step, setStep] = useState<CreateChannelStep>("details");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(defaultCategoryId ?? "");
   const [channelType, setChannelType] = useState<ChannelTypeOption>("open");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1063,11 +1126,18 @@ function CreateChannelDialog({
     setStep("details");
     setName("");
     setDescription("");
-    setSelectedCategory("");
+    setSelectedCategory(defaultCategoryId ?? "");
     setChannelType("open");
     setSelectedMemberIds([]);
     setIsSubmitting(false);
   };
+
+  // Sync defaultCategoryId when dialog opens
+  useEffect(() => {
+    if (open && defaultCategoryId) {
+      setSelectedCategory(defaultCategoryId);
+    }
+  }, [open, defaultCategoryId]);
 
   const handleSubmit = async () => {
     if (!name.trim() || !selectedCategory) return;
