@@ -147,6 +147,7 @@ export function WorkspaceSidebar({
     id: Id<"channels">;
     name: string;
     description?: string;
+    isPrivate?: boolean;
   } | null>(null);
   const [deletingChannel, setDeletingChannel] = useState<{
     id: Id<"channels">;
@@ -165,6 +166,7 @@ export function WorkspaceSidebar({
   } | null>(null);
 
   const updateChannel = useMutation(api.channels.updateChannel);
+  const addChannelMembers = useMutation(api.channels.addChannelMembers);
   const deleteChannel = useMutation(api.channels.deleteChannel);
   const updateCategoryMutation = useMutation(api.channels.updateCategory);
   const deleteCategoryMutation = useMutation(api.channels.deleteCategory);
@@ -667,15 +669,23 @@ export function WorkspaceSidebar({
       {/* Edit Channel Dialog */}
       <EditChannelDialog
         channel={editingChannel}
+        organizationId={organizationId}
         onOpenChange={(open) => !open && setEditingChannel(null)}
-        onSave={async (name, description) => {
+        onSave={async (name, description, isPrivate, memberIds) => {
           if (!editingChannel) return;
           const oldName = editingChannel.name;
           await updateChannel({
             channelId: editingChannel.id,
             name,
             description,
+            isPrivate,
           });
+          if (isPrivate && memberIds.length > 0) {
+            await addChannelMembers({
+              channelId: editingChannel.id,
+              userIds: memberIds,
+            });
+          }
           setEditingChannel(null);
           // If viewing the renamed channel, redirect to the new URL
           if (pathname.endsWith(`/${oldName}`) && pathname.includes(`${base}/c/`)) {
@@ -827,7 +837,7 @@ function SortableCategory({
   base: string;
   pathname: string;
   isAdmin: boolean;
-  onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
+  onEdit: (ch: { id: Id<"channels">; name: string; description?: string; isPrivate?: boolean }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
   onShare: (ch: { id: Id<"channels">; name: string }) => void;
   onViewThreads: (ch: { id: Id<"channels">; name: string }) => void;
@@ -987,7 +997,7 @@ function SortableChannel({
   base: string;
   pathname: string;
   isAdmin: boolean;
-  onEdit: (ch: { id: Id<"channels">; name: string; description?: string }) => void;
+  onEdit: (ch: { id: Id<"channels">; name: string; description?: string; isPrivate?: boolean }) => void;
   onDelete: (ch: { id: Id<"channels">; name: string }) => void;
   onShare: (ch: { id: Id<"channels">; name: string }) => void;
   onViewThreads: (ch: { id: Id<"channels">; name: string }) => void;
@@ -1060,6 +1070,7 @@ function SortableChannel({
             id: channel._id,
             name: channel.name,
             description: channel.description,
+            isPrivate: channel.isPrivate,
           })
         }
       >
@@ -1685,30 +1696,53 @@ function CreateCategoryDialog({
 
 function EditChannelDialog({
   channel,
+  organizationId,
   onOpenChange,
   onSave,
 }: {
-  channel: { id: Id<"channels">; name: string; description?: string } | null;
+  channel: { id: Id<"channels">; name: string; description?: string; isPrivate?: boolean } | null;
+  organizationId: Id<"organizations">;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string, description: string) => Promise<void>;
+  onSave: (name: string, description: string, isPrivate: boolean, memberIds: string[]) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const existingMembers = useQuery(
+    api.channels.getChannelMembers,
+    channel ? { channelId: channel.id } : "skip"
+  );
 
   // Sync state when channel changes
   useEffect(() => {
     if (channel) {
       setName(channel.name);
       setDescription(channel.description ?? "");
+      setIsPrivate(channel.isPrivate ?? false);
     }
   }, [channel]);
+
+  // Sync existing members when loaded
+  useEffect(() => {
+    if (existingMembers) {
+      setSelectedMemberIds(existingMembers);
+    }
+  }, [existingMembers]);
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
     setIsSubmitting(true);
     try {
-      await onSave(name, description);
+      await onSave(name, description, isPrivate, isPrivate ? selectedMemberIds : []);
     } finally {
       setIsSubmitting(false);
     }
@@ -1723,7 +1757,7 @@ function EditChannelDialog({
         <DialogHeader>
           <DialogTitle>Edit channel</DialogTitle>
           <DialogDescription>
-            Update the name or description of this channel.
+            Update the name, description, or privacy of this channel.
           </DialogDescription>
         </DialogHeader>
 
@@ -1742,7 +1776,7 @@ function EditChannelDialog({
                 className="h-full flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSubmit();
+                  if (e.key === "Enter" && !isPrivate) handleSubmit();
                 }}
               />
             </div>
@@ -1763,6 +1797,35 @@ function EditChannelDialog({
               className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsPrivate(!isPrivate)}
+            className={`flex items-start gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
+              isPrivate
+                ? "border-foreground/30 bg-muted"
+                : "border-border hover:border-foreground/20 hover:bg-muted/50"
+            }`}
+          >
+            <LockSimple size={16} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <div className="grid gap-0.5">
+              <span className="text-xs font-medium">Private channel</span>
+              <span className="text-[11px] text-muted-foreground">
+                Only selected members can see and access this channel
+              </span>
+            </div>
+            {isPrivate && (
+              <Check size={14} className="ml-auto mt-0.5 flex-shrink-0" />
+            )}
+          </button>
+
+          {isPrivate && (
+            <MemberPicker
+              organizationId={organizationId}
+              selectedMemberIds={selectedMemberIds}
+              onToggle={toggleMember}
+            />
+          )}
         </div>
 
         <DialogFooter>
