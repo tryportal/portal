@@ -192,7 +192,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
     const prev = prevMessageCountRef.current;
     prevMessageCountRef.current = messageCount;
 
-    if (prev === 0 || messageCount <= prev) return;
+    if (messageCount <= prev) return;
 
     // Clear optimistic messages since real ones have arrived
     if (optimisticMessages?.length) {
