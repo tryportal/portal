@@ -113,7 +113,7 @@ export function MessageInput({
   const sendMessage = useMutation(api.messages.sendMessage);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
 
-  const mentionSuggestion = useMentionSuggestion();
+  const mentionSuggestion = useMentionSuggestion(channelId);
 
   // Store callbacks in refs so the editor keymap doesn't go stale
   const handleSendRef = useRef<() => void>(() => {});

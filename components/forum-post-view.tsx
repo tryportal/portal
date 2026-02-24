@@ -133,7 +133,7 @@ export function ForumPostView({
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const mentionSuggestion = useMentionSuggestion();
+  const mentionSuggestion = useMentionSuggestion(channelId);
 
   const editor = useEditor({
     extensions: [

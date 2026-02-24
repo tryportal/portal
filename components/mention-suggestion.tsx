@@ -10,8 +10,10 @@ import {
 } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useWorkspace } from "@/components/workspace-context";
 import Image from "next/image";
+import { Users } from "@phosphor-icons/react";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
 
@@ -103,7 +105,11 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
                   : "hover:bg-muted"
               }`}
             >
-              {item.imageUrl ? (
+              {item.userId === "everyone" ? (
+                <div className="flex size-5 shrink-0 items-center justify-center bg-muted text-muted-foreground">
+                  <Users size={12} weight="bold" />
+                </div>
+              ) : item.imageUrl ? (
                 <Image
                   src={item.imageUrl}
                   alt={name}
@@ -132,32 +138,73 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 MentionList.displayName = "MentionList";
 
 // Hook to provide filtered members for the suggestion
-export function useMentionSuggestion(): Omit<SuggestionOptions, "editor"> {
+export function useMentionSuggestion(
+  channelId?: Id<"channels">
+): Omit<SuggestionOptions, "editor"> {
   const workspace = useWorkspace();
   const members = useQuery(api.organizations.getWorkspaceMembers, {
     organizationId: workspace._id,
   });
+  const sharedMembers = useQuery(
+    api.sharedChannels.getSharedMembers,
+    channelId ? { channelId } : "skip"
+  );
 
   // Use a ref so the items callback always reads the latest members data,
   // even though TipTap captures the suggestion config once at editor creation.
   const membersRef = useRef(members);
   membersRef.current = members;
+  const sharedMembersRef = useRef(sharedMembers);
+  sharedMembersRef.current = sharedMembers;
 
   return {
     items: ({ query }: { query: string }) => {
       const currentMembers = membersRef.current;
       if (!currentMembers) return [];
       const q = query.toLowerCase();
-      return currentMembers
-        .filter((m) => {
-          const name = [m.firstName, m.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          const email = (m.email ?? "").toLowerCase();
-          return name.includes(q) || email.includes(q);
-        })
-        .slice(0, 8);
+
+      // Build @everyone entry when query matches
+      const everyoneItem: MemberItem = {
+        userId: "everyone",
+        firstName: "everyone",
+        lastName: null,
+        email: null,
+        imageUrl: null,
+      };
+      const showEveryone = "everyone".includes(q);
+
+      // Workspace members filtered
+      const filtered: MemberItem[] = currentMembers.filter((m) => {
+        const name = [m.firstName, m.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const email = (m.email ?? "").toLowerCase();
+        return name.includes(q) || email.includes(q);
+      });
+
+      // Merge shared channel members (deduplicate by userId)
+      const seenIds = new Set(filtered.map((m) => m.userId));
+      const currentShared = sharedMembersRef.current;
+      if (currentShared) {
+        for (const sm of currentShared) {
+          if (seenIds.has(sm.userId)) continue;
+          const name = (sm.userName ?? "").toLowerCase();
+          if (!name.includes(q)) continue;
+          seenIds.add(sm.userId);
+          const nameParts = (sm.userName ?? "").split(" ");
+          filtered.push({
+            userId: sm.userId,
+            firstName: nameParts[0] ?? null,
+            lastName: nameParts.slice(1).join(" ") || null,
+            email: null,
+            imageUrl: sm.userImageUrl ?? null,
+          });
+        }
+      }
+
+      const results = filtered.slice(0, 8);
+      return showEveryone ? [everyoneItem, ...results] : results;
     },
     render: () => {
       let component: ReactRenderer<MentionListRef> | null = null;

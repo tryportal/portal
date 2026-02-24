@@ -5,9 +5,11 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { X, ChatCircle } from "@phosphor-icons/react";
 import { MessageItem, type MessageData } from "@/components/message-item";
-import { MessageInput } from "@/components/message-input";
+import { MessageInput, type PendingMessage } from "@/components/message-input";
+import { type OptimisticMessage } from "@/components/message-list";
 import { DotLoader } from "@/components/ui/dot-loader";
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useUser } from "@clerk/nextjs";
 
 interface ThreadSidebarProps {
   parentMessage?: MessageData;
@@ -37,6 +39,33 @@ export function ThreadSidebar({
   onClose,
   onEmojiPickerOpen,
 }: ThreadSidebarProps) {
+  const { user } = useUser();
+
+  // Optimistic messages for instant thread reply feedback
+  const [optimisticMessages, setOptimisticMessages] = useState<
+    OptimisticMessage[]
+  >([]);
+
+  const handleMessageSending = useCallback(
+    (pending: PendingMessage) => {
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: pending.id,
+          content: pending.content,
+          userName: user?.fullName ?? user?.username ?? "You",
+          userImageUrl: user?.imageUrl ?? null,
+          parentMessage: null,
+          attachments: pending.attachments,
+        },
+      ]);
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+    },
+    [user]
+  );
+
   // Fetch parent message if not provided with full data
   const fetchedParent = useQuery(
     api.messages.getMessage,
@@ -60,14 +89,17 @@ export function ThreadSidebar({
     [replies]
   );
 
-  // Auto-scroll to bottom when new replies arrive
+  // Auto-scroll to bottom when new replies arrive & clear optimistic messages
   useEffect(() => {
     const count = replyMessages.length;
     if (count > prevCountRef.current) {
+      if (optimisticMessages.length) {
+        setOptimisticMessages([]);
+      }
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     prevCountRef.current = count;
-  }, [replyMessages.length]);
+  }, [replyMessages.length, optimisticMessages.length]);
 
   const noopReply = () => {};
   const noopCancel = () => {};
@@ -142,6 +174,47 @@ export function ThreadSidebar({
               />
             );
           })}
+
+          {/* Optimistic pending replies */}
+          {optimisticMessages.map((opt) => {
+            const lastMsg = replyMessages[replyMessages.length - 1];
+            const fakeMsg: MessageData = {
+              _id: opt.id as Id<"messages">,
+              userId: "pending",
+              content: opt.content,
+              createdAt: Date.now(),
+              userName: opt.userName,
+              userImageUrl: opt.userImageUrl,
+              parentMessage: null,
+              isSaved: false,
+              isOwn: true,
+              attachments: opt.attachments?.map((a) => ({
+                storageId: "pending" as Id<"_storage">,
+                name: a.name,
+                size: a.size,
+                type: a.type,
+                url: null,
+                previewUrl: a.previewUrl,
+              })),
+            };
+            const shouldGroup =
+              lastMsg &&
+              lastMsg.isOwn &&
+              Date.now() - lastMsg.createdAt < 2 * 60 * 1000;
+
+            return (
+              <MessageItem
+                key={opt.id}
+                message={fakeMsg}
+                isAdmin={isAdmin}
+                onReply={noopReply}
+                onEmojiPickerOpen={onEmojiPickerOpen}
+                showAvatar={!shouldGroup}
+                hideThreadIndicator
+                pending
+              />
+            );
+          })}
         </div>
 
         <div ref={bottomRef} />
@@ -152,6 +225,7 @@ export function ThreadSidebar({
         channelId={channelId}
         replyTo={null}
         onCancelReply={noopCancel}
+        onMessageSending={handleMessageSending}
         parentMessageId={parentMessageId}
       />
     </div>

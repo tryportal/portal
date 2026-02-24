@@ -1,6 +1,16 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 
+function mentionsUser(
+  mentions: string[] | undefined,
+  userId: string
+): boolean {
+  return (
+    mentions?.includes(userId) === true ||
+    mentions?.includes("everyone") === true
+  );
+}
+
 /**
  * Get the 3 most recent messages where the current user is mentioned
  * within a given workspace (across all channels in that workspace).
@@ -62,7 +72,7 @@ export const getRecentMentions = query({
         .take(50);
 
       for (const msg of messages) {
-        if (msg.mentions?.includes(identity.subject)) {
+        if (mentionsUser(msg.mentions, identity.subject)) {
           mentionMessages.push(msg);
         }
       }
@@ -246,7 +256,7 @@ export const getUnreadMentionCount = query({
 
       for (const msg of messages) {
         if (
-          msg.mentions?.includes(identity.subject) &&
+          mentionsUser(msg.mentions, identity.subject) &&
           !readMessageIds.has(msg._id)
         ) {
           count++;
@@ -311,7 +321,7 @@ export const getAllMentions = query({
         .take(100);
 
       for (const msg of messages) {
-        if (msg.mentions?.includes(identity.subject)) {
+        if (mentionsUser(msg.mentions, identity.subject)) {
           mentionMessages.push(msg);
         }
       }
