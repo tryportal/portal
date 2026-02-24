@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useWorkspace } from "@/components/workspace-context";
 import { ChannelChat } from "@/components/channel-chat";
+import { ForumChannel } from "@/components/forum-channel";
 import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function ChannelPage({
@@ -42,6 +43,10 @@ export default function ChannelPage({
         </div>
       </div>
     );
+  }
+
+  if (channelData.channelType === "forum") {
+    return <ForumChannel channel={channelData} slug={slug} />;
   }
 
   return <ChannelChat channel={channelData} slug={slug} />;

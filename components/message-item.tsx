@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ShikiCode } from "@/components/shiki-code";
 import {
   ArrowBendUpLeft,
   Smiley,
@@ -621,7 +622,24 @@ function MessageItemInner({
           </div>
         ) : (
           <div className="prose-chat text-xs leading-relaxed [&_p]:my-0">
-            <Markdown remarkPlugins={[remarkGfm]}>{preprocessMentions(message.content)}</Markdown>
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({ className, children, ...props }) {
+                  const match = /language-(\w+)/.exec(className || "");
+                  const isInline = !match && !className;
+                  if (isInline) {
+                    return <code className={className} {...props}>{children}</code>;
+                  }
+                  return (
+                    <ShikiCode
+                      code={String(children).replace(/\n$/, "")}
+                      language={match?.[1] || "text"}
+                    />
+                  );
+                },
+              }}
+            >{preprocessMentions(message.content)}</Markdown>
             {message.editedAt && (
               <span
                 className="ml-1 text-[10px] text-muted-foreground"

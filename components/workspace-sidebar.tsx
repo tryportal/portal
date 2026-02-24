@@ -1204,6 +1204,7 @@ function CreateChannelDialog({
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>(defaultCategoryId ?? "");
   const [channelType, setChannelType] = useState<ChannelTypeOption>("open");
+  const [isForumChannel, setIsForumChannel] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1220,6 +1221,7 @@ function CreateChannelDialog({
     setDescription("");
     setSelectedCategory(defaultCategoryId ?? "");
     setChannelType("open");
+    setIsForumChannel(false);
     setSelectedMemberIds([]);
     setIsSubmitting(false);
   };
@@ -1248,6 +1250,7 @@ function CreateChannelDialog({
         permissions,
         isPrivate: isPrivate || undefined,
         memberIds: isPrivate ? selectedMemberIds : undefined,
+        channelType: isForumChannel ? "forum" : undefined,
       });
       reset();
       onOpenChange(false);
@@ -1337,6 +1340,40 @@ function CreateChannelDialog({
                 placeholder="What's this channel about?"
                 className="h-8 w-full border border-border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
               />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Format</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setIsForumChannel(false)}
+                  className={`flex items-center gap-2 border px-3 py-2 text-left transition-colors ${
+                    !isForumChannel
+                      ? "border-foreground/30 bg-muted"
+                      : "border-border hover:border-foreground/20 hover:bg-muted/50"
+                  }`}
+                >
+                  <Hash size={14} className="shrink-0 text-muted-foreground" />
+                  <div>
+                    <span className="text-xs font-medium">Chat</span>
+                    <p className="text-[10px] text-muted-foreground">Real-time messaging</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setIsForumChannel(true)}
+                  className={`flex items-center gap-2 border px-3 py-2 text-left transition-colors ${
+                    isForumChannel
+                      ? "border-foreground/30 bg-muted"
+                      : "border-border hover:border-foreground/20 hover:bg-muted/50"
+                  }`}
+                >
+                  <ChatCircle size={14} className="shrink-0 text-muted-foreground" />
+                  <div>
+                    <span className="text-xs font-medium">Forum</span>
+                    <p className="text-[10px] text-muted-foreground">Threaded posts</p>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}

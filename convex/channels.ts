@@ -305,6 +305,10 @@ export const createChannel = mutation({
     permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
     isPrivate: v.optional(v.boolean()),
     memberIds: v.optional(v.array(v.string())),
+    channelType: v.optional(v.union(v.literal("chat"), v.literal("forum"))),
+    forumSettings: v.optional(v.object({
+      whoCanPost: v.union(v.literal("everyone"), v.literal("admins")),
+    })),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -339,12 +343,14 @@ export const createChannel = mutation({
       categoryId: args.categoryId,
       name: args.name,
       description: args.description,
-      icon: "Hash",
+      icon: args.channelType === "forum" ? "ChatCircle" : "Hash",
       permissions: args.permissions ?? "open",
       isPrivate: isPrivate || undefined,
       order: maxOrder + 1,
       createdAt: Date.now(),
       createdBy: identity.subject,
+      channelType: args.channelType || undefined,
+      forumSettings: args.channelType === "forum" ? (args.forumSettings ?? { whoCanPost: "everyone" }) : undefined,
     });
 
     // Add channel members for private channels
