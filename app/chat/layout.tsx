@@ -18,7 +18,7 @@ export default async function ChatLayout({
   return (
     <div className="min-h-screen">
       <WorkspaceNavbar slug={slug} />
-      <ChatShell>{children}</ChatShell>
+      <ChatShell slug={slug}>{children}</ChatShell>
     </div>
   );
 }
