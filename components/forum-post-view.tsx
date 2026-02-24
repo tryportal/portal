@@ -329,7 +329,7 @@ export function ForumPostView({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         {/* Post content */}
-        <div className="px-4 py-4 md:px-6">
+        <div className="border-b border-border px-4 py-4 md:px-6">
           <h1 className="text-base font-bold md:text-sm">{post.title}</h1>
           <div className="mt-2 flex items-center gap-2">
             {post.authorImageUrl ? (
