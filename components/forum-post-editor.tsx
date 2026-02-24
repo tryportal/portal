@@ -17,12 +17,16 @@ import {
   Eye,
   PencilSimple,
   File,
+  TextB,
+  TextItalic,
+  TextStrikethrough,
+  Code,
+  CodeBlock,
+  Link,
+  ListBullets,
+  ListNumbers,
+  Quotes,
 } from "@phosphor-icons/react";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Mention from "@tiptap/extension-mention";
-import Placeholder from "@tiptap/extension-placeholder";
-import { useMentionSuggestion } from "@/components/mention-suggestion";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ShikiCode } from "@/components/shiki-code";
@@ -38,39 +42,54 @@ interface ForumPostEditorProps {
   };
 }
 
-function getContentFromEditor(editor: ReturnType<typeof useEditor>): {
-  text: string;
-  mentions: string[];
-} {
-  if (!editor) return { text: "", mentions: [] };
-
-  const mentions: string[] = [];
-  let text = "";
-
-  editor.state.doc.descendants((node) => {
-    if (node.type.name === "mention") {
-      const id = node.attrs.id as string;
-      const label = node.attrs.label as string;
-      text += `<@${id}|${label}>`;
-      if (!mentions.includes(id)) mentions.push(id);
-    } else if (node.isText) {
-      text += node.text;
-    } else if (node.type.name === "paragraph") {
-      if (text.length > 0) text += "\n";
-    } else if (node.type.name === "hardBreak") {
-      text += "\n";
-    } else if (node.type.name === "codeBlock") {
-      if (text.length > 0) text += "\n";
-    } else if (node.type.name === "bulletList" || node.type.name === "orderedList") {
-      if (text.length > 0 && !text.endsWith("\n")) text += "\n";
-    } else if (node.type.name === "listItem") {
-      // handled by children
-    } else if (node.type.name === "blockquote") {
-      if (text.length > 0) text += "\n";
-    }
+function wrapSelection(
+  textarea: HTMLTextAreaElement,
+  before: string,
+  after: string,
+  setValue: (v: string) => void
+) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+  const selected = text.slice(start, end);
+  const replacement = `${before}${selected || "text"}${after}`;
+  const newValue = text.slice(0, start) + replacement + text.slice(end);
+  setValue(newValue);
+  // Restore cursor after React re-render
+  requestAnimationFrame(() => {
+    textarea.focus();
+    const cursorPos = selected
+      ? start + replacement.length
+      : start + before.length;
+    const cursorEnd = selected
+      ? start + replacement.length
+      : start + before.length + "text".length;
+    textarea.setSelectionRange(cursorPos, cursorEnd);
   });
+}
 
-  return { text: text.trim(), mentions };
+function prefixLines(
+  textarea: HTMLTextAreaElement,
+  prefix: string,
+  setValue: (v: string) => void
+) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+
+  // Find the start of the first selected line
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+  const lineEnd = text.indexOf("\n", end);
+  const selectedLines = text.slice(lineStart, lineEnd === -1 ? undefined : lineEnd);
+  const prefixed = selectedLines
+    .split("\n")
+    .map((line) => `${prefix}${line}`)
+    .join("\n");
+  const newValue = text.slice(0, lineStart) + prefixed + (lineEnd === -1 ? "" : text.slice(lineEnd));
+  setValue(newValue);
+  requestAnimationFrame(() => {
+    textarea.focus();
+  });
 }
 
 export function ForumPostEditor({
@@ -80,53 +99,18 @@ export function ForumPostEditor({
   editPost,
 }: ForumPostEditorProps) {
   const [title, setTitle] = useState(editPost?.title ?? "");
+  const [content, setContent] = useState(editPost?.content ?? "");
   const [preview, setPreview] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dragCounterRef = useRef(0);
 
   const createPost = useMutation(api.forumPosts.createForumPost);
   const updatePost = useMutation(api.forumPosts.updateForumPost);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
-
-  const mentionSuggestion = useMentionSuggestion();
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        codeBlock: { HTMLAttributes: { class: "code-block" } },
-      }),
-      Mention.configure({
-        HTMLAttributes: { class: "mention" },
-        suggestion: mentionSuggestion,
-        renderText: ({ node }) => `<@${node.attrs.id}|${node.attrs.label}>`,
-      }),
-      Placeholder.configure({
-        placeholder: "Write your post content... (Markdown supported)",
-      }),
-    ],
-    content: editPost?.content ?? "",
-    editorProps: {
-      attributes: {
-        class:
-          "w-full min-h-[200px] max-h-[500px] overflow-y-auto resize-none bg-transparent px-4 py-3 text-sm leading-relaxed outline-none md:text-xs",
-      },
-      handlePaste: (_view, event) => {
-        const files = Array.from(event.clipboardData?.files ?? []);
-        if (files.length > 0) {
-          event.preventDefault();
-          addFiles(files);
-          return true;
-        }
-        return false;
-      },
-    },
-    editable: true,
-    immediatelyRender: false,
-  });
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -159,9 +143,7 @@ export function ForumPostEditor({
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!editor || !title.trim()) return;
-
-    const { text: content } = getContentFromEditor(editor);
+    if (!title.trim()) return;
     if (!content.trim() && pendingFiles.length === 0) return;
 
     setIsSending(true);
@@ -174,14 +156,14 @@ export function ForumPostEditor({
         await updatePost({
           postId: editPost.postId,
           title: title.trim(),
-          content: content || editPost.content,
+          content,
         });
         onPostCreated(editPost.postId);
       } else {
         const postId = await createPost({
           channelId,
           title: title.trim(),
-          content: content || "",
+          content,
           attachments,
         });
         onPostCreated(postId);
@@ -189,7 +171,7 @@ export function ForumPostEditor({
     } finally {
       setIsSending(false);
     }
-  }, [editor, title, pendingFiles, channelId, createPost, updatePost, editPost, onPostCreated, uploadFiles]);
+  }, [title, content, pendingFiles, channelId, createPost, updatePost, editPost, onPostCreated, uploadFiles]);
 
   const addFiles = useCallback((files: File[]) => {
     if (files.length === 0) return;
@@ -231,8 +213,105 @@ export function ForumPostEditor({
     [addFiles]
   );
 
-  const { text: currentContent } = editor ? getContentFromEditor(editor) : { text: "" };
-  const canSubmit = title.trim().length > 0 && (currentContent.trim().length > 0 || pendingFiles.length > 0);
+  const handleToolbar = useCallback(
+    (action: string) => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      switch (action) {
+        case "bold":
+          wrapSelection(ta, "**", "**", setContent);
+          break;
+        case "italic":
+          wrapSelection(ta, "_", "_", setContent);
+          break;
+        case "strikethrough":
+          wrapSelection(ta, "~~", "~~", setContent);
+          break;
+        case "code":
+          wrapSelection(ta, "`", "`", setContent);
+          break;
+        case "codeblock": {
+          const start = ta.selectionStart;
+          const end = ta.selectionEnd;
+          const text = ta.value;
+          const selected = text.slice(start, end);
+          const replacement = `\n\`\`\`\n${selected || "code"}\n\`\`\`\n`;
+          setContent(text.slice(0, start) + replacement + text.slice(end));
+          requestAnimationFrame(() => {
+            ta.focus();
+          });
+          break;
+        }
+        case "link":
+          wrapSelection(ta, "[", "](url)", setContent);
+          break;
+        case "ul":
+          prefixLines(ta, "- ", setContent);
+          break;
+        case "ol":
+          prefixLines(ta, "1. ", setContent);
+          break;
+        case "quote":
+          prefixLines(ta, "> ", setContent);
+          break;
+      }
+    },
+    []
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Tab inserts two spaces
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const text = ta.value;
+        setContent(text.slice(0, start) + "  " + text.slice(end));
+        requestAnimationFrame(() => {
+          ta.setSelectionRange(start + 2, start + 2);
+        });
+      }
+      // Cmd/Ctrl+B for bold
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        handleToolbar("bold");
+      }
+      // Cmd/Ctrl+I for italic
+      if ((e.metaKey || e.ctrlKey) && e.key === "i") {
+        e.preventDefault();
+        handleToolbar("italic");
+      }
+      // Cmd/Ctrl+K for link
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        handleToolbar("link");
+      }
+      // Cmd/Ctrl+Enter to submit
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleToolbar, handleSubmit]
+  );
+
+  const canSubmit = title.trim().length > 0 && (content.trim().length > 0 || pendingFiles.length > 0);
+
+  const toolbarButtons = [
+    { action: "bold", icon: TextB, title: "Bold (Ctrl+B)" },
+    { action: "italic", icon: TextItalic, title: "Italic (Ctrl+I)" },
+    { action: "strikethrough", icon: TextStrikethrough, title: "Strikethrough" },
+    null, // separator
+    { action: "code", icon: Code, title: "Inline code" },
+    { action: "codeblock", icon: CodeBlock, title: "Code block" },
+    { action: "link", icon: Link, title: "Link (Ctrl+K)" },
+    null,
+    { action: "ul", icon: ListBullets, title: "Bulleted list" },
+    { action: "ol", icon: ListNumbers, title: "Numbered list" },
+    { action: "quote", icon: Quotes, title: "Quote" },
+  ];
 
   return (
     <div
@@ -255,8 +334,25 @@ export function ForumPostEditor({
       </div>
 
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-2 py-1">
+        <div className="flex items-center gap-0">
+          {toolbarButtons.map((btn, i) =>
+            btn === null ? (
+              <div key={i} className="mx-1 h-4 w-px bg-border" />
+            ) : (
+              <button
+                key={btn.action}
+                onClick={() => handleToolbar(btn.action)}
+                className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title={btn.title}
+              >
+                <btn.icon size={14} />
+              </button>
+            )
+          )}
+
+          <div className="mx-1 h-4 w-px bg-border" />
+
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex size-7 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -290,29 +386,40 @@ export function ForumPostEditor({
       <div className="flex-1 overflow-y-auto">
         {preview ? (
           <div className="prose-forum px-4 py-3 text-sm md:text-xs">
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({ className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  const isInline = !match && !className;
-                  if (isInline) {
-                    return <code className={className} {...props}>{children}</code>;
-                  }
-                  return (
-                    <ShikiCode
-                      code={String(children).replace(/\n$/, "")}
-                      language={match?.[1] || "text"}
-                    />
-                  );
-                },
-              }}
-            >
-              {currentContent}
-            </Markdown>
+            {content.trim() ? (
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    const isInline = !match && !className;
+                    if (isInline) {
+                      return <code className={className} {...props}>{children}</code>;
+                    }
+                    return (
+                      <ShikiCode
+                        code={String(children).replace(/\n$/, "")}
+                        language={match?.[1] || "text"}
+                      />
+                    );
+                  },
+                }}
+              >
+                {content}
+              </Markdown>
+            ) : (
+              <p className="text-muted-foreground italic">Nothing to preview</p>
+            )}
           </div>
         ) : (
-          <EditorContent editor={editor} />
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Write your post content... (Markdown supported)"
+            className="size-full min-h-[200px] resize-none bg-transparent px-4 py-3 text-sm leading-relaxed outline-none placeholder:text-muted-foreground md:text-xs font-mono"
+          />
         )}
       </div>
 

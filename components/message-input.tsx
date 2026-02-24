@@ -66,7 +66,22 @@ function getContentFromEditor(editor: ReturnType<typeof useEditor>): {
       text += `<@${id}|${label}>`;
       if (!mentions.includes(id)) mentions.push(id);
     } else if (node.isText) {
-      text += node.text;
+      let content = node.text ?? "";
+      // Preserve inline formatting marks as markdown
+      const marks = node.marks.map((m) => m.type.name);
+      if (marks.includes("code")) {
+        content = `\`${content}\``;
+      }
+      if (marks.includes("bold")) {
+        content = `**${content}**`;
+      }
+      if (marks.includes("italic")) {
+        content = `_${content}_`;
+      }
+      if (marks.includes("strike")) {
+        content = `~~${content}~~`;
+      }
+      text += content;
     } else if (node.type.name === "paragraph") {
       // Add newline between paragraphs (but not before first)
       if (text.length > 0) text += "\n";
