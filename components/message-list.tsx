@@ -37,7 +37,8 @@ export interface OptimisticMessage {
 }
 
 interface MessageListProps {
-  channelId: Id<"channels">;
+  channelId?: Id<"channels">;
+  conversationId?: Id<"conversations">;
   isAdmin: boolean;
   onReply: (message: MessageData) => void;
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
@@ -87,12 +88,18 @@ function formatDateSeparator(timestamp: number): string {
 
 export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
   function MessageList(
-    { channelId, isAdmin, onReply, onEmojiPickerOpen, searchResults, optimisticMessages, onOptimisticClear, onOpenThread },
+    { channelId, conversationId, isAdmin, onReply, onEmojiPickerOpen, searchResults, optimisticMessages, onOptimisticClear, onOpenThread },
     ref
   ) {
   const { results, status, loadMore } = usePaginatedQuery(
-    api.messages.getMessages,
-    { channelId },
+    conversationId
+      ? api.conversations.getConversationMessages
+      : api.messages.getMessages,
+    conversationId
+      ? { conversationId }
+      : channelId
+        ? { channelId }
+        : "skip",
     { initialNumItems: BATCH_SIZE }
   );
 
@@ -264,7 +271,9 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
           />
           <p className="mt-3 text-sm font-medium">No messages yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Be the first to send a message in this channel.
+            {conversationId
+              ? "Send a message to start the conversation."
+              : "Be the first to send a message in this channel."}
           </p>
         </div>
       </div>

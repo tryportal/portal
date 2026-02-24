@@ -43,7 +43,8 @@ export interface PendingMessage {
 }
 
 interface MessageInputProps {
-  channelId: Id<"channels">;
+  channelId?: Id<"channels">;
+  conversationId?: Id<"conversations">;
   replyTo: MessageData | null;
   onCancelReply: () => void;
   onMessageSending?: (pending: PendingMessage) => void;
@@ -95,6 +96,7 @@ function getContentFromEditor(editor: ReturnType<typeof useEditor>): {
 
 export function MessageInput({
   channelId,
+  conversationId,
   replyTo,
   onCancelReply,
   onMessageSending,
@@ -110,7 +112,8 @@ export function MessageInput({
   const dragCounterRef = useRef(0);
   const isSendingRef = useRef(false);
 
-  const sendMessage = useMutation(api.messages.sendMessage);
+  const sendChannelMessage = useMutation(api.messages.sendMessage);
+  const sendDm = useMutation(api.conversations.sendDirectMessage);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
 
   const mentionSuggestion = useMentionSuggestion(channelId);
@@ -272,15 +275,26 @@ export function MessageInput({
       const attachments = hasFiles
         ? await uploadFiles(filesToUpload)
         : undefined;
-      await sendMessage({
-        channelId,
-        content:
-          trimmed ||
-          `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`,
-        attachments,
-        parentMessageId: effectiveParentId,
-        mentions: mentions.length > 0 ? mentions : undefined,
-      });
+      const messageContent =
+        trimmed ||
+        `Sent ${filesToUpload.length} file${filesToUpload.length > 1 ? "s" : ""}`;
+      if (conversationId) {
+        await sendDm({
+          conversationId,
+          content: messageContent,
+          attachments,
+          parentMessageId: effectiveParentId,
+          mentions: mentions.length > 0 ? mentions : undefined,
+        });
+      } else if (channelId) {
+        await sendChannelMessage({
+          channelId,
+          content: messageContent,
+          attachments,
+          parentMessageId: effectiveParentId,
+          mentions: mentions.length > 0 ? mentions : undefined,
+        });
+      }
     } finally {
       isSendingRef.current = false;
       setIsSending(false);
@@ -291,8 +305,10 @@ export function MessageInput({
   }, [
     editor,
     pendingFiles,
-    sendMessage,
+    sendChannelMessage,
+    sendDm,
     channelId,
+    conversationId,
     replyTo,
     onCancelReply,
     onMessageSending,

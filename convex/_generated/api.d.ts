@@ -9,9 +9,12 @@
  */
 
 import type * as channels from "../channels.js";
+import type * as conversations from "../conversations.js";
 import type * as emails from "../emails.js";
 import type * as forumPosts from "../forumPosts.js";
 import type * as invitations from "../invitations.js";
+import type * as linkEmbeds from "../linkEmbeds.js";
+import type * as linkEmbedsAction from "../linkEmbedsAction.js";
 import type * as messages from "../messages.js";
 import type * as organizations from "../organizations.js";
 import type * as overview from "../overview.js";
@@ -26,9 +29,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   channels: typeof channels;
+  conversations: typeof conversations;
   emails: typeof emails;
   forumPosts: typeof forumPosts;
   invitations: typeof invitations;
+  linkEmbeds: typeof linkEmbeds;
+  linkEmbedsAction: typeof linkEmbedsAction;
   messages: typeof messages;
   organizations: typeof organizations;
   overview: typeof overview;

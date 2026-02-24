@@ -14,7 +14,8 @@ import { useUser } from "@clerk/nextjs";
 interface ThreadSidebarProps {
   parentMessage?: MessageData;
   parentMessageId: Id<"messages">;
-  channelId: Id<"channels">;
+  channelId?: Id<"channels">;
+  conversationId?: Id<"conversations">;
   isAdmin: boolean;
   onClose: () => void;
   onEmojiPickerOpen: (messageId: Id<"messages">, rect: DOMRect) => void;
@@ -35,6 +36,7 @@ export function ThreadSidebar({
   parentMessage: parentMessageProp,
   parentMessageId,
   channelId,
+  conversationId,
   isAdmin,
   onClose,
   onEmojiPickerOpen,
@@ -223,6 +225,7 @@ export function ThreadSidebar({
       {/* Thread input */}
       <MessageInput
         channelId={channelId}
+        conversationId={conversationId}
         replyTo={null}
         onCancelReply={noopCancel}
         onMessageSending={handleMessageSending}

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { WorkspaceNavbar } from "@/components/workspace-navbar";
+import { ChatShell } from "@/components/chat-shell";
 
 export default async function ChatLayout({
   children,
@@ -17,7 +18,7 @@ export default async function ChatLayout({
   return (
     <div className="min-h-screen">
       <WorkspaceNavbar slug={slug} />
-      {children}
+      <ChatShell>{children}</ChatShell>
     </div>
   );
 }
