@@ -61,6 +61,14 @@ export interface MessageData {
     channelName?: string;
     userName?: string;
   };
+  linkEmbed?: {
+    url: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+    favicon?: string;
+  };
   attachments?: {
     storageId: Id<"_storage">;
     name: string;
@@ -351,6 +359,63 @@ function FileAttachment({
         </button>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Link Embed
+// ============================================================================
+
+function LinkEmbed({
+  linkEmbed,
+}: {
+  linkEmbed: NonNullable<MessageData["linkEmbed"]>;
+}) {
+  return (
+    <a
+      href={linkEmbed.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1.5 block max-w-full border border-border bg-muted/30 hover:bg-muted/50 transition-colors md:max-w-96"
+    >
+      {linkEmbed.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={linkEmbed.image}
+          alt={linkEmbed.title ?? ""}
+          className="max-h-40 w-full object-cover"
+          loading="lazy"
+        />
+      )}
+      <div className="px-3 py-2">
+        {(linkEmbed.siteName || linkEmbed.favicon) && (
+          <div className="flex items-center gap-1.5 mb-1">
+            {linkEmbed.favicon && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={linkEmbed.favicon}
+                alt=""
+                className="size-3 object-contain"
+                loading="lazy"
+              />
+            )}
+            {linkEmbed.siteName && (
+              <span className="text-[10px] text-muted-foreground">
+                {linkEmbed.siteName}
+              </span>
+            )}
+          </div>
+        )}
+        {linkEmbed.title && (
+          <p className="text-xs font-medium line-clamp-2">{linkEmbed.title}</p>
+        )}
+        {linkEmbed.description && (
+          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
+            {linkEmbed.description}
+          </p>
+        )}
+      </div>
+    </a>
   );
 }
 
@@ -677,6 +742,9 @@ function MessageItemInner({
             ))}
           </div>
         )}
+
+        {/* Link embed */}
+        {message.linkEmbed && <LinkEmbed linkEmbed={message.linkEmbed} />}
 
         {/* Reactions */}
         {reactions.length > 0 && (

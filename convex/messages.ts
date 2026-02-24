@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // ============================================================================
 // Queries
@@ -795,6 +796,15 @@ export const sendMessage = mutation({
       mentions: args.mentions,
       createdAt: Date.now(),
     });
+
+    // Schedule link embed fetch if message contains a URL
+    const urlMatch = args.content.match(/https?:\/\/[^\s<>)"']+/);
+    if (urlMatch) {
+      await ctx.scheduler.runAfter(0, internal.linkEmbeds.fetchLinkEmbed, {
+        messageId,
+        url: urlMatch[0],
+      });
+    }
 
     // Update read status for sender
     const existingReadStatus = await ctx.db
