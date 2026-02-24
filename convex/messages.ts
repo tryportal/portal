@@ -800,7 +800,7 @@ export const sendMessage = mutation({
     // Schedule link embed fetch if message contains a URL
     const urlMatch = args.content.match(/https?:\/\/[^\s<>)"']+/);
     if (urlMatch) {
-      await ctx.scheduler.runAfter(0, internal.linkEmbeds.fetchLinkEmbed, {
+      await ctx.scheduler.runAfter(0, internal.linkEmbedsAction.fetchLinkEmbed, {
         messageId,
         url: urlMatch[0],
       });
