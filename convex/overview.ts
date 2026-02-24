@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 function mentionsUser(
@@ -238,6 +238,15 @@ export const getUnreadMentionCount = query({
     const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
     const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
 
+    // Check if user has cleared their inbox
+    const clearedEntry = await ctx.db
+      .query("inboxClearedAt")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", identity.subject).eq("organizationId", args.organizationId)
+      )
+      .unique();
+    const clearedAt = clearedEntry?.clearedAt ?? 0;
+
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -257,7 +266,8 @@ export const getUnreadMentionCount = query({
       for (const msg of messages) {
         if (
           mentionsUser(msg.mentions, identity.subject) &&
-          !readMessageIds.has(msg._id)
+          !readMessageIds.has(msg._id) &&
+          msg.createdAt > clearedAt
         ) {
           count++;
         }
@@ -304,6 +314,15 @@ export const getAllMentions = query({
 
     const channelMap = new Map(channels.map((c) => [c._id, c]));
 
+    // Check if user has cleared their inbox
+    const clearedEntry = await ctx.db
+      .query("inboxClearedAt")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", identity.subject).eq("organizationId", args.organizationId)
+      )
+      .unique();
+    const clearedAt = clearedEntry?.clearedAt ?? 0;
+
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -321,7 +340,10 @@ export const getAllMentions = query({
         .take(100);
 
       for (const msg of messages) {
-        if (mentionsUser(msg.mentions, identity.subject)) {
+        if (
+          mentionsUser(msg.mentions, identity.subject) &&
+          msg.createdAt > clearedAt
+        ) {
           mentionMessages.push(msg);
         }
       }
@@ -458,5 +480,194 @@ export const getMutedChannelIds = query({
       .collect();
 
     return mutedEntries.map((m) => m.channelId);
+  },
+});
+
+/**
+ * Mark all unread mentions as read for the current user in a workspace.
+ */
+export const markAllMentionsRead = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return;
+
+    const allChannels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    // Filter out muted channels
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
+    const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
+
+    const readStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const readMessageIds = new Set(readStatuses.map((s) => s.messageId));
+
+    for (const channel of channels) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) =>
+          q.eq("channelId", channel._id)
+        )
+        .order("desc")
+        .take(50);
+
+      for (const msg of messages) {
+        if (
+          mentionsUser(msg.mentions, identity.subject) &&
+          !readMessageIds.has(msg._id)
+        ) {
+          await ctx.db.insert("mentionReadStatus", {
+            userId: identity.subject,
+            messageId: msg._id,
+            readAt: Date.now(),
+          });
+        }
+      }
+    }
+  },
+});
+
+/**
+ * Clear all inbox notifications by setting a clearedAt timestamp.
+ * Mentions created before this timestamp will be hidden.
+ */
+export const clearAllNotifications = mutation({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("inboxClearedAt")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", identity.subject).eq("organizationId", args.organizationId)
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { clearedAt: Date.now() });
+    } else {
+      await ctx.db.insert("inboxClearedAt", {
+        userId: identity.subject,
+        organizationId: args.organizationId,
+        clearedAt: Date.now(),
+      });
+    }
+  },
+});
+
+/**
+ * Get combined unread inbox count (mentions + DMs) for badge display.
+ */
+export const getUnreadInboxCount = query({
+  args: { organizationId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { mentions: 0, dms: 0 };
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return { mentions: 0, dms: 0 };
+
+    // --- Unread mentions ---
+    const allChannels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const mutedEntries = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
+    const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
+
+    const clearedEntry = await ctx.db
+      .query("inboxClearedAt")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", identity.subject).eq("organizationId", args.organizationId)
+      )
+      .unique();
+    const clearedAt = clearedEntry?.clearedAt ?? 0;
+
+    const readStatuses = await ctx.db
+      .query("mentionReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const readMessageIds = new Set(readStatuses.map((s) => s.messageId));
+
+    let mentionCount = 0;
+    for (const channel of channels) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_created", (q) =>
+          q.eq("channelId", channel._id)
+        )
+        .order("desc")
+        .take(50);
+
+      for (const msg of messages) {
+        if (
+          mentionsUser(msg.mentions, identity.subject) &&
+          !readMessageIds.has(msg._id) &&
+          msg.createdAt > clearedAt
+        ) {
+          mentionCount++;
+        }
+      }
+    }
+
+    // --- Unread DMs ---
+    const userId = identity.subject;
+    const asP1 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
+      .collect();
+    const asP2 = await ctx.db
+      .query("conversations")
+      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
+      .collect();
+    const allConvs = [...asP1, ...asP2];
+
+    const convReadStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const convReadMap = new Map(convReadStatuses.map((rs) => [rs.conversationId, rs.lastReadAt]));
+
+    let dmCount = 0;
+    for (const conv of allConvs) {
+      const lastReadAt = convReadMap.get(conv._id) ?? 0;
+      if (conv.lastMessageAt > lastReadAt) {
+        dmCount++;
+      }
+    }
+
+    return { mentions: mentionCount, dms: dmCount };
   },
 });

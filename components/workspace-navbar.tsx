@@ -11,6 +11,8 @@ import {
   MagnifyingGlass,
   ArrowsLeftRight,
 } from "@phosphor-icons/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { UserMenu } from "@/components/user-menu";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
@@ -32,6 +34,13 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/w/${slug}`;
   const { toggle } = useMobileSidebar();
+
+  const workspace = useQuery(api.organizations.getWorkspaceBySlug, { slug });
+  const inboxCount = useQuery(
+    api.overview.getUnreadInboxCount,
+    workspace ? { organizationId: workspace._id } : "skip"
+  );
+  const totalUnread = (inboxCount?.mentions ?? 0) + (inboxCount?.dms ?? 0);
 
   return (
     <header className="border-b border-border">
@@ -68,11 +77,14 @@ export function WorkspaceNavbar({ slug }: { slug: string }) {
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex w-12 items-center justify-center border-r border-border hover:bg-muted md:w-14 ${
+                className={`relative flex w-12 items-center justify-center border-r border-border hover:bg-muted md:w-14 ${
                   isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
                 <Icon size={22} weight={isActive ? "fill" : "regular"} className="md:size-6" />
+                {Icon === Tray && totalUnread > 0 && (
+                  <span className="absolute right-1.5 top-2 size-2 rounded-full bg-foreground" />
+                )}
               </Link>
             );
           })}

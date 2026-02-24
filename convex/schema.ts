@@ -321,6 +321,13 @@ export default defineSchema({
   // Forum Posts - Posts in forum-type channels
   // ============================================================================
 
+  // Tracks when a user last cleared their inbox (mentions before this timestamp are hidden)
+  inboxClearedAt: defineTable({
+    userId: v.string(),
+    organizationId: v.id("organizations"),
+    clearedAt: v.number(),
+  }).index("by_user_and_org", ["userId", "organizationId"]),
+
   forumPosts: defineTable({
     channelId: v.id("channels"), // The forum channel this post belongs to
     title: v.string(), // Post title
