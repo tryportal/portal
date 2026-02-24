@@ -12,6 +12,7 @@ import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import { useMentionNotifications } from "@/components/use-mention-notifications";
 import { CommandPalette } from "@/components/command-palette";
+import { ResizableSidebar } from "@/components/resizable-sidebar";
 
 /** Routes that do NOT show the sidebar */
 const NO_SIDEBAR_ROUTES = ["/inbox", "/saved", "/shared"];
@@ -62,13 +63,13 @@ export function WorkspaceShell({
       <div className="flex h-[calc(100dvh-57px)]">
         {/* Desktop sidebar */}
         {showSidebar && (
-          <div className="hidden md:block">
+          <ResizableSidebar storageKey="sidebar-width" className="hidden md:flex">
             <WorkspaceSidebar
               slug={slug}
               organizationId={workspace._id}
               role={workspace.role}
             />
-          </div>
+          </ResizableSidebar>
         )}
 
         {/* Mobile sidebar drawer */}

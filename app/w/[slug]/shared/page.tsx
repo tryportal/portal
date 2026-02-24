@@ -8,6 +8,7 @@ import { ArrowsLeftRight, Hash, Users } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 import { ChannelChat } from "@/components/channel-chat";
 import { DotLoader } from "@/components/ui/dot-loader";
+import { ResizableSidebar } from "@/components/resizable-sidebar";
 import Image from "next/image";
 
 interface SelectedChannel {
@@ -114,7 +115,8 @@ export default function SharedChannelsPage({
   return (
     <div className="flex h-full">
       {/* Sidebar */}
-      <aside className="w-[280px] border-r border-border flex flex-col bg-background">
+      <ResizableSidebar storageKey="shared-sidebar-width" className="hidden md:flex">
+      <aside className="flex h-full w-full flex-col border-r border-border bg-background">
         <header className="flex items-center gap-2 px-4 h-12 border-b border-border shrink-0">
           <ArrowsLeftRight size={16} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold">Shared Channels</h2>
@@ -182,6 +184,7 @@ export default function SharedChannelsPage({
           />
         )}
       </aside>
+      </ResizableSidebar>
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0">

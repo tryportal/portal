@@ -88,8 +88,6 @@ import { useWorkspace } from "@/components/workspace-context";
 import { ShareChannelDialog } from "@/components/share-channel-dialog";
 import { ThreadsList } from "@/components/threads-list";
 
-// Width aligns with 4 navbar cells (logo + 3 nav icons) = 4 × 56px
-const SIDEBAR_WIDTH = 280;
 
 interface WorkspaceSidebarProps {
   slug: string;
@@ -419,10 +417,7 @@ export function WorkspaceSidebar({
   return (
     <>
       <aside
-        className={`flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground ${
-          isMobileDrawer ? "w-full" : "w-[280px]"
-        }`}
-        style={isMobileDrawer ? undefined : { width: SIDEBAR_WIDTH }}
+        className="flex h-full w-full flex-col border-r border-border bg-sidebar text-sidebar-foreground"
       >
         {/* Navigation */}
         <nav className="flex flex-col gap-px pl-2 pt-2 pb-2">
