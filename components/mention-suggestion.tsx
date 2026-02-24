@@ -11,7 +11,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { useWorkspace } from "@/components/workspace-context";
+import { useOptionalWorkspace } from "@/components/workspace-context";
 import Image from "next/image";
 import { Users } from "@phosphor-icons/react";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
@@ -139,12 +139,15 @@ MentionList.displayName = "MentionList";
 
 // Hook to provide filtered members for the suggestion
 export function useMentionSuggestion(
-  channelId?: Id<"channels">
+  channelId?: Id<"channels">,
+  organizationId?: Id<"organizations">
 ): Omit<SuggestionOptions, "editor"> {
-  const workspace = useWorkspace();
-  const members = useQuery(api.organizations.getWorkspaceMembers, {
-    organizationId: workspace._id,
-  });
+  const workspace = useOptionalWorkspace();
+  const resolvedOrgId = organizationId ?? workspace?._id;
+  const members = useQuery(
+    api.organizations.getWorkspaceMembers,
+    resolvedOrgId ? { organizationId: resolvedOrgId } : "skip"
+  );
   const sharedMembers = useQuery(
     api.sharedChannels.getSharedMembers,
     channelId ? { channelId } : "skip"

@@ -37,3 +37,7 @@ export function useWorkspace(): WorkspaceData {
   }
   return ctx;
 }
+
+export function useOptionalWorkspace(): WorkspaceData | null {
+  return useContext(WorkspaceContext);
+}
