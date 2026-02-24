@@ -68,7 +68,7 @@ export default function OnboardingPage() {
   };
 
   const hasWorkspace = memberships && memberships.length > 0;
-  const exitHref = hasWorkspace ? `/w/${memberships[0].slug}` : null;
+  const exitHref = hasWorkspace ? "/" : null;
 
   return (
     <div className="flex min-h-screen">
