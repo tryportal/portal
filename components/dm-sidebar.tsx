@@ -72,7 +72,7 @@ export function DmSidebar() {
         </div>
 
         {/* Conversation list */}
-        <div className="flex-1 overflow-y-auto px-1">
+        <div className="flex-1 overflow-y-auto pl-2">
           {conversations === undefined && (
             <div className="flex justify-center py-4">
               <DotLoader dotCount={3} dotSize={3} gap={3} duration={1000} />
@@ -102,10 +102,10 @@ export function DmSidebar() {
               <Link
                 key={conv._id}
                 href={`/chat/${conv._id}`}
-                className={`flex items-center gap-2.5 rounded-[6px] px-2 py-1.5 text-xs transition-colors ${
+                className={`flex items-center gap-2.5 rounded-l-[6px] border-r-[3px] px-2.5 py-1.5 text-xs ${
                   isActive
-                    ? "bg-muted font-medium text-sidebar-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground"
+                    ? "border-foreground/30 bg-muted font-medium text-sidebar-foreground"
+                    : "border-transparent text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground"
                 }`}
               >
                 {/* Avatar */}
@@ -113,10 +113,10 @@ export function DmSidebar() {
                   <img
                     src={conv.otherUser.imageUrl}
                     alt=""
-                    className="size-7 shrink-0 rounded-full object-cover"
+                    className="size-7 shrink-0 object-cover"
                   />
                 ) : (
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+                  <div className="flex size-7 shrink-0 items-center justify-center bg-muted text-[10px] font-medium">
                     {initials}
                   </div>
                 )}

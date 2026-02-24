@@ -122,10 +122,10 @@ export function NewDmDialog({ open, onOpenChange }: NewDmDialogProps) {
                     <img
                       src={member.imageUrl}
                       alt=""
-                      className="size-6 shrink-0 rounded-full object-cover"
+                      className="size-6 shrink-0 object-cover"
                     />
                   ) : (
-                    <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+                    <div className="flex size-6 shrink-0 items-center justify-center bg-muted text-[10px] font-medium">
                       {initials}
                     </div>
                   )}

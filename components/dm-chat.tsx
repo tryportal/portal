@@ -171,10 +171,10 @@ export function DmChat({ conversationId }: DmChatProps) {
             <img
               src={conversation.otherUser.imageUrl}
               alt=""
-              className="size-6 rounded-full object-cover"
+              className="size-6 object-cover"
             />
           ) : (
-            <div className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+            <div className="flex size-6 items-center justify-center bg-muted text-[10px] font-medium">
               {otherUserInitials}
             </div>
           )}
