@@ -55,10 +55,19 @@ export const getUserMemberships = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    return ctx.db
+    const members = await ctx.db
       .query("organizationMembers")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
+
+    const results = await Promise.all(
+      members.map(async (member) => {
+        const org = await ctx.db.get(member.organizationId);
+        return { ...member, slug: org?.slug ?? "" };
+      })
+    );
+
+    return results;
   },
 });
 

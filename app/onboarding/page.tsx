@@ -67,6 +67,9 @@ export default function OnboardingPage() {
     }
   };
 
+  const hasWorkspace = memberships && memberships.length > 0;
+  const exitHref = hasWorkspace ? `/w/${memberships[0].slug}` : null;
+
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
@@ -96,7 +99,27 @@ export default function OnboardingPage() {
             <Image src="/portal.svg" alt="Portal" width={20} height={20} />
             <span className="text-xs font-medium">Portal</span>
           </Link>
+          {exitHref && (
+            <Link
+              href={exitHref}
+              className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Exit
+            </Link>
+          )}
         </div>
+
+        {/* Exit button - desktop */}
+        {exitHref && (
+          <div className="hidden lg:flex justify-end p-4">
+            <Link
+              href={exitHref}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Back to workspace
+            </Link>
+          </div>
+        )}
 
         <div className="flex flex-1 items-center justify-center px-6 py-12">
           {step === "choice" && (
