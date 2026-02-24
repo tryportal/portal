@@ -51,6 +51,15 @@ export const getRecentMentions = query({
     const channelIds = new Set(channels.map((c) => c._id));
     const channelMap = new Map(channels.map((c) => [c._id, c]));
 
+    // Check if user has cleared their inbox
+    const clearedEntry = await ctx.db
+      .query("inboxClearedAt")
+      .withIndex("by_user_and_org", (q) =>
+        q.eq("userId", identity.subject).eq("organizationId", args.organizationId)
+      )
+      .unique();
+    const clearedAt = clearedEntry?.clearedAt ?? 0;
+
     // Get read mention statuses for the user
     const readStatuses = await ctx.db
       .query("mentionReadStatus")
@@ -72,7 +81,10 @@ export const getRecentMentions = query({
         .take(50);
 
       for (const msg of messages) {
-        if (mentionsUser(msg.mentions, identity.subject)) {
+        if (
+          mentionsUser(msg.mentions, identity.subject) &&
+          msg.createdAt > clearedAt
+        ) {
           mentionMessages.push(msg);
         }
       }
