@@ -65,7 +65,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
           setSelectedIndex((i) => (i + 1) % items.length);
           return true;
         }
-        if (event.key === "Enter") {
+        if (event.key === "Enter" || event.key === "Tab") {
           selectItem(selectedIndex);
           return true;
         }
