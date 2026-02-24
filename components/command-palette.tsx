@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -43,7 +44,9 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { user } = useUser();
   const { theme, setTheme } = useTheme();
+  const getOrCreateConversation = useMutation(api.conversations.getOrCreateConversation);
 
   const categories = useQuery(
     api.channels.getChannelsAndCategories,
@@ -166,8 +169,10 @@ export function CommandPalette({
 
         {members && members.length > 0 && (
           <>
-            <CommandGroup heading="People">
-              {members.map((member) => {
+            <CommandGroup heading="Message someone">
+              {members
+                .filter((m) => m.userId !== user?.id)
+                .map((member) => {
                 const name = [member.firstName, member.lastName]
                   .filter(Boolean)
                   .join(" ");
@@ -175,14 +180,19 @@ export function CommandPalette({
                   <CommandItem
                     key={member._id}
                     onSelect={() =>
-                      runCommand(() => router.push(`${base}/people`))
+                      runCommand(async () => {
+                        const conversationId = await getOrCreateConversation({
+                          otherUserId: member.userId,
+                        });
+                        router.push(`/chat/${conversationId}`);
+                      })
                     }
                   >
                     {member.imageUrl ? (
                       <img
                         src={member.imageUrl}
                         alt=""
-                        className="size-5 rounded-full"
+                        className="size-5"
                       />
                     ) : (
                       <Users />
