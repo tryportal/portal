@@ -329,7 +329,7 @@ export function ForumPostView({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         {/* Post content */}
-        <div className="border-b border-border px-4 py-4 md:px-6">
+        <div className="px-4 py-4 md:px-6">
           <h1 className="text-base font-bold md:text-sm">{post.title}</h1>
           <div className="mt-2 flex items-center gap-2">
             {post.authorImageUrl ? (
@@ -532,29 +532,29 @@ export function ForumPostView({
       </div>
 
       {/* Comment input */}
-      <div className="shrink-0 border-t border-border px-3 pb-3 pt-0 md:px-4 md:pb-4">
-        <div className="border border-border bg-background">
-          {/* Pending files */}
-          {pendingFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-3 pt-2.5">
-              {pendingFiles.map((file, i) => (
-                <div
-                  key={`${file.name}-${i}`}
-                  className="flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
+      <div className="shrink-0 px-3 pb-3 md:px-4 md:pb-4">
+        {/* Pending files */}
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 pb-2">
+            {pendingFiles.map((file, i) => (
+              <div
+                key={`${file.name}-${i}`}
+                className="flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
+              >
+                <Paperclip size={12} className="shrink-0 text-muted-foreground" />
+                <span className="text-[11px] truncate max-w-32">{file.name}</span>
+                <button
+                  onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Paperclip size={12} className="shrink-0 text-muted-foreground" />
-                  <span className="text-[11px] truncate max-w-32">{file.name}</span>
-                  <button
-                    onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X size={10} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
+        <div className="border border-border bg-background">
           <EditorContent editor={editor} />
 
           <div className="flex items-center justify-between px-1 pb-1 md:px-1.5 md:pb-1.5">
