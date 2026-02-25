@@ -79,7 +79,8 @@ export default function GetStartedPage() {
               <FieldGroup>
                 <Clerk.Connection name="google" asChild>
                   <Button variant="outline" size="lg" className="w-full gap-2">
-                    <Image src="/google-black-icon.svg" alt="Google" width={16} height={16} />
+                    <Image src="/google-black-icon.svg" alt="Google" width={16} height={16} className="dark:hidden" />
+                    <Image src="/google-white-icon.svg" alt="Google" width={16} height={16} className="hidden dark:block" />
                     Continue with Google
                   </Button>
                 </Clerk.Connection>
