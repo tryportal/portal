@@ -62,5 +62,10 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "overrides": {
+    "@emoji-mart/react": {
+      "react": "^19.0.0"
+    }
+  }
 }
