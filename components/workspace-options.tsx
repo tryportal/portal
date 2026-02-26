@@ -70,11 +70,8 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
     (s) => !s.creatorOnly || isCreator
   );
 
-  useEffect(() => {
-    if (!visibleSections.some((s) => s.id === activeSection)) {
-      setActiveSection("details");
-    }
-  }, [isCreator, activeSection, visibleSections]);
+  const activeSectionValid = visibleSections.some((s) => s.id === activeSection);
+  const resolvedSection = activeSectionValid ? activeSection : "details";
 
   return (
     <div className="flex h-full flex-1 max-md:flex-col">
@@ -85,7 +82,7 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
       >
         <div className="flex flex-row gap-px px-2 py-2 md:flex-col md:pl-2 md:pr-0">
           {visibleSections.map(({ id, label, icon: Icon }) => {
-            const isActive = activeSection === id;
+            const isActive = resolvedSection === id;
             const isDanger = id === "danger";
 
             return (
@@ -117,9 +114,9 @@ export function WorkspaceOptions({ workspace }: WorkspaceOptionsProps) {
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-xl px-4 py-4 md:px-8">
-          {activeSection === "details" && <DetailsPanel workspace={workspace} />}
-          {activeSection === "visibility" && <VisibilityPanel workspace={workspace} />}
-          {activeSection === "danger" && isCreator && <DangerPanel workspace={workspace} />}
+          {resolvedSection === "details" && <DetailsPanel workspace={workspace} />}
+          {resolvedSection === "visibility" && <VisibilityPanel workspace={workspace} />}
+          {resolvedSection === "danger" && isCreator && <DangerPanel workspace={workspace} />}
         </div>
       </div>
     </div>
@@ -325,6 +322,7 @@ function InfoSection({
 
   const updateWorkspace = useMutation(api.organizations.updateWorkspace);
 
+  // Sync from server when workspace props change
   useEffect(() => {
     setName(workspace.name);
     setDescription(workspace.description ?? "");
@@ -429,9 +427,7 @@ function SlugSection({
     api.organizations.updateWorkspaceSlug
   );
 
-  useEffect(() => {
-    setSlug(workspace.slug);
-  }, [workspace.slug]);
+  useEffect(() => { setSlug(workspace.slug); }, [workspace.slug]);
 
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError("");

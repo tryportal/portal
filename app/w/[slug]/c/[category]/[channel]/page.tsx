@@ -14,7 +14,7 @@ export default function ChannelPage({
   params: Promise<{ slug: string; category: string; channel: string }>;
 }) {
   const { slug, category, channel: channelName } = use(params);
-  const workspace = useWorkspace();
+  useWorkspace();
 
   const channelData = useQuery(api.messages.getChannelByName, {
     slug,
@@ -46,7 +46,7 @@ export default function ChannelPage({
   }
 
   if (channelData.channelType === "forum") {
-    return <ForumChannel channel={channelData} slug={slug} />;
+    return <ForumChannel channel={channelData} />;
   }
 
   return <ChannelChat channel={channelData} slug={slug} />;

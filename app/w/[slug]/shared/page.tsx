@@ -100,7 +100,7 @@ export default function SharedChannelsPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = use(params);
+  use(params);
   const sharedChannels = useQuery(api.sharedChannels.getMySharedChannels);
   const [selected, setSelected] = useState<SelectedChannel | null>(null);
 

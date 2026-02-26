@@ -59,6 +59,7 @@ export function ThreadSidebar({
           userImageUrl: user?.imageUrl ?? null,
           parentMessage: null,
           attachments: pending.attachments,
+          createdAt: Date.now(),
         },
       ]);
       requestAnimationFrame(() => {
@@ -92,6 +93,7 @@ export function ThreadSidebar({
   );
 
   // Auto-scroll to bottom when new replies arrive & clear optimistic messages
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const count = replyMessages.length;
     if (count > prevCountRef.current) {
@@ -102,6 +104,7 @@ export function ThreadSidebar({
     }
     prevCountRef.current = count;
   }, [replyMessages.length, optimisticMessages.length]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const noopReply = () => {};
   const noopCancel = () => {};
@@ -184,7 +187,7 @@ export function ThreadSidebar({
               _id: opt.id as Id<"messages">,
               userId: "pending",
               content: opt.content,
-              createdAt: Date.now(),
+              createdAt: opt.createdAt,
               userName: opt.userName,
               userImageUrl: opt.userImageUrl,
               parentMessage: null,
@@ -202,7 +205,7 @@ export function ThreadSidebar({
             const shouldGroup =
               lastMsg &&
               lastMsg.isOwn &&
-              Date.now() - lastMsg.createdAt < 2 * 60 * 1000;
+              opt.createdAt - lastMsg.createdAt < 2 * 60 * 1000;
 
             return (
               <MessageItem

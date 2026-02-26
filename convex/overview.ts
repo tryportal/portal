@@ -48,7 +48,6 @@ export const getRecentMentions = query({
     const mutedChannelIds = new Set(mutedEntries.map((m) => m.channelId));
     const channels = allChannels.filter((c) => !mutedChannelIds.has(c._id));
 
-    const channelIds = new Set(channels.map((c) => c._id));
     const channelMap = new Map(channels.map((c) => [c._id, c]));
 
     // Check if user has cleared their inbox

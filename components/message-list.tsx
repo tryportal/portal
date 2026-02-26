@@ -34,6 +34,7 @@ export interface OptimisticMessage {
   userImageUrl: string | null;
   parentMessage: { content: string; userId: string; userName: string } | null;
   attachments?: OptimisticAttachment[];
+  createdAt: number;
 }
 
 interface MessageListProps {
@@ -195,6 +196,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
 
   // When new messages arrive and user is at bottom, scroll down
   const messageCount = messages.length;
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const prev = prevMessageCountRef.current;
     prevMessageCountRef.current = messageCount;
@@ -214,6 +216,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
       setShowNewMessagePill(true);
     }
   }, [messageCount, optimisticMessages?.length, onOptimisticClear, pinToBottom]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ResizeObserver on content: catches ALL height changes including
   // async image/video loads, reactions, edits, new messages, etc.
@@ -348,7 +351,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
                 _id: opt.id as Id<"messages">,
                 userId: "pending",
                 content: opt.content,
-                createdAt: Date.now(),
+                createdAt: opt.createdAt,
                 userName: opt.userName,
                 userImageUrl: opt.userImageUrl,
                 parentMessage: opt.parentMessage,
@@ -367,7 +370,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(
                 lastMsg &&
                 lastMsg.isOwn &&
                 !fakeMsg.parentMessage &&
-                Date.now() - lastMsg.createdAt < 2 * 60 * 1000;
+                opt.createdAt - lastMsg.createdAt < 2 * 60 * 1000;
 
               return (
                 <div key={opt.id}>

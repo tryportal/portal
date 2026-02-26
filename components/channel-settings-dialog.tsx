@@ -21,7 +21,6 @@ interface ChannelSettingsDialogProps {
   channelId: Id<"channels">;
   channelName: string;
   channelDescription?: string;
-  slug?: string;
 }
 
 export function ChannelSettingsDialog({
@@ -30,7 +29,6 @@ export function ChannelSettingsDialog({
   channelId,
   channelName,
   channelDescription,
-  slug,
 }: ChannelSettingsDialogProps) {
   const [name, setName] = useState(channelName);
   const [description, setDescription] = useState(channelDescription ?? "");

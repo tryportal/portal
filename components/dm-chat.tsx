@@ -58,6 +58,7 @@ export function DmChat({ conversationId }: DmChatProps) {
               }
             : null,
           attachments: pending.attachments,
+          createdAt: Date.now(),
         },
       ]);
       requestAnimationFrame(() => {

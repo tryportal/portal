@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
-import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -15,14 +14,10 @@ import {
   Trash,
   PencilSimple,
   Paperclip,
-  Smiley,
   PaperPlaneRight,
   X,
-  Image as ImageIcon,
-  DownloadSimple,
   File,
   ChatCircle,
-  Crown,
 } from "@phosphor-icons/react";
 import {
   DropdownMenu,
@@ -108,7 +103,6 @@ export function ForumPostView({
   onBack,
   onEdit,
 }: ForumPostViewProps) {
-  const { user } = useUser();
   const post = useQuery(api.forumPosts.getForumPost, { postId });
   const {
     results: comments,

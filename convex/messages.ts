@@ -38,7 +38,6 @@ export const getChannelByName = query({
       .unique();
 
     // If not a workspace member, check if they're a shared channel member
-    let isSharedMember = false;
     if (!membership) {
       // We need to find the channel first to check shared membership
       const categories = await ctx.db
@@ -68,7 +67,6 @@ export const getChannelByName = query({
         )
         .unique();
       if (!sharedMember) return null;
-      isSharedMember = true;
 
       // Check mute status
       const muted = await ctx.db

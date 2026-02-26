@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Check, Sun, Moon, Monitor, Bell, BellSlash } from "@phosphor-icons/react";
 import { WorkspaceIcon } from "@/components/workspace-icon";
 import { DotLoader } from "@/components/ui/dot-loader";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -31,15 +31,12 @@ export default function SettingsPage() {
 
   const [browserPermission, setBrowserPermission] = useState<
     NotificationPermission | "unsupported"
-  >("default");
-
-  useEffect(() => {
+  >(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
-      setBrowserPermission(Notification.permission);
-    } else {
-      setBrowserPermission("unsupported");
+      return Notification.permission;
     }
-  }, []);
+    return "unsupported";
+  });
 
   const handleToggleNotifications = useCallback(async () => {
     if (!currentUser) return;

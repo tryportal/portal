@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ChannelHeader } from "@/components/channel-header";
@@ -75,6 +74,7 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
               }
             : null,
           attachments: pending.attachments,
+          createdAt: Date.now(),
         },
       ]);
       // Scroll to bottom immediately
@@ -284,7 +284,6 @@ export function ChannelChat({ channel, slug }: ChannelChatProps) {
           channelId={channel._id}
           channelName={channel.name}
           channelDescription={channel.description}
-          slug={slug}
         />
       )}
 

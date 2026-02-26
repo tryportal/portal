@@ -74,7 +74,6 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -100,7 +99,6 @@ export function WorkspaceSidebar({
   slug,
   organizationId,
   role,
-  isMobileDrawer,
 }: WorkspaceSidebarProps) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
@@ -110,16 +108,15 @@ export function WorkspaceSidebar({
   const serverData = useQuery(api.channels.getChannelsAndCategories, {
     organizationId,
   });
-  const mutedChannelIds = useQuery(api.overview.getMutedChannelIds) ?? [];
-  const mutedSet = useMemo(() => new Set(mutedChannelIds), [mutedChannelIds]);
+  const mutedChannelIds = useQuery(api.overview.getMutedChannelIds);
+  const mutedSet = useMemo(() => new Set(mutedChannelIds ?? []), [mutedChannelIds]);
   const muteChannel = useMutation(api.messages.muteChannel);
   const unmuteChannel = useMutation(api.messages.unmuteChannel);
 
   // Optimistic local copy — updated instantly on drag, synced from server
   const [localData, setLocalData] = useState(serverData);
-  useEffect(() => {
-    if (serverData) setLocalData(serverData);
-  }, [serverData]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (serverData) setLocalData(serverData); }, [serverData]);
 
   // Expose as `data` so the rest of the component works unchanged
   const data = localData;
@@ -195,46 +192,8 @@ export function WorkspaceSidebar({
     setActiveId(id);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    if (activeType !== "channel") return;
-    const { active, over } = event;
-    if (!over || !data) return;
-
-    const activeChannelId = active.id as string;
-    const overId = over.id as string;
-
-    // Find which category the active channel is in
-    let activeCategoryIdx = -1;
-    let activeChannelIdx = -1;
-    for (let ci = 0; ci < data.length; ci++) {
-      const chIdx = data[ci].channels.findIndex((ch) => ch._id === activeChannelId);
-      if (chIdx !== -1) {
-        activeCategoryIdx = ci;
-        activeChannelIdx = chIdx;
-        break;
-      }
-    }
-    if (activeCategoryIdx === -1) return;
-
-    // Find where we're hovering over
-    let overCategoryIdx = -1;
-    let overChannelIdx = -1;
-    // Check if over a category (for dropping into empty category)
-    overCategoryIdx = data.findIndex((c) => c._id === overId);
-    if (overCategoryIdx === -1) {
-      // Over a channel
-      for (let ci = 0; ci < data.length; ci++) {
-        const chIdx = data[ci].channels.findIndex((ch) => ch._id === overId);
-        if (chIdx !== -1) {
-          overCategoryIdx = ci;
-          overChannelIdx = chIdx;
-          break;
-        }
-      }
-    }
-
-    // No need to do anything during dragOver - we handle everything in dragEnd
-  };
+  // No need to do anything during dragOver - we handle everything in dragEnd
+  const handleDragOver = () => {};
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

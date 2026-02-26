@@ -38,9 +38,9 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
   ({ items, command }, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    useEffect(() => {
-      setSelectedIndex(0);
-    }, [items]);
+    // Reset selection index when items change
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => { setSelectedIndex(0); }, [items]);
 
     const selectItem = useCallback(
       (index: number) => {
@@ -156,9 +156,15 @@ export function useMentionSuggestion(
   // Use a ref so the items callback always reads the latest members data,
   // even though TipTap captures the suggestion config once at editor creation.
   const membersRef = useRef(members);
-  membersRef.current = members;
   const sharedMembersRef = useRef(sharedMembers);
-  sharedMembersRef.current = sharedMembers;
+
+  useEffect(() => {
+    membersRef.current = members;
+  }, [members]);
+
+  useEffect(() => {
+    sharedMembersRef.current = sharedMembers;
+  }, [sharedMembers]);
 
   return {
     items: ({ query }: { query: string }) => {

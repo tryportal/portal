@@ -17,7 +17,6 @@ import {
   BookmarkSimple,
   ArrowsOutCardinal,
   ChatTeardrop,
-  Sparkle,
   LinkSimple,
   Smiley,
   Tray,
@@ -151,12 +150,6 @@ const detailFeatures = [
     description:
       "Paste a URL and Portal pulls in the title, description, and image. No need to explain what you're sharing.",
   },
-  {
-    icon: <Sparkle weight="bold" className="size-5" />,
-    title: "Pearl AI",
-    description:
-      "A built-in AI assistant that lives in your workspace. Ask questions, draft messages, and get answers without switching tabs.",
-  },
 ];
 
 const comingSoonFeatures = [
@@ -224,8 +217,8 @@ export function FeaturesPage() {
             custom={2}
             className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground md:text-lg"
           >
-            Channels, threads, search, permissions, and an AI assistant that
-            actually helps. All in one place, nothing bolted on.
+            Channels, threads, search, and permissions. All in one place,
+            nothing bolted on.
           </motion.p>
 
           <motion.div

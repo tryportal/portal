@@ -21,7 +21,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { ChannelHeader } from "@/components/channel-header";
 import { ForumPostView } from "@/components/forum-post-view";
 import { ForumPostEditor } from "@/components/forum-post-editor";
 import { DotLoader } from "@/components/ui/dot-loader";
@@ -43,7 +42,6 @@ interface ForumChannelProps {
     channelType?: "chat" | "forum";
     forumSettings?: { whoCanPost: "everyone" | "admins" };
   };
-  slug?: string;
 }
 
 function timeAgo(timestamp: number): string {
@@ -75,7 +73,7 @@ const filterLabels: Record<StatusFilter, string> = {
   closed: "Closed",
 };
 
-export function ForumChannel({ channel, slug }: ForumChannelProps) {
+export function ForumChannel({ channel }: ForumChannelProps) {
   const [view, setView] = useState<ForumView>("list");
   const [activePostId, setActivePostId] = useState<Id<"forumPosts"> | null>(null);
   const [editPost, setEditPost] = useState<{ postId: Id<"forumPosts">; title: string; content: string } | null>(null);

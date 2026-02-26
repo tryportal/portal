@@ -9,23 +9,24 @@ import { Bell, X } from "@phosphor-icons/react";
 const DISMISSED_KEY = "portal-notif-dismissed";
 
 export function NotificationPrompt() {
-  const [show, setShow] = useState(false);
   const currentUser = useQuery(api.users.currentUser);
   const setNotificationsEnabled = useMutation(
     api.users.setNotificationsEnabled
   );
 
-  useEffect(() => {
-    if (!currentUser) return;
-    if (currentUser.notificationsEnabled) return;
-    if (typeof window === "undefined") return;
-    if (!("Notification" in window)) return;
-    if (Notification.permission === "granted") return;
-    if (Notification.permission === "denied") return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+  const shouldShow =
+    !!currentUser &&
+    !currentUser.notificationsEnabled &&
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    Notification.permission !== "granted" &&
+    Notification.permission !== "denied" &&
+    !localStorage.getItem(DISMISSED_KEY);
 
-    setShow(true);
-  }, [currentUser]);
+  const [show, setShow] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (shouldShow && !show) setShow(true); }, [shouldShow, show]);
 
   if (!show) return null;
 

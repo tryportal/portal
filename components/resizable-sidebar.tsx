@@ -106,8 +106,6 @@ export function ResizableSidebar({
     };
   }, [storageKey]);
 
-  const isSnapped = SNAP_POINTS.includes(width);
-
   return (
     <div
       className={`relative flex h-full shrink-0 ${className}`}

@@ -43,7 +43,6 @@ export default function InvitePage({
   const isInvalid = invite === null;
   const isExpired = invite?.isExpired;
   const isRevoked = invite?.status === "revoked";
-  const isUsed = invite?.status === "accepted" && !invite;
   const needsAuth = isLoaded && !isSignedIn;
   const alreadyMember = invite?.alreadyMember;
 
