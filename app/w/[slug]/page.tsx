@@ -1,29 +1,22 @@
 "use client";
 
-import { useWorkspace, useWorkspaceData } from "@/components/workspace-context";
-import { OverviewPage } from "@/components/preview/overview-page";
-import { usePageTitle } from "@/lib/use-page-title";
-import { LoadingSpinner } from "@/components/loading-spinner";
+import { use } from "react";
+import { useWorkspace } from "@/components/workspace-context";
+import { WorkspaceOverview } from "@/components/workspace-overview";
 
-export default function WorkspacePage() {
-  const data = useWorkspaceData();
-  const organization = data?.organization;
-  
-  usePageTitle(organization?.name ? `${organization.name} - Portal` : "Home - Portal");
-
-  // Show overview page when no channel is selected
-  // The actual channel view is handled by the [category]/[channel] route
-  if (!organization?._id) {
-    return (
-      <main className="flex-1 overflow-hidden">
-        <LoadingSpinner fullScreen />
-      </main>
-    );
-  }
+export default function WorkspacePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = use(params);
+  const workspace = useWorkspace();
 
   return (
-    <main className="flex-1 overflow-hidden">
-      <OverviewPage organizationId={organization._id} />
-    </main>
+    <WorkspaceOverview
+      slug={slug}
+      organizationId={workspace._id}
+      workspace={workspace}
+    />
   );
 }

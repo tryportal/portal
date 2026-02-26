@@ -1,20 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
-import { ConvexClientProvider } from "@/lib/convex-provider";
-import { DatabuddyProvider } from "@/lib/databuddy";
-import { ThemeProvider } from "@/lib/theme-provider";
-import { ClerkThemeProvider } from "@/lib/clerk-theme-provider";
-import { UserSettingsProvider } from "@/lib/user-settings";
-import { RootNotificationProvider } from "@/components/notifications/notification-provider";
-import { CookieConsentBanner } from "@/components/cookie-consent-banner";
-import { ClientUpdateProvider } from "@/components/client-update-provider";
-import { Toaster } from "sonner";
 import { Agentation } from "agentation";
+import { ConvexClientProvider } from "./ConvexClientProvider";
+import { AuthSync } from "@/components/auth-sync";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,118 +18,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tryportal.app"),
-  title: {
-    default: "Portal - Team Chat, Reimagined",
-    template: "%s | Portal",
-  },
-  description:
-    "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
-  keywords: [
-    "team chat",
-    "slack alternative",
-    "open source chat",
-    "team messaging",
-    "real-time messaging",
-    "privacy-first chat",
-    "free team chat",
-    "workspace collaboration",
-    "channel-based messaging",
-    "self-hosted chat",
-    "secure team communication",
-    "discord alternative",
-    "microsoft teams alternative",
-  ],
-  authors: [{ name: "Portal Team", url: "https://tryportal.app" }],
-  creator: "Portal",
-  publisher: "Portal",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
+  title: "Portal",
+  description: "Team messaging for everyone",
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
-      { url: "/favicon.png", type: "image/png" },
-    ],
-    apple: "/favicon.svg",
+    icon: "/portal-icon.svg",
   },
-  manifest: "/manifest.json",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://tryportal.app",
-    siteName: "Portal",
-    title: "Portal - Team Chat, Reimagined",
-    description:
-      "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Portal - Open Source Team Chat",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Portal - Team Chat, Reimagined",
-    description:
-      "Open-source team chat alternative to Slack. Real-time messaging, organized channels, seamless collaboration — privacy-first and free forever.",
-    images: ["/opengraph-image"],
-    creator: "@tryportal",
-  },
-  alternates: {
-    canonical: "https://tryportal.app",
-  },
-  category: "technology",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <ClerkProvider appearance={{ baseTheme: dark }}>
-      <html lang="en" className={inter.variable} suppressHydrationWarning>
-        <head>
-          <meta name="theme-color" content="#26251E" />
-        </head>
-        <body className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased`}>
-          <ThemeProvider defaultTheme="system" storageKey="portal-theme">
-            <ClerkThemeProvider>
-              <UserSettingsProvider>
-                <DatabuddyProvider>
-                  <ConvexClientProvider>
-                    <RootNotificationProvider>
-                      <ClientUpdateProvider>
-                        {children}
-                        <CookieConsentBanner />
-                        <Toaster position="bottom-right" richColors />
-                        {process.env.NODE_ENV === "development" && <Agentation />}
-                      </ClientUpdateProvider>
-                    </RootNotificationProvider>
-                  </ConvexClientProvider>
-                </DatabuddyProvider>
-              </UserSettingsProvider>
-            </ClerkThemeProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ThemeProvider>
+            <ConvexClientProvider>
+              <AuthSync />
+              {children}
+            </ConvexClientProvider>
           </ThemeProvider>
+          {process.env.NEXT_PUBLIC_AGENTATION === "true" && <Agentation />}
         </body>
       </html>
     </ClerkProvider>

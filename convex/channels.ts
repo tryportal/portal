@@ -1,555 +1,381 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Id, Doc } from "./_generated/dataModel";
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-async function checkAdminAccess(
-  ctx: { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: { query: Function } },
-  organizationId: Id<"organizations">
-): Promise<{ userId: string; isAdmin: boolean }> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = identity.subject;
-  const membership = await ctx.db
-    .query("organizationMembers")
-    .withIndex("by_organization_and_user", (q: { eq: Function }) =>
-      q.eq("organizationId", organizationId).eq("userId", userId)
-    )
-    .first();
-
-  if (!membership) {
-    throw new Error("Not a member of this organization");
-  }
-
-  return { userId, isAdmin: membership.role === "admin" };
-}
-
-async function requireAdmin(
-  ctx: { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: { query: Function } },
-  organizationId: Id<"organizations">
-): Promise<string> {
-  const { userId, isAdmin } = await checkAdminAccess(ctx, organizationId);
-  if (!isAdmin) {
-    throw new Error("Only organization admins can perform this action");
-  }
-  return userId;
-}
-
-// ============================================================================
-// Category Queries
-// ============================================================================
-
-/**
- * Get all categories and their channels for an organization
- */
-export const getCategoriesAndChannels = query({
+export const getChannelsAndCategories = query({
   args: { organizationId: v.id("organizations") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const userId = identity.subject;
-
-    // Check membership
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) return [];
-
-    const isAdmin = membership.role === "admin";
-
-    // Get all categories ordered by order
-    const categories = await ctx.db
-      .query("channelCategories")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    // Sort by order
-    categories.sort((a, b) => a.order - b.order);
-
-    // Get all channels for this organization
-    const channels = await ctx.db
-      .query("channels")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    // Get user's channel memberships for private channels
-    const channelMemberships = await ctx.db
-      .query("channelMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const memberChannelIds = new Set(channelMemberships.map((m) => m.channelId));
-
-    // Get all shared channel members to determine which channels are shared externally
-    const sharedMembers = await ctx.db
-      .query("sharedChannelMembers")
-      .collect();
-    
-    const sharedChannelIds = new Set(sharedMembers.map((m) => m.channelId));
-
-    // Get all pending share links
-    const shareLinks = await ctx.db
-      .query("sharedChannelInvitations")
-      .filter((q) => q.eq(q.field("isLinkInvite"), true))
-      .filter((q) => q.eq(q.field("status"), "pending"))
-      .collect();
-    
-    const sharedChannelIdsFromLinks = new Set(shareLinks.map((s) => s.channelId));
-
-    // Filter channels based on privacy and membership
-    const accessibleChannels = channels.filter((channel) => {
-      // Public channels are accessible to all org members
-      if (!channel.isPrivate) return true;
-      // Admins can see all private channels
-      if (isAdmin) return true;
-      // For private channels, check if user is a member
-      return memberChannelIds.has(channel._id);
-    });
-
-    // Group channels by category and sort by order
-    const result = categories.map((category) => {
-      const categoryChannels = accessibleChannels
-        .filter((c) => c.categoryId === category._id)
-        .sort((a, b) => a.order - b.order)
-        .map((c) => ({
-          ...c,
-          isShared: sharedChannelIds.has(c._id) || sharedChannelIdsFromLinks.has(c._id),
-        }));
-      return {
-        ...category,
-        channels: categoryChannels,
-      };
-    });
-
-    return result;
-  },
-});
-
-/**
- * Get a single category
- */
-export const getCategory = query({
-  args: { categoryId: v.id("channelCategories") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const category = await ctx.db.get(args.categoryId);
-    if (!category) return null;
+    // Verify membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return null;
 
-    // Check membership
+    const isAdmin = membership.role === "admin";
+
+    const categories = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization_and_order", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const channels = await ctx.db
+      .query("channels")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    // For non-admins, get their private channel and category memberships to filter
+    let accessibleChannelIds: Set<string> | null = null;
+    let accessibleCategoryIds: Set<string> | null = null;
+    if (!isAdmin) {
+      const myChannelMemberships = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      accessibleChannelIds = new Set(myChannelMemberships.map((m) => m.channelId));
+
+      const myCategoryMemberships = await ctx.db
+        .query("categoryMembers")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      accessibleCategoryIds = new Set(myCategoryMemberships.map((m) => m.categoryId));
+    }
+
+    // Group channels by category and sort by order
+    const grouped = categories
+      .sort((a, b) => a.order - b.order)
+      .filter((category) => {
+        if (isAdmin) return true;
+        // Hide private categories the user isn't a member of
+        if (category.isPrivate) {
+          return accessibleCategoryIds!.has(category._id);
+        }
+        return true;
+      })
+      .map((category) => ({
+        ...category,
+        channels: channels
+          .filter((ch) => {
+            if (ch.categoryId !== category._id) return false;
+            if (isAdmin) return true;
+            // For private channels (not from category privacy), check channel members
+            if (ch.isPrivate) {
+              return accessibleChannelIds!.has(ch._id);
+            }
+            return true;
+          })
+          .sort((a, b) => a.order - b.order),
+      }));
+
+    return grouped;
+  },
+});
+
+export const createCategory = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    name: v.string(),
+    isPrivate: v.optional(v.boolean()),
+    memberIds: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Get next order
+    const existing = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const maxOrder = existing.reduce((max, c) => Math.max(max, c.order), -1);
+
+    const categoryId = await ctx.db.insert("channelCategories", {
+      organizationId: args.organizationId,
+      name: args.name,
+      order: maxOrder + 1,
+      isPrivate: args.isPrivate || undefined,
+      createdAt: Date.now(),
+    });
+
+    // Add category members for private categories
+    if (args.isPrivate) {
+      const now = Date.now();
+      // Always add the creator
+      await ctx.db.insert("categoryMembers", {
+        categoryId,
+        userId: identity.subject,
+        addedAt: now,
+        addedBy: identity.subject,
+      });
+      if (args.memberIds) {
+        for (const userId of args.memberIds) {
+          if (userId === identity.subject) continue;
+          await ctx.db.insert("categoryMembers", {
+            categoryId,
+            userId,
+            addedAt: now,
+            addedBy: identity.subject,
+          });
+        }
+      }
+    }
+
+    return categoryId;
+  },
+});
+
+export const updateCategory = mutation({
+  args: {
+    categoryId: v.id("channelCategories"),
+    name: v.optional(v.string()),
+    isPrivate: v.optional(v.boolean()),
+    memberIds: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
+
+    // Verify admin
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
         q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
 
-    if (!membership) return null;
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name.trim();
+    if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate || undefined;
+    await ctx.db.patch(args.categoryId, updates);
 
-    return category;
-  },
-});
-
-// ============================================================================
-// Channel Queries
-// ============================================================================
-
-/**
- * Get a single channel
- */
-export const getChannel = query({
-  args: { channelId: v.id("channels") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) return null;
-
-    // Check organization membership
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (membership) {
-      // User is an org member - check private channel access
-      if (channel.isPrivate && membership.role !== "admin") {
-        const channelMember = await ctx.db
-          .query("channelMembers")
-          .withIndex("by_channel_and_user", (q) =>
-            q.eq("channelId", args.channelId).eq("userId", userId)
-          )
-          .first();
-
-        if (!channelMember) return null;
+    // Sync category members if memberIds provided
+    if (args.memberIds !== undefined) {
+      // Remove all existing category members
+      const existingMembers = await ctx.db
+        .query("categoryMembers")
+        .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+        .collect();
+      for (const m of existingMembers) {
+        await ctx.db.delete(m._id);
       }
-      return channel;
+
+      // Add new members (always include the caller)
+      if (args.isPrivate !== false) {
+        const now = Date.now();
+        const memberSet = new Set(args.memberIds);
+        memberSet.add(identity.subject); // Always include admin
+
+        for (const userId of memberSet) {
+          await ctx.db.insert("categoryMembers", {
+            categoryId: args.categoryId,
+            userId,
+            addedAt: now,
+            addedBy: identity.subject,
+          });
+        }
+      }
     }
-
-    // Check if user is a shared channel member (external access)
-    const sharedMember = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", args.channelId).eq("userId", userId)
-      )
-      .first();
-
-    if (sharedMember) {
-      return channel;
-    }
-
-    return null;
   },
 });
 
-/**
- * Get channel members for a private channel
- */
-export const getChannelMembers = query({
-  args: { channelId: v.id("channels") },
+export const getCategoryMembers = query({
+  args: { categoryId: v.id("channelCategories") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const userId = identity.subject;
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) return [];
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) return [];
 
-    // Check org membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
+    if (!membership) return [];
 
-    // If not an org member, check if shared channel member
-    if (!membership) {
-      const sharedMember = await ctx.db
-        .query("sharedChannelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", args.channelId).eq("userId", userId)
-        )
-        .first();
-      
-      if (!sharedMember) return [];
-    }
-
-    // Get channel members (internal private channel members)
     const members = await ctx.db
-      .query("channelMembers")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .query("categoryMembers")
+      .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
       .collect();
 
     return members.map((m) => m.userId);
   },
 });
 
-/**
- * Get channel by organization slug, category name, and channel name (for routing)
- */
-export const getChannelByRoute = query({
+export const deleteCategory = mutation({
   args: {
-    orgSlug: v.string(),
-    categoryName: v.string(),
-    channelName: v.string(),
+    categoryId: v.id("channelCategories"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) throw new Error("Category not found");
 
-    // Get organization by slug
-    const org = await ctx.db
-      .query("organizations")
-      .withIndex("by_slug", (q) => q.eq("slug", args.orgSlug))
-      .first();
-
-    if (!org) return null;
-
-    // Find category by name (case-insensitive)
-    const categories = await ctx.db
-      .query("channelCategories")
-      .withIndex("by_organization", (q) => q.eq("organizationId", org._id))
-      .collect();
-
-    const category = categories.find(
-      (c) => c.name.toLowerCase() === args.categoryName.toLowerCase()
-    );
-
-    if (!category) return null;
-
-    // Find channel by name in this category (case-insensitive)
-    const channels = await ctx.db
-      .query("channels")
-      .withIndex("by_category", (q) => q.eq("categoryId", category._id))
-      .collect();
-
-    const channel = channels.find(
-      (c) => c.name.toLowerCase() === args.channelName.toLowerCase()
-    );
-
-    if (!channel) return null;
-
-    // Check organization membership
+    // Verify admin
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", org._id).eq("userId", userId)
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
       )
-      .first();
-
-    if (membership) {
-      // User is an org member - check private channel access
-      if (channel.isPrivate && membership.role !== "admin") {
-        const channelMember = await ctx.db
-          .query("channelMembers")
-          .withIndex("by_channel_and_user", (q) =>
-            q.eq("channelId", channel._id).eq("userId", userId)
-          )
-          .first();
-
-        if (!channelMember) return null;
-      }
-
-      return {
-        channel,
-        category,
-        organization: org,
-        membership,
-        isExternalMember: false,
-      };
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    // Check if user is a shared channel member (external access)
-    const sharedMember = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", channel._id).eq("userId", userId)
-      )
-      .first();
-
-    if (sharedMember) {
-      return {
-        channel,
-        category,
-        organization: org,
-        membership: null,
-        isExternalMember: true,
-      };
-    }
-
-    return null;
-  },
-});
-
-// ============================================================================
-// Category Mutations
-// ============================================================================
-
-/**
- * Create a new category
- */
-export const createCategory = mutation({
-  args: {
-    organizationId: v.id("organizations"),
-    name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.organizationId);
-
-    // Get the highest order value
-    const categories = await ctx.db
+    // Get all categories for this org
+    const allCategories = await ctx.db
       .query("channelCategories")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .withIndex("by_organization_and_order", (q) =>
+        q.eq("organizationId", category.organizationId)
+      )
       .collect();
 
-    const maxOrder = categories.reduce((max, c) => Math.max(max, c.order), -1);
-
-    const categoryId = await ctx.db.insert("channelCategories", {
-      organizationId: args.organizationId,
-      name: args.name,
-      order: maxOrder + 1,
-      createdAt: Date.now(),
-    });
-
-    return categoryId;
-  },
-});
-
-/**
- * Update category name
- */
-export const updateCategory = mutation({
-  args: {
-    categoryId: v.id("channelCategories"),
-    name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const category = await ctx.db.get(args.categoryId);
-    if (!category) {
-      throw new Error("Category not found");
+    if (allCategories.length <= 1) {
+      throw new Error("Cannot delete the only category");
     }
 
-    await requireAdmin(ctx, category.organizationId);
+    // Find the first other category (lowest order that isn't this one)
+    const sortedCategories = allCategories.sort((a, b) => a.order - b.order);
+    const targetCategory = sortedCategories.find((c) => c._id !== args.categoryId);
+    if (!targetCategory) throw new Error("No target category found");
 
-    await ctx.db.patch(args.categoryId, { name: args.name });
-    return args.categoryId;
-  },
-});
-
-/**
- * Delete a category and all its channels
- */
-export const deleteCategory = mutation({
-  args: { categoryId: v.id("channelCategories") },
-  handler: async (ctx, args) => {
-    const category = await ctx.db.get(args.categoryId);
-    if (!category) {
-      throw new Error("Category not found");
-    }
-
-    await requireAdmin(ctx, category.organizationId);
-
-    // Get all channels in this category and delete them
+    // Move all channels from this category to the target
     const channels = await ctx.db
       .query("channels")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
       .collect();
 
-    // Delete all channels in this category
-    for (const channel of channels) {
-      await ctx.db.delete(channel._id);
+    // Get existing channels in target to calculate order offset
+    const targetChannels = await ctx.db
+      .query("channels")
+      .withIndex("by_category", (q) => q.eq("categoryId", targetCategory._id))
+      .collect();
+    const maxOrder = targetChannels.reduce((max, c) => Math.max(max, c.order), -1);
+
+    for (let i = 0; i < channels.length; i++) {
+      await ctx.db.patch(channels[i]._id, {
+        categoryId: targetCategory._id,
+        order: maxOrder + 1 + i,
+      });
     }
 
     // Delete the category
     await ctx.db.delete(args.categoryId);
-    return { success: true };
   },
 });
 
-/**
- * Reorder categories
- */
-export const reorderCategories = mutation({
-  args: {
-    organizationId: v.id("organizations"),
-    categoryIds: v.array(v.id("channelCategories")),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.organizationId);
-
-    // Update order for each category
-    for (let i = 0; i < args.categoryIds.length; i++) {
-      const category = await ctx.db.get(args.categoryIds[i]);
-      if (category && category.organizationId === args.organizationId) {
-        await ctx.db.patch(args.categoryIds[i], { order: i });
-      }
-    }
-
-    return { success: true };
-  },
-});
-
-// ============================================================================
-// Channel Mutations
-// ============================================================================
-
-/**
- * Create a new channel
- */
 export const createChannel = mutation({
   args: {
     organizationId: v.id("organizations"),
     categoryId: v.id("channelCategories"),
     name: v.string(),
     description: v.optional(v.string()),
-    icon: v.string(),
-    permissions: v.union(v.literal("open"), v.literal("readOnly")),
+    permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
     isPrivate: v.optional(v.boolean()),
-    memberIds: v.optional(v.array(v.string())), // Clerk user IDs for private channel members
-    channelType: v.optional(v.union(v.literal("chat"), v.literal("forum"))), // Default is "chat"
+    memberIds: v.optional(v.array(v.string())),
+    channelType: v.optional(v.union(v.literal("chat"), v.literal("forum"))),
     forumSettings: v.optional(v.object({
       whoCanPost: v.union(v.literal("everyone"), v.literal("admins")),
     })),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAdmin(ctx, args.organizationId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-    // Check if there are any categories in the workspace
-    const categories = await ctx.db
-      .query("channelCategories")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    if (categories.length === 0) {
-      throw new Error("Cannot create a channel: there are no categories in this workspace. Please create a category first.");
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    // Verify category exists and belongs to organization
+    // Check if category is private — force channel to be private too
     const category = await ctx.db.get(args.categoryId);
-    if (!category || category.organizationId !== args.organizationId) {
-      throw new Error("Category not found");
-    }
+    if (!category) throw new Error("Category not found");
+    const isPrivate = category.isPrivate ? true : (args.isPrivate ?? false);
 
-    // Get the highest order value in this category
-    const channels = await ctx.db
+    // Get next order within category
+    const existing = await ctx.db
       .query("channels")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
       .collect();
 
-    const maxOrder = channels.reduce((max, c) => Math.max(max, c.order), -1);
-
-    // Determine channel type and settings
-    const channelType = args.channelType || "chat";
-    const forumSettings = channelType === "forum" 
-      ? (args.forumSettings || { whoCanPost: "everyone" })
-      : undefined;
+    const maxOrder = existing.reduce((max, c) => Math.max(max, c.order), -1);
 
     const channelId = await ctx.db.insert("channels", {
       organizationId: args.organizationId,
       categoryId: args.categoryId,
       name: args.name,
       description: args.description,
-      icon: args.icon,
-      permissions: args.permissions,
-      isPrivate: args.isPrivate || false,
+      icon: args.channelType === "forum" ? "ChatCircle" : "Hash",
+      permissions: args.permissions ?? "open",
+      isPrivate: isPrivate || undefined,
       order: maxOrder + 1,
       createdAt: Date.now(),
-      createdBy: userId,
-      channelType,
-      forumSettings,
+      createdBy: identity.subject,
+      channelType: args.channelType || undefined,
+      forumSettings: args.channelType === "forum" ? (args.forumSettings ?? { whoCanPost: "everyone" }) : undefined,
     });
 
-    // If this is a private channel, add the selected members
-    if (args.isPrivate && args.memberIds) {
+    // Add channel members for private channels
+    if (isPrivate) {
       const now = Date.now();
-      // Always add the creator as a member
-      const membersToAdd = new Set([userId, ...args.memberIds]);
+      // Collect all member IDs: explicit picks + category members (for private categories)
+      const allMemberIds = new Set<string>([identity.subject]);
+      if (args.memberIds) {
+        for (const id of args.memberIds) allMemberIds.add(id);
+      }
+      // If category is private, auto-include all category members
+      if (category.isPrivate) {
+        const catMembers = await ctx.db
+          .query("categoryMembers")
+          .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+          .collect();
+        for (const m of catMembers) allMemberIds.add(m.userId);
+      }
 
-      for (const memberId of membersToAdd) {
+      for (const userId of allMemberIds) {
         await ctx.db.insert("channelMembers", {
           channelId,
-          userId: memberId,
+          userId,
           addedAt: now,
-          addedBy: userId,
+          addedBy: identity.subject,
         });
       }
     }
@@ -558,524 +384,281 @@ export const createChannel = mutation({
   },
 });
 
-/**
- * Update a channel
- */
 export const updateChannel = mutation({
   args: {
     channelId: v.id("channels"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
-    icon: v.optional(v.string()),
     permissions: v.optional(v.union(v.literal("open"), v.literal("readOnly"))),
     isPrivate: v.optional(v.boolean()),
-    memberIds: v.optional(v.array(v.string())), // Clerk user IDs for private channel members
-    forumSettings: v.optional(v.object({
-      whoCanPost: v.union(v.literal("everyone"), v.literal("admins")),
-    })),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    const userId = await requireAdmin(ctx, channel.organizationId);
-
-    const updates: Partial<Doc<"channels">> = {};
-    if (args.name !== undefined) updates.name = args.name;
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name.trim().toLowerCase().replace(/\s+/g, "-");
     if (args.description !== undefined) updates.description = args.description;
-    if (args.icon !== undefined) updates.icon = args.icon;
     if (args.permissions !== undefined) updates.permissions = args.permissions;
-    if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate;
-    // Only allow updating forum settings for forum channels
-    if (args.forumSettings !== undefined && channel.channelType === "forum") {
-      updates.forumSettings = args.forumSettings;
-    }
+    if (args.isPrivate !== undefined) updates.isPrivate = args.isPrivate || undefined;
 
     await ctx.db.patch(args.channelId, updates);
-
-    // If memberIds is provided and channel is/will be private, update the member list
-    if (args.memberIds !== undefined) {
-      const isPrivate = args.isPrivate !== undefined ? args.isPrivate : channel.isPrivate;
-
-      if (isPrivate) {
-        // Get current channel members
-        const currentMembers = await ctx.db
-          .query("channelMembers")
-          .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-          .collect();
-
-        const currentMemberIds = new Set(currentMembers.map((m) => m.userId));
-        const newMemberIds = new Set([userId, ...args.memberIds]); // Always include the admin making the change
-
-        // Remove members that are no longer in the list
-        for (const member of currentMembers) {
-          if (!newMemberIds.has(member.userId)) {
-            await ctx.db.delete(member._id);
-          }
-        }
-
-        // Add new members
-        const now = Date.now();
-        for (const memberId of newMemberIds) {
-          if (!currentMemberIds.has(memberId)) {
-            await ctx.db.insert("channelMembers", {
-              channelId: args.channelId,
-              userId: memberId,
-              addedAt: now,
-              addedBy: userId,
-            });
-          }
-        }
-      } else {
-        // If channel is no longer private, remove all channel members
-        const members = await ctx.db
-          .query("channelMembers")
-          .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-          .collect();
-
-        for (const member of members) {
-          await ctx.db.delete(member._id);
-        }
-      }
-    }
-
-    return args.channelId;
   },
 });
 
-/**
- * Delete a channel
- */
 export const deleteChannel = mutation({
-  args: { channelId: v.id("channels") },
+  args: {
+    channelId: v.id("channels"),
+  },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    await requireAdmin(ctx, channel.organizationId);
-
-    // Delete channel members if any
-    const members = await ctx.db
+    // Cascade delete all related data
+    const channelMembers = await ctx.db
       .query("channelMembers")
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
       .collect();
+    for (const m of channelMembers) await ctx.db.delete(m._id);
 
-    for (const member of members) {
-      await ctx.db.delete(member._id);
-    }
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of messages) await ctx.db.delete(m._id);
 
+    const typing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const t of typing) await ctx.db.delete(t._id);
+
+    const muted = await ctx.db
+      .query("mutedChannels")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of muted) await ctx.db.delete(m._id);
+
+    const readStatus = await ctx.db
+      .query("channelReadStatus")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const r of readStatus) await ctx.db.delete(r._id);
+
+    const sharedInvites = await ctx.db
+      .query("sharedChannelInvitations")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const i of sharedInvites) await ctx.db.delete(i._id);
+
+    const sharedMembers = await ctx.db
+      .query("sharedChannelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const m of sharedMembers) await ctx.db.delete(m._id);
+
+    const forumPosts = await ctx.db
+      .query("forumPosts")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    for (const p of forumPosts) await ctx.db.delete(p._id);
+
+    // Delete the channel itself
     await ctx.db.delete(args.channelId);
-    return { success: true };
   },
 });
 
-/**
- * Reorder channels within a category
- */
+export const reorderCategories = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    categoryIds: v.array(v.id("channelCategories")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    // Update order for each category
+    for (let i = 0; i < args.categoryIds.length; i++) {
+      await ctx.db.patch(args.categoryIds[i], { order: i });
+    }
+  },
+});
+
 export const reorderChannels = mutation({
   args: {
     categoryId: v.id("channelCategories"),
     channelIds: v.array(v.id("channels")),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Get category to find organization
     const category = await ctx.db.get(args.categoryId);
-    if (!category) {
-      throw new Error("Category not found");
+    if (!category) throw new Error("Category not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", category.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    await requireAdmin(ctx, category.organizationId);
-
-    // Update order for each channel
+    // Update order and category for each channel
     for (let i = 0; i < args.channelIds.length; i++) {
-      const channel = await ctx.db.get(args.channelIds[i]);
-      if (channel && channel.categoryId === args.categoryId) {
-        await ctx.db.patch(args.channelIds[i], { order: i });
-      }
-    }
-
-    return { success: true };
-  },
-});
-
-/**
- * Move a channel to a different category
- */
-export const moveChannel = mutation({
-  args: {
-    channelId: v.id("channels"),
-    targetCategoryId: v.id("channelCategories"),
-    newOrder: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-
-    await requireAdmin(ctx, channel.organizationId);
-
-    const targetCategory = await ctx.db.get(args.targetCategoryId);
-    if (!targetCategory || targetCategory.organizationId !== channel.organizationId) {
-      throw new Error("Target category not found");
-    }
-
-    // Update channel with new category and order
-    await ctx.db.patch(args.channelId, {
-      categoryId: args.targetCategoryId,
-      order: args.newOrder,
-    });
-
-    // Reorder other channels in the target category
-    const channels = await ctx.db
-      .query("channels")
-      .withIndex("by_category", (q) => q.eq("categoryId", args.targetCategoryId))
-      .collect();
-
-    const sortedChannels = channels
-      .filter((c) => c._id !== args.channelId)
-      .sort((a, b) => a.order - b.order);
-
-    // Insert the moved channel at the right position
-    for (let i = 0; i < sortedChannels.length; i++) {
-      const newOrder = i >= args.newOrder ? i + 1 : i;
-      if (sortedChannels[i].order !== newOrder) {
-        await ctx.db.patch(sortedChannels[i]._id, { order: newOrder });
-      }
-    }
-
-    return { success: true };
-  },
-});
-
-// ============================================================================
-// Internal Functions (used by organizations.ts)
-// ============================================================================
-
-/**
- * Create default category and channel for a new organization
- * This is called from the createOrganization mutation
- */
-export const createDefaultCategoryAndChannel = mutation({
-  args: {
-    organizationId: v.id("organizations"),
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Create default "General" category
-    const categoryId = await ctx.db.insert("channelCategories", {
-      organizationId: args.organizationId,
-      name: "General",
-      order: 0,
-      createdAt: Date.now(),
-    });
-
-    // Create default "general" channel
-    const channelId = await ctx.db.insert("channels", {
-      organizationId: args.organizationId,
-      categoryId,
-      name: "general",
-      description: "General discussion for the workspace",
-      icon: "Hash",
-      permissions: "open",
-      order: 0,
-      createdAt: Date.now(),
-      createdBy: args.userId,
-    });
-
-    return { categoryId, channelId };
-  },
-});
-
-// ============================================================================
-// Channel Muting
-// ============================================================================
-
-/**
- * Mute a channel for the current user
- */
-export const muteChannel = mutation({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-
-    // Check if user is a member of the organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) {
-      throw new Error("Not a member of this organization");
-    }
-
-    // Check private channel access
-    if (channel.isPrivate && membership.role !== "admin") {
-      const channelMember = await ctx.db
-        .query("channelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", args.channelId).eq("userId", userId)
-        )
-        .first();
-
-      if (!channelMember) {
-        throw new Error("You don't have access to this private channel");
-      }
-    }
-
-    // Check if already muted
-    const existingMute = await ctx.db
-      .query("mutedChannels")
-      .withIndex("by_user_and_channel", (q) =>
-        q.eq("userId", userId).eq("channelId", args.channelId)
-      )
-      .first();
-
-    if (existingMute) {
-      // Already muted, return success
-      return { success: true, alreadyMuted: true };
-    }
-
-    // Mute the channel
-    await ctx.db.insert("mutedChannels", {
-      userId,
-      channelId: args.channelId,
-      mutedAt: Date.now(),
-    });
-
-    return { success: true, alreadyMuted: false };
-  },
-});
-
-/**
- * Unmute a channel for the current user
- */
-export const unmuteChannel = mutation({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    // Find and delete the mute record
-    const existingMute = await ctx.db
-      .query("mutedChannels")
-      .withIndex("by_user_and_channel", (q) =>
-        q.eq("userId", userId).eq("channelId", args.channelId)
-      )
-      .first();
-
-    if (existingMute) {
-      await ctx.db.delete(existingMute._id);
-      return { success: true, wasMuted: true };
-    }
-
-    return { success: true, wasMuted: false };
-  },
-});
-
-/**
- * Check if a channel is muted by the current user
- */
-export const isChannelMuted = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
-
-    const userId = identity.subject;
-
-    const existingMute = await ctx.db
-      .query("mutedChannels")
-      .withIndex("by_user_and_channel", (q) =>
-        q.eq("userId", userId).eq("channelId", args.channelId)
-      )
-      .first();
-
-    return existingMute !== null;
-  },
-});
-
-/**
- * Get all muted channel IDs for the current user in an organization
- */
-export const getMutedChannels = query({
-  args: {
-    organizationId: v.id("organizations"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const userId = identity.subject;
-
-    // Get all channels in this organization
-    const channels = await ctx.db
-      .query("channels")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    const channelIds = new Set(channels.map((c) => c._id));
-
-    // Get all muted channels for this user
-    const mutedChannels = await ctx.db
-      .query("mutedChannels")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Filter to only include channels in the specified organization
-    return mutedChannels
-      .filter((mute) => channelIds.has(mute.channelId))
-      .map((mute) => mute.channelId);
-  },
-});
-
-// ============================================================================
-// Channel Read Status
-// ============================================================================
-
-/**
- * Mark a channel as read by the current user
- * This updates the lastReadAt timestamp to the latest message's createdAt
- */
-export const markChannelAsRead = mutation({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-
-    // Check if user is a member of the organization
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) {
-      throw new Error("Not a member of this organization");
-    }
-
-    // Use current time to mark all messages up to now as read
-    // This avoids race conditions where messages arrive between query and update
-    const readTimestamp = Date.now();
-
-    // Check if there's already a read status entry
-    const existingStatus = await ctx.db
-      .query("channelReadStatus")
-      .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", args.channelId).eq("userId", userId)
-      )
-      .first();
-
-    if (existingStatus) {
-      // Only update if the new timestamp is greater
-      if (readTimestamp > existingStatus.lastReadAt) {
-        await ctx.db.patch(existingStatus._id, { lastReadAt: readTimestamp });
-      }
-    } else {
-      // Create new read status
-      await ctx.db.insert("channelReadStatus", {
-        channelId: args.channelId,
-        userId,
-        lastReadAt: readTimestamp,
+      await ctx.db.patch(args.channelIds[i], {
+        categoryId: args.categoryId,
+        order: i,
       });
     }
   },
 });
 
-/**
- * Get unread status for all channels in an organization
- * Returns a map of channelId -> hasUnread (boolean)
- */
-export const getUnreadChannels = query({
+export const addChannelMembers = mutation({
   args: {
-    organizationId: v.id("organizations"),
+    channelId: v.id("channels"),
+    userIds: v.array(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return {};
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
 
-    // Check if user is a member of the organization
+    // Verify admin
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", userId)
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
       )
-      .first();
-
-    if (!membership) return {};
-
-    // Get all channels in this organization
-    const channels = await ctx.db
-      .query("channels")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
-      .collect();
-
-    // Get all read statuses for this user
-    const readStatuses = await ctx.db
-      .query("channelReadStatus")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const readStatusMap = new Map(
-      readStatuses.map((rs) => [rs.channelId, rs.lastReadAt])
-    );
-
-    const unreadChannels: Record<string, boolean> = {};
-
-    // Check each channel for unread messages
-    for (const channel of channels) {
-      const lastReadAt = readStatusMap.get(channel._id) ?? 0;
-
-      // Get latest message in this channel
-      const latestMessage = await ctx.db
-        .query("messages")
-        .withIndex("by_channel_and_created", (q) => q.eq("channelId", channel._id))
-        .order("desc")
-        .first();
-
-      // Channel has unread if latest message is after lastReadAt and not from current user
-      if (latestMessage && latestMessage.createdAt > lastReadAt && latestMessage.userId !== userId) {
-        unreadChannels[channel._id] = true;
-      }
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    return unreadChannels;
+    const now = Date.now();
+    for (const userId of args.userIds) {
+      // Skip if already a member
+      const existing = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", args.channelId).eq("userId", userId)
+        )
+        .unique();
+      if (existing) continue;
+
+      await ctx.db.insert("channelMembers", {
+        channelId: args.channelId,
+        userId,
+        addedAt: now,
+        addedBy: identity.subject,
+      });
+    }
+  },
+});
+
+export const removeChannelMember = mutation({
+  args: {
+    channelId: v.id("channels"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const channelMember = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel_and_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", args.userId)
+      )
+      .unique();
+    if (channelMember) {
+      await ctx.db.delete(channelMember._id);
+    }
+  },
+});
+
+export const getChannelMembers = query({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) return [];
+
+    // Verify workspace membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) return [];
+
+    const members = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+
+    return members.map((m) => m.userId);
   },
 });

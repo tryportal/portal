@@ -1,481 +1,263 @@
 "use client";
 
-import * as React from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useState, useCallback, useEffect } from "react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { Id } from "@/convex/_generated/dataModel";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
-  EnvelopeIcon,
-  LinkIcon,
-  CheckIcon,
-  CopyIcon,
-  ShareNetworkIcon,
-  PaperPlaneIcon,
-  UsersIcon,
-  TrashIcon,
+  Copy,
+  Check,
+  Link as LinkIcon,
+  Trash,
+  EnvelopeSimple,
+  ArrowSquareOut,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 
-type ShareChannelDialogProps = {
+interface ShareChannelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   channelId: Id<"channels">;
   channelName: string;
-};
+  workspaceName: string;
+  inviterName: string;
+}
 
 export function ShareChannelDialog({
   open,
   onOpenChange,
   channelId,
   channelName,
+  workspaceName,
+  inviterName,
 }: ShareChannelDialogProps) {
-  const [activeTab, setActiveTab] = React.useState<"email" | "link" | "members">("email");
-  const [email, setEmail] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
-  const [copiedLink, setCopiedLink] = React.useState(false);
+  const [email, setEmail] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
-  // Actions and mutations
-  const sendInvitation = useAction(api.invitations.sendSharedChannelInvitationEmail);
-  const createLink = useMutation(api.sharedChannels.createSharedChannelLink);
-  const revokeLink = useMutation(api.sharedChannels.revokeSharedChannelLink);
-  const removeExternalMember = useMutation(api.sharedChannels.removeExternalMember);
-
-  // Query for existing invite link
-  const existingLink = useQuery(api.sharedChannels.getSharedChannelLink, 
-    channelId ? { channelId } : "skip"
+  const activeInviteLink = useQuery(
+    api.sharedChannels.getActiveInviteLink,
+    open ? { channelId } : "skip"
+  );
+  const sharedMembers = useQuery(
+    api.sharedChannels.getSharedMembers,
+    open ? { channelId } : "skip"
   );
 
-  // Query for shared members
-  const sharedMembers = useQuery(api.sharedChannels.getSharedChannelMembers, 
-    channelId ? { channelId } : "skip"
-  );
+  const createEmailInvite = useMutation(api.sharedChannels.createEmailInvite);
+  const createInviteLink = useMutation(api.sharedChannels.createInviteLink);
+  const revokeInviteLink = useMutation(api.sharedChannels.revokeInviteLink);
+  const removeSharedMember = useMutation(api.sharedChannels.removeSharedMember);
+  const sendChannelInviteEmail = useAction(api.emails.sendChannelInviteEmail);
 
-  // Query for pending invitations
-  const pendingInvitations = useQuery(api.sharedChannels.getPendingSharedInvitations, 
-    channelId ? { channelId } : "skip"
-  );
-
-  const baseUrl =
+  const appUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const inviteLink = existingLink
-    ? `${baseUrl}/shared/${existingLink.token}`
-    : null;
+  const inviteLink = generatedLink
+    ? generatedLink
+    : activeInviteLink
+      ? `${appUrl}/channel-invite/${activeInviteLink.token}`
+      : null;
 
-  const handleSendInvitation = async () => {
-    if (!email.trim()) {
-      setError("Please enter an email address");
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      await sendInvitation({
-        channelId,
-        email: email.trim(),
-        baseUrl,
-      });
-      setSuccess(true);
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
       setEmail("");
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send invitation");
-    } finally {
-      setIsLoading(false);
+      setEmailSent(false);
+      setLinkCopied(false);
+      setGeneratedLink(null);
     }
-  };
+  }, [open]);
 
-  const handleCreateLink = async () => {
-    setIsLoading(true);
-    setError(null);
-
+  const handleSendEmail = useCallback(async () => {
+    if (!email.trim()) return;
+    setIsSendingEmail(true);
     try {
-      await createLink({
-        channelId,
+      const { token } = await createEmailInvite({ channelId, email: email.trim() });
+      await sendChannelInviteEmail({
+        email: email.trim(),
+        inviteToken: token,
+        channelName,
+        workspaceName,
+        inviterName,
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create invite link");
+      setEmail("");
+      setEmailSent(true);
+      setTimeout(() => setEmailSent(false), 3000);
     } finally {
-      setIsLoading(false);
+      setIsSendingEmail(false);
     }
-  };
+  }, [email, channelId, channelName, workspaceName, inviterName, createEmailInvite, sendChannelInviteEmail]);
 
-  const handleRevokeLink = async () => {
-    setIsLoading(true);
-    setError(null);
-
+  const handleGenerateLink = useCallback(async () => {
     try {
-      await revokeLink({
-        channelId,
-      });
+      const { token } = await createInviteLink({ channelId });
+      setGeneratedLink(`${appUrl}/channel-invite/${token}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke invite link");
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to generate invite link:", err);
     }
-  };
+  }, [channelId, createInviteLink, appUrl]);
 
-  const handleCopyLink = async () => {
+  const handleCopyLink = useCallback(async () => {
     if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }, [inviteLink]);
 
+  const handleRevokeLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch {
-      setError("Failed to copy link");
-    }
-  };
-
-  const handleRemoveMember = async (userId: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await removeExternalMember({
-        channelId,
-        userId,
-      });
+      await revokeInviteLink({ channelId });
+      setGeneratedLink(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove member");
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to revoke invite link:", err);
     }
-  };
-
-  const handleClose = () => {
-    setEmail("");
-    setError(null);
-    setSuccess(false);
-    setCopiedLink(false);
-    onOpenChange(false);
-  };
-
-  const memberCount = (sharedMembers?.length || 0);
-  const pendingCount = (pendingInvitations?.length || 0);
+  }, [channelId, revokeInviteLink]);
 
   return (
-    <AlertDialog open={open} onOpenChange={handleClose}>
-      <AlertDialogContent className="max-w-md p-0 gap-0 bg-card">
-        {/* Header */}
-        <AlertDialogHeader className="border-b border-border px-6 py-4 text-left place-items-start">
-          <div className="flex items-center gap-2">
-            <div className="size-8 bg-foreground rounded-lg flex items-center justify-center">
-              <ShareNetworkIcon className="size-4 text-background" weight="bold" />
-            </div>
-            <div>
-              <AlertDialogTitle className="text-base font-semibold text-foreground">
-                Share #{channelName}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Invite people from other workspaces
-              </AlertDialogDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Share #{channelName}</DialogTitle>
+          <DialogDescription>
+            Invite people from other workspaces to access this channel.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          {/* Email invite */}
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium flex items-center gap-1.5">
+              <EnvelopeSimple size={12} />
+              Invite by email
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSendEmail();
+                }}
+              />
+              <Button
+                size="sm"
+                onClick={handleSendEmail}
+                disabled={!email.trim() || isSendingEmail}
+              >
+                {emailSent ? (
+                  <>
+                    <Check size={14} />
+                    Sent
+                  </>
+                ) : isSendingEmail ? (
+                  "Sending..."
+                ) : (
+                  "Send"
+                )}
+              </Button>
             </div>
           </div>
-        </AlertDialogHeader>
 
-        {/* Content */}
-        <div className="px-6 py-4">
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-muted rounded-lg mb-4">
-            <button
-              onClick={() => setActiveTab("email")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
-                activeTab === "email"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <EnvelopeIcon className="size-4" weight="bold" />
-              Email
-            </button>
-            <button
-              onClick={() => setActiveTab("link")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
-                activeTab === "link"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <LinkIcon className="size-4" weight="bold" />
-              Link
-            </button>
-            <button
-              onClick={() => setActiveTab("members")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
-                activeTab === "members"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <UsersIcon className="size-4" weight="bold" />
-              {memberCount > 0 && <span className="text-xs">({memberCount})</span>}
-            </button>
-          </div>
+          <Separator />
 
-          {/* Email Tab */}
-          {activeTab === "email" && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-xs font-medium text-foreground/80 mb-2 block">
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="collaborator@external.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !isLoading) {
-                      handleSendInvitation();
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="bg-card border-border"
-                />
+          {/* Link invite */}
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium flex items-center gap-1.5">
+              <LinkIcon size={12} />
+              Invite link
+            </label>
+            {inviteLink ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Input value={inviteLink} readOnly className="font-mono text-xs" />
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    {linkCopied ? <Check size={14} /> : <Copy size={14} />}
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive w-fit text-xs"
+                  onClick={handleRevokeLink}
+                >
+                  Revoke link
+                </Button>
               </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleGenerateLink}>
+                <LinkIcon size={14} />
+                Generate invite link
+              </Button>
+            )}
+          </div>
 
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-xs text-red-600">{error}</p>
-                </div>
-              )}
-
-              {success && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                  <CheckIcon className="size-4 text-green-600" weight="bold" />
-                  <p className="text-xs text-green-600">Invitation sent successfully!</p>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                They'll receive an email with a link to join this channel. They won't have access to other channels in your workspace.
-              </p>
-
-              {/* Pending invitations */}
-              {pendingInvitations && pendingInvitations.length > 0 && (
-                <div className="mt-4">
-                  <Label className="text-xs font-medium text-foreground/80 mb-2 block">
-                    Pending Invitations ({pendingCount})
-                  </Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {pendingInvitations.map((inv) => (
-                      <div key={inv._id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                        <span className="text-sm text-foreground truncate">{inv.email}</span>
-                        <span className="text-xs text-muted-foreground">Pending</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Link Tab */}
-          {activeTab === "link" && (
-            <div className="space-y-4">
-              {inviteLink ? (
-                <>
-                  <div>
-                    <Label className="text-xs font-medium text-foreground/80 mb-2 block">
-                      Share this link
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={inviteLink}
-                        readOnly
-                        className="bg-muted border-border font-mono text-xs"
-                      />
-                      <Button
-                        onClick={handleCopyLink}
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0"
-                      >
-                        {copiedLink ? (
-                          <CheckIcon className="size-4" weight="bold" />
-                        ) : (
-                          <CopyIcon className="size-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-foreground/70">
-                      Anyone with this link can join this channel. They won't have access to other channels in your workspace.
-                    </p>
-                  </div>
-
-                  {error && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs text-red-600">{error}</p>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleRevokeLink}
-                    variant="outline"
-                    size="sm"
-                    disabled={isLoading}
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    Revoke Link
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="p-4 bg-muted rounded-lg text-center">
-                    <LinkIcon className="size-8 mx-auto mb-2 text-muted-foreground" weight="bold" />
-                    <p className="text-sm text-foreground/80 mb-1">No active invite link</p>
-                    <p className="text-xs text-muted-foreground">
-                      Create a shareable link that anyone can use to join this channel
-                    </p>
-                  </div>
-
-                  {error && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs text-red-600">{error}</p>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleCreateLink}
-                    disabled={isLoading}
-                    className="w-full bg-foreground hover:bg-foreground/90"
-                  >
-                    Create Invite Link
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Members Tab */}
-          {activeTab === "members" && (
-            <div className="space-y-4">
-              {sharedMembers && sharedMembers.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+          {/* Shared members */}
+          {sharedMembers && sharedMembers.length > 0 && (
+            <>
+              <Separator />
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium">
+                  Shared with ({sharedMembers.length})
+                </label>
+                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
                   {sharedMembers.map((member) => (
-                    <div key={member._id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {member.user?.imageUrl ? (
-                          <img
-                            src={member.user.imageUrl}
-                            alt=""
-                            className="size-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="size-8 rounded-full bg-foreground/10 flex items-center justify-center">
-                            <span className="text-sm font-medium text-foreground">
-                              {member.user?.firstName?.[0] || member.user?.email?.[0] || "?"}
-                            </span>
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {member.user?.firstName} {member.user?.lastName}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {member.sourceOrganization
-                              ? member.sourceOrganization.name
-                              : member.user?.email}
-                          </p>
+                    <div
+                      key={member._id}
+                      className="flex items-center gap-2.5 px-1 py-1.5 text-xs"
+                    >
+                      {member.userImageUrl ? (
+                        <img
+                          src={member.userImageUrl}
+                          alt={member.userName}
+                          className="size-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
+                          {member.userName.charAt(0).toUpperCase()}
                         </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate">{member.userName}</span>
+                        {member.sourceOrgName && (
+                          <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                            <ArrowSquareOut size={10} />
+                            {member.sourceOrgName}
+                          </span>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleRemoveMember(member.userId)}
-                        disabled={isLoading}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          removeSharedMember({ channelId, userId: member.userId })
+                        }
                       >
-                        <TrashIcon className="size-4" />
+                        <Trash size={12} />
                       </Button>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <UsersIcon className="size-8 mx-auto mb-2 text-muted-foreground" weight="bold" />
-                  <p className="text-sm text-foreground/80 mb-1">No external members yet</p>
-                  <p className="text-xs text-muted-foreground">
-                    Invite people using email or a shareable link
-                  </p>
-                </div>
-              )}
-
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-xs text-red-600">{error}</p>
-                </div>
-              )}
-            </div>
+              </div>
+            </>
           )}
         </div>
-
-        {/* Footer */}
-        <AlertDialogFooter className="border-t border-border px-6 py-4">
-          {activeTab === "email" ? (
-            <>
-              <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-              <Button
-                onClick={handleSendInvitation}
-                disabled={isLoading || !email.trim()}
-                className="bg-foreground hover:bg-foreground/90"
-              >
-                {isLoading ? (
-                  "Sending..."
-                ) : (
-                  <>
-                    <PaperPlaneIcon className="size-4 mr-2" weight="bold" />
-                    Send Invitation
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <AlertDialogCancel disabled={isLoading} className="w-full sm:w-auto">
-              Close
-            </AlertDialogCancel>
-          )}
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 }

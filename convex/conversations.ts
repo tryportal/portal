@@ -1,92 +1,97 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
+import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Normalize participant IDs to ensure consistent ordering
- * participant1Id is always alphabetically lower than participant2Id
- */
-function normalizeParticipants(userId1: string, userId2: string): { participant1Id: string; participant2Id: string } {
-  if (userId1 < userId2) {
-    return { participant1Id: userId1, participant2Id: userId2 };
-  }
-  return { participant1Id: userId2, participant2Id: userId1 };
-}
-
-// ============================================================================
-// Conversation Queries
+// Queries
 // ============================================================================
 
 /**
- * Get all conversations for the current user, ordered by last message time
+ * List all conversations for the current user, sorted by most recent activity.
+ * Enriches each with the other participant's profile, last message preview, and unread status.
  */
-export const getUserConversations = query({
-  args: {},
+export const listConversations = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
     const userId = identity.subject;
 
-    // Find conversations where user is participant1
-    const conversationsAsP1 = await ctx.db
+    // Query both indexes to find all conversations
+    const asParticipant1 = await ctx.db
       .query("conversations")
       .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
       .collect();
 
-    // Find conversations where user is participant2
-    const conversationsAsP2 = await ctx.db
+    const asParticipant2 = await ctx.db
       .query("conversations")
       .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
       .collect();
 
-    // Combine and deduplicate
-    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
-    const uniqueConversations = Array.from(
-      new Map(allConversations.map((c) => [c._id, c])).values()
-    );
+    // Merge and sort by lastMessageAt desc
+    const all = [...asParticipant1, ...asParticipant2];
+    all.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
 
-    // Sort by lastMessageAt descending
-    uniqueConversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+    // Get read statuses for all conversations
+    const readStatuses = await ctx.db
+      .query("conversationReadStatus")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const readMap = new Map(readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt]));
 
-    // For each conversation, get the other participant's ID and the last message
-    const conversationsWithDetails = await Promise.all(
-      uniqueConversations.map(async (conv) => {
-        const otherParticipantId = conv.participant1Id === userId
-          ? conv.participant2Id
-          : conv.participant1Id;
+    // Enrich each conversation
+    const enriched = await Promise.all(
+      all.map(async (conv) => {
+        const otherUserId =
+          conv.participant1Id === userId ? conv.participant2Id : conv.participant1Id;
 
-        // Get the last message in this conversation
-        const lastMessage = await ctx.db
+        // Get other user's profile
+        const otherUser = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", otherUserId))
+          .unique();
+
+        // Get last message
+        const lastMessages = await ctx.db
           .query("messages")
-          .withIndex("by_conversation_and_created", (q) => q.eq("conversationId", conv._id))
+          .withIndex("by_conversation_and_created", (q) =>
+            q.eq("conversationId", conv._id)
+          )
           .order("desc")
-          .first();
+          .take(1);
+        const lastMessage = lastMessages[0] ?? null;
+
+        // Check unread status
+        const lastReadAt = readMap.get(conv._id) ?? 0;
+        const hasUnread = conv.lastMessageAt > lastReadAt;
 
         return {
-          ...conv,
-          otherParticipantId,
-          lastMessage: lastMessage
+          _id: conv._id,
+          lastMessageAt: conv.lastMessageAt,
+          otherUser: otherUser
             ? {
-                content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
-                userId: lastMessage.userId,
+                clerkId: otherUser.clerkId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                imageUrl: otherUser.imageUrl,
               }
             : null,
+          lastMessagePreview: lastMessage?.content?.slice(0, 100) ?? null,
+          lastMessageUserId: lastMessage?.userId ?? null,
+          hasUnread,
         };
       })
     );
 
-    return conversationsWithDetails;
+    return enriched;
   },
 });
 
 /**
- * Get a single conversation by ID (verify current user is a participant)
+ * Get a single conversation by ID with the other participant's profile.
+ * Verifies the caller is a participant.
  */
 export const getConversation = query({
   args: { conversationId: v.id("conversations") },
@@ -94,399 +99,375 @@ export const getConversation = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) return null;
+
     const userId = identity.subject;
-    const conversation = await ctx.db.get(args.conversationId);
-
-    if (!conversation) return null;
-
-    // Verify user is a participant
-    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
+    if (conv.participant1Id !== userId && conv.participant2Id !== userId) {
       return null;
     }
 
-    const otherParticipantId = conversation.participant1Id === userId
-      ? conversation.participant2Id
-      : conversation.participant1Id;
+    const otherUserId =
+      conv.participant1Id === userId ? conv.participant2Id : conv.participant1Id;
+
+    const otherUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", otherUserId))
+      .unique();
 
     return {
-      ...conversation,
-      otherParticipantId,
+      ...conv,
+      otherUser: otherUser
+        ? {
+            clerkId: otherUser.clerkId,
+            firstName: otherUser.firstName,
+            lastName: otherUser.lastName,
+            imageUrl: otherUser.imageUrl,
+          }
+        : null,
     };
   },
 });
 
 /**
- * Check if a conversation exists between two users
- */
-export const getConversationByParticipants = query({
-  args: { otherUserId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-    const { participant1Id, participant2Id } = normalizeParticipants(userId, args.otherUserId);
-
-    const conversation = await ctx.db
-      .query("conversations")
-      .withIndex("by_participants", (q) =>
-        q.eq("participant1Id", participant1Id).eq("participant2Id", participant2Id)
-      )
-      .first();
-
-    return conversation;
-  },
-});
-
-// ============================================================================
-// Conversation Mutations
-// ============================================================================
-
-/**
- * Create a new conversation between the current user and another user
- * Returns the existing conversation if one already exists
- */
-export const createConversation = mutation({
-  args: { otherUserId: v.string() },
-  handler: async (ctx, args): Promise<Id<"conversations">> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    // Can't create a conversation with yourself
-    if (userId === args.otherUserId) {
-      throw new Error("Cannot create a conversation with yourself");
-    }
-
-    const { participant1Id, participant2Id } = normalizeParticipants(userId, args.otherUserId);
-
-    // Check if conversation already exists
-    const existingConversation = await ctx.db
-      .query("conversations")
-      .withIndex("by_participants", (q) =>
-        q.eq("participant1Id", participant1Id).eq("participant2Id", participant2Id)
-      )
-      .first();
-
-    if (existingConversation) {
-      return existingConversation._id;
-    }
-
-    // Create new conversation
-    const now = Date.now();
-    const conversationId = await ctx.db.insert("conversations", {
-      participant1Id,
-      participant2Id,
-      createdAt: now,
-      lastMessageAt: now,
-    });
-
-    return conversationId;
-  },
-});
-
-/**
- * Get or create a conversation with another user
- * This is a convenience mutation that always returns a conversation ID
+ * Find existing or create new conversation between two users.
+ * Alphabetically sorts participant IDs for canonical ordering.
  */
 export const getOrCreateConversation = mutation({
   args: { otherUserId: v.string() },
-  handler: async (ctx, args): Promise<Id<"conversations">> => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
-
     if (userId === args.otherUserId) {
-      throw new Error("Cannot create a conversation with yourself");
+      throw new Error("Cannot create conversation with yourself");
     }
 
-    const { participant1Id, participant2Id } = normalizeParticipants(userId, args.otherUserId);
+    // Canonical ordering
+    const [participant1Id, participant2Id] =
+      userId < args.otherUserId
+        ? [userId, args.otherUserId]
+        : [args.otherUserId, userId];
 
-    // Check if conversation already exists
-    const existingConversation = await ctx.db
+    // Check if conversation exists
+    const existing = await ctx.db
       .query("conversations")
       .withIndex("by_participants", (q) =>
         q.eq("participant1Id", participant1Id).eq("participant2Id", participant2Id)
       )
-      .first();
+      .unique();
 
-    if (existingConversation) {
-      return existingConversation._id;
-    }
+    if (existing) return existing._id;
 
     // Create new conversation
     const now = Date.now();
-    const conversationId = await ctx.db.insert("conversations", {
+    const id = await ctx.db.insert("conversations", {
       participant1Id,
       participant2Id,
       createdAt: now,
       lastMessageAt: now,
     });
 
-    return conversationId;
+    return id;
   },
 });
 
 /**
- * Update the lastMessageAt timestamp for a conversation
- * Called internally when a new message is sent
+ * Get paginated DM messages for a conversation.
+ * 50 messages per page, newest first. Enriches with user profiles, thread metadata, etc.
  */
-export const updateLastMessageAt = mutation({
-  args: { conversationId: v.id("conversations") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const conversation = await ctx.db.get(args.conversationId);
-
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
-
-    // Verify user is a participant
-    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
-      throw new Error("Not a participant in this conversation");
-    }
-
-    await ctx.db.patch(args.conversationId, {
-      lastMessageAt: Date.now(),
-    });
+export const getConversationMessages = query({
+  args: {
+    conversationId: v.id("conversations"),
+    paginationOpts: paginationOptsValidator,
   },
-});
-
-// ============================================================================
-// Read Status - Unread Message Tracking
-// ============================================================================
-
-/**
- * Mark a conversation as read by the current user
- * This updates the lastReadAt timestamp to the latest message's createdAt
- * to avoid race conditions where new messages arrive during the mutation
- */
-export const markConversationAsRead = mutation({
-  args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
+    if (!identity) return { page: [], isDone: true, continueCursor: "" };
+
+    // Verify participation
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) return { page: [], isDone: true, continueCursor: "" };
+    if (
+      conv.participant1Id !== identity.subject &&
+      conv.participant2Id !== identity.subject
+    ) {
+      return { page: [], isDone: true, continueCursor: "" };
     }
 
-    const userId = identity.subject;
-    const conversation = await ctx.db.get(args.conversationId);
-
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
-
-    // Verify user is a participant
-    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
-      throw new Error("Not a participant in this conversation");
-    }
-
-    // Get the latest message in the conversation to use its timestamp
-    // This ensures we mark all current messages as read, avoiding race conditions
-    const latestMessage = await ctx.db
+    const results = await ctx.db
       .query("messages")
       .withIndex("by_conversation_and_created", (q) =>
         q.eq("conversationId", args.conversationId)
       )
       .order("desc")
-      .first();
+      .paginate(args.paginationOpts);
 
-    // Use the latest message's createdAt or current time if no messages exist
-    const readTimestamp = latestMessage ? latestMessage.createdAt : Date.now();
+    // Collect unique user IDs
+    const userIds = new Set<string>();
+    for (const msg of results.page) {
+      userIds.add(msg.userId);
+    }
 
-    // Check if read status exists
-    const existingStatus = await ctx.db
+    // Batch fetch user profiles
+    const userMap = new Map<
+      string,
+      { firstName?: string; lastName?: string; imageUrl?: string; clerkId: string }
+    >();
+    for (const uid of userIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", uid))
+        .unique();
+      if (user) {
+        userMap.set(uid, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl,
+          clerkId: user.clerkId,
+        });
+      }
+    }
+
+    // Fetch parent messages for replies
+    const parentIds: Id<"messages">[] = [];
+    for (const msg of results.page) {
+      if (msg.parentMessageId) {
+        parentIds.push(msg.parentMessageId);
+      }
+    }
+
+    const parentMap = new Map<
+      Id<"messages">,
+      { content: string; userId: string; userName: string }
+    >();
+    for (const parentId of parentIds) {
+      const parent = await ctx.db.get(parentId);
+      if (parent) {
+        const parentUser = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", parent.userId))
+          .unique();
+        parentMap.set(parentId, {
+          content: parent.content,
+          userId: parent.userId,
+          userName: parentUser
+            ? [parentUser.firstName, parentUser.lastName].filter(Boolean).join(" ") ||
+              "Unknown"
+            : "Unknown",
+        });
+      }
+    }
+
+    // Check saved messages
+    const savedMessages = await ctx.db
+      .query("savedMessages")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const savedMessageIds = new Set(savedMessages.map((s) => s.messageId));
+
+    // Resolve attachment URLs
+    const attachmentUrlMap = new Map<string, string>();
+    for (const msg of results.page) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          if (!attachmentUrlMap.has(att.storageId)) {
+            const url = await ctx.storage.getUrl(att.storageId);
+            if (url) attachmentUrlMap.set(att.storageId, url);
+          }
+        }
+      }
+    }
+
+    // Filter out thread replies from main feed
+    const mainMessages = results.page.filter((msg) => !msg.parentMessageId);
+
+    // Thread metadata
+    const threadMetaMap = new Map<
+      Id<"messages">,
+      { count: number; latestRepliers: { imageUrl?: string; name: string }[] }
+    >();
+    for (const msg of mainMessages) {
+      const replies = await ctx.db
+        .query("messages")
+        .withIndex("by_parent_message", (q) => q.eq("parentMessageId", msg._id))
+        .collect();
+      if (replies.length > 0) {
+        const seen = new Set<string>();
+        const latestRepliers: { imageUrl?: string; name: string }[] = [];
+        for (let i = replies.length - 1; i >= 0 && latestRepliers.length < 3; i--) {
+          const r = replies[i];
+          if (seen.has(r.userId)) continue;
+          seen.add(r.userId);
+          const u =
+            userMap.get(r.userId) ??
+            (await (async () => {
+              const user = await ctx.db
+                .query("users")
+                .withIndex("by_clerk_id", (q) => q.eq("clerkId", r.userId))
+                .unique();
+              if (user) {
+                userMap.set(r.userId, {
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  imageUrl: user.imageUrl,
+                  clerkId: user.clerkId,
+                });
+                return userMap.get(r.userId)!;
+              }
+              return null;
+            })());
+          if (u) {
+            latestRepliers.push({
+              imageUrl: u.imageUrl,
+              name:
+                [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unknown",
+            });
+          }
+        }
+        threadMetaMap.set(msg._id, { count: replies.length, latestRepliers });
+      }
+    }
+
+    // Enrich messages
+    const enrichedPage = mainMessages.map((msg) => {
+      const user = userMap.get(msg.userId);
+      const parentMessage = msg.parentMessageId
+        ? parentMap.get(msg.parentMessageId) ?? null
+        : null;
+      const threadMeta = threadMetaMap.get(msg._id);
+
+      return {
+        ...msg,
+        userName: user
+          ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown",
+        userImageUrl: user?.imageUrl ?? null,
+        parentMessage,
+        isSaved: savedMessageIds.has(msg._id),
+        isOwn: msg.userId === identity.subject,
+        attachments: msg.attachments?.map((att) => ({
+          ...att,
+          url: attachmentUrlMap.get(att.storageId) ?? null,
+        })),
+        threadReplyCount: threadMeta?.count ?? 0,
+        threadLatestRepliers: threadMeta?.latestRepliers ?? [],
+        isSharedMember: false,
+        sharedFromWorkspace: null as string | null,
+        sharedFromWorkspaceLogoUrl: null as string | null,
+      };
+    });
+
+    return {
+      ...results,
+      page: enrichedPage,
+    };
+  },
+});
+
+/**
+ * Send a direct message in a conversation.
+ */
+export const sendDirectMessage = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    content: v.string(),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          name: v.string(),
+          size: v.number(),
+          type: v.string(),
+        })
+      )
+    ),
+    parentMessageId: v.optional(v.id("messages")),
+    mentions: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) throw new Error("Conversation not found");
+
+    const userId = identity.subject;
+    if (conv.participant1Id !== userId && conv.participant2Id !== userId) {
+      throw new Error("Not a participant in this conversation");
+    }
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      userId,
+      content: args.content,
+      attachments: args.attachments,
+      parentMessageId: args.parentMessageId,
+      mentions: args.mentions,
+      createdAt: Date.now(),
+    });
+
+    // Update lastMessageAt
+    await ctx.db.patch(args.conversationId, { lastMessageAt: Date.now() });
+
+    // Schedule link embed fetch if URL detected
+    const urlMatch = args.content.match(/https?:\/\/[^\s<>)"']+/);
+    if (urlMatch) {
+      await ctx.scheduler.runAfter(0, internal.linkEmbedsAction.fetchLinkEmbed, {
+        messageId,
+        url: urlMatch[0],
+      });
+    }
+
+    // Update read status for sender
+    const existingReadStatus = await ctx.db
       .query("conversationReadStatus")
       .withIndex("by_conversation_and_user", (q) =>
         q.eq("conversationId", args.conversationId).eq("userId", userId)
       )
-      .first();
+      .unique();
 
-    if (existingStatus) {
-      // Only update if the new timestamp is greater (to avoid going backwards)
-      if (readTimestamp > existingStatus.lastReadAt) {
-        await ctx.db.patch(existingStatus._id, { lastReadAt: readTimestamp });
-      }
+    if (existingReadStatus) {
+      await ctx.db.patch(existingReadStatus._id, { lastReadAt: Date.now() });
     } else {
-      // Create new read status
       await ctx.db.insert("conversationReadStatus", {
         conversationId: args.conversationId,
         userId,
-        lastReadAt: readTimestamp,
+        lastReadAt: Date.now(),
       });
     }
+
+    return messageId;
   },
 });
 
 /**
- * Get unread message count for a specific conversation
+ * Mark a conversation as read for the current user.
  */
-export const getUnreadCount = query({
+export const markConversationRead = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return 0;
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
-    const conversation = await ctx.db.get(args.conversationId);
-
-    if (!conversation) return 0;
-
-    // Verify user is a participant
-    if (conversation.participant1Id !== userId && conversation.participant2Id !== userId) {
-      return 0;
-    }
-
-    // Get the user's last read timestamp
-    const readStatus = await ctx.db
+    const existing = await ctx.db
       .query("conversationReadStatus")
       .withIndex("by_conversation_and_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", userId)
+        q
+          .eq("conversationId", args.conversationId)
+          .eq("userId", identity.subject)
       )
-      .first();
+      .unique();
 
-    const lastReadAt = readStatus?.lastReadAt ?? 0;
-
-    // Count messages after lastReadAt that are NOT from the current user
-    const unreadMessages = await ctx.db
-      .query("messages")
-      .withIndex("by_conversation_and_created", (q) =>
-        q.eq("conversationId", args.conversationId).gt("createdAt", lastReadAt)
-      )
-      .collect();
-
-    // Filter out messages from current user (you don't have unread messages from yourself)
-    return unreadMessages.filter((msg) => msg.userId !== userId).length;
-  },
-});
-
-/**
- * Get total unread message count across all conversations for the current user
- */
-export const getTotalUnreadCount = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return 0;
-
-    const userId = identity.subject;
-
-    // Get all conversations for this user
-    const conversationsAsP1 = await ctx.db
-      .query("conversations")
-      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
-      .collect();
-
-    const conversationsAsP2 = await ctx.db
-      .query("conversations")
-      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
-      .collect();
-
-    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
-    const uniqueConversations = Array.from(
-      new Map(allConversations.map((c) => [c._id, c])).values()
-    );
-
-    // Get all read statuses for this user
-    const readStatuses = await ctx.db
-      .query("conversationReadStatus")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const readStatusMap = new Map(
-      readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
-    );
-
-    let totalUnread = 0;
-
-    // Count unread messages in each conversation
-    for (const conv of uniqueConversations) {
-      const lastReadAt = readStatusMap.get(conv._id) ?? 0;
-
-      const unreadMessages = await ctx.db
-        .query("messages")
-        .withIndex("by_conversation_and_created", (q) =>
-          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
-        )
-        .collect();
-
-      // Filter out messages from current user
-      totalUnread += unreadMessages.filter((msg) => msg.userId !== userId).length;
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastReadAt: Date.now() });
+    } else {
+      await ctx.db.insert("conversationReadStatus", {
+        conversationId: args.conversationId,
+        userId: identity.subject,
+        lastReadAt: Date.now(),
+      });
     }
-
-    return totalUnread;
-  },
-});
-
-/**
- * Get unread counts for all conversations (for sidebar badges)
- * Returns a map of conversationId -> unread count
- */
-export const getUnreadCountsForAllConversations = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return {};
-
-    const userId = identity.subject;
-
-    // Get all conversations for this user
-    const conversationsAsP1 = await ctx.db
-      .query("conversations")
-      .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
-      .collect();
-
-    const conversationsAsP2 = await ctx.db
-      .query("conversations")
-      .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
-      .collect();
-
-    const allConversations = [...conversationsAsP1, ...conversationsAsP2];
-    const uniqueConversations = Array.from(
-      new Map(allConversations.map((c) => [c._id, c])).values()
-    );
-
-    // Get all read statuses for this user
-    const readStatuses = await ctx.db
-      .query("conversationReadStatus")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const readStatusMap = new Map(
-      readStatuses.map((rs) => [rs.conversationId, rs.lastReadAt])
-    );
-
-    const unreadCounts: Record<string, number> = {};
-
-    // Count unread messages in each conversation
-    for (const conv of uniqueConversations) {
-      const lastReadAt = readStatusMap.get(conv._id) ?? 0;
-
-      const unreadMessages = await ctx.db
-        .query("messages")
-        .withIndex("by_conversation_and_created", (q) =>
-          q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
-        )
-        .collect();
-
-      // Filter out messages from current user
-      const count = unreadMessages.filter((msg) => msg.userId !== userId).length;
-      if (count > 0) {
-        unreadCounts[conv._id] = count;
-      }
-    }
-
-    return unreadCounts;
   },
 });

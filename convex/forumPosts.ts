@@ -1,211 +1,111 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
 
 // ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Check if user has access to a forum channel
- */
-async function checkForumChannelAccess(
-  ctx: { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: { get: Function; query: Function } },
-  channelId: Id<"channels">
-): Promise<{
-  userId: string;
-  channel: Doc<"channels">;
-  membership: Doc<"organizationMembers"> | null;
-  isAdmin: boolean;
-  isExternalMember: boolean;
-}> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = identity.subject;
-  const channel = await ctx.db.get(channelId);
-  if (!channel) {
-    throw new Error("Channel not found");
-  }
-
-  // Verify this is a forum channel
-  if (channel.channelType !== "forum") {
-    throw new Error("This is not a forum channel");
-  }
-
-  // Check organization membership first
-  const membership = await ctx.db
-    .query("organizationMembers")
-    .withIndex("by_organization_and_user", (q: { eq: Function }) =>
-      q.eq("organizationId", channel.organizationId).eq("userId", userId)
-    )
-    .first();
-
-  if (membership) {
-    const isAdmin = membership.role === "admin";
-
-    // Check private channel access for org members
-    if (channel.isPrivate && !isAdmin) {
-      const channelMember = await ctx.db
-        .query("channelMembers")
-        .withIndex("by_channel_and_user", (q: { eq: Function }) =>
-          q.eq("channelId", channelId).eq("userId", userId)
-        )
-        .first();
-
-      if (!channelMember) {
-        throw new Error("You don't have access to this private channel");
-      }
-    }
-
-    return { userId, channel, membership, isAdmin, isExternalMember: false };
-  }
-
-  // Check if user is a shared channel member (external access)
-  const sharedMember = await ctx.db
-    .query("sharedChannelMembers")
-    .withIndex("by_channel_and_user", (q: { eq: Function }) =>
-      q.eq("channelId", channelId).eq("userId", userId)
-    )
-    .first();
-
-  if (sharedMember) {
-    return { userId, channel, membership: null, isAdmin: false, isExternalMember: true };
-  }
-
-  throw new Error("Not a member of this organization or channel");
-}
-
-/**
- * Check if user can create posts in a forum channel
- */
-function canCreatePost(
-  channel: Doc<"channels">,
-  isAdmin: boolean
-): boolean {
-  const whoCanPost = channel.forumSettings?.whoCanPost ?? "everyone";
-  
-  if (whoCanPost === "admins") {
-    return isAdmin;
-  }
-  
-  return true; // "everyone" can post
-}
-
-/**
- * Check if user can modify a post (author or admin)
- */
-function canModifyPost(
-  post: Doc<"forumPosts">,
-  userId: string,
-  isAdmin: boolean
-): boolean {
-  return post.authorId === userId || isAdmin;
-}
-
-// ============================================================================
-// Forum Post Queries
+// Queries
 // ============================================================================
 
 /**
- * Get all posts for a forum channel with pagination
- * Sorted by: pinned first, then by lastActivityAt desc
+ * Get paginated forum posts for a channel.
+ * Returns posts with author info, sorted by pinned first then last activity.
  */
-export const getPosts = query({
+export const getForumPosts = query({
   args: {
     channelId: v.id("channels"),
-    limit: v.optional(v.number()),
-    cursor: v.optional(v.number()), // lastActivityAt timestamp for cursor-based pagination
-    statusFilter: v.optional(v.union(v.literal("open"), v.literal("closed"), v.literal("solved"), v.literal("all"))),
+    status: v.optional(v.union(v.literal("open"), v.literal("closed"), v.literal("solved"))),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { posts: [], nextCursor: null, hasMore: false };
+    if (!identity) return { page: [], isDone: true, continueCursor: "" };
 
-    // Get channel and verify access
+    // Verify channel access
     const channel = await ctx.db.get(args.channelId);
-    if (!channel) return { posts: [], nextCursor: null, hasMore: false };
+    if (!channel) return { page: [], isDone: true, continueCursor: "" };
 
-    // Verify this is a forum channel
-    if (channel.channelType !== "forum") {
-      return { posts: [], nextCursor: null, hasMore: false };
-    }
-
-    // Check organization membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
         q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
+    if (!membership) return { page: [], isDone: true, continueCursor: "" };
 
-    // If not an org member, check for shared channel access
-    if (!membership) {
-      const sharedMember = await ctx.db
-        .query("sharedChannelMembers")
+    // Check private channel access
+    if (channel.isPrivate && membership.role !== "admin") {
+      const channelMember = await ctx.db
+        .query("channelMembers")
         .withIndex("by_channel_and_user", (q) =>
           q.eq("channelId", args.channelId).eq("userId", identity.subject)
         )
-        .first();
-      
-      if (!sharedMember) {
-        return { posts: [], nextCursor: null, hasMore: false };
+        .unique();
+      if (!channelMember) return { page: [], isDone: true, continueCursor: "" };
+    }
+
+    let results;
+    if (args.status) {
+      results = await ctx.db
+        .query("forumPosts")
+        .withIndex("by_channel_and_status", (q) =>
+          q.eq("channelId", args.channelId).eq("status", args.status!)
+        )
+        .order("desc")
+        .paginate(args.paginationOpts);
+    } else {
+      results = await ctx.db
+        .query("forumPosts")
+        .withIndex("by_channel_and_last_activity", (q) =>
+          q.eq("channelId", args.channelId)
+        )
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
+
+    // Batch fetch author profiles
+    const authorIds = new Set<string>();
+    for (const post of results.page) {
+      authorIds.add(post.authorId);
+    }
+
+    const authorMap = new Map<string, { firstName?: string; lastName?: string; imageUrl?: string }>();
+    for (const authorId of authorIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", authorId))
+        .unique();
+      if (user) {
+        authorMap.set(authorId, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl,
+        });
       }
     }
 
-    const limit = args.limit ?? 20;
-    const statusFilter = args.statusFilter ?? "all";
-
-    // Get all posts for the channel
-    let allPosts = await ctx.db
-      .query("forumPosts")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-      .collect();
-
-    // Apply status filter
-    if (statusFilter !== "all") {
-      allPosts = allPosts.filter((post) => post.status === statusFilter);
-    }
-
-    // Sort: pinned first, then by lastActivityAt desc
-    allPosts.sort((a, b) => {
-      // Pinned posts first
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      // Then by last activity (most recent first)
-      return b.lastActivityAt - a.lastActivityAt;
+    const enrichedPage = results.page.map((post) => {
+      const author = authorMap.get(post.authorId);
+      const authorName = author
+        ? [author.firstName, author.lastName].filter(Boolean).join(" ") || "Unknown"
+        : "Unknown";
+      return {
+        ...post,
+        authorName,
+        authorImageUrl: author?.imageUrl ?? null,
+      };
     });
 
-    // Apply cursor-based pagination
-    let startIndex = 0;
-    if (args.cursor) {
-      const cursorIndex = allPosts.findIndex(
-        (post) => !post.isPinned && post.lastActivityAt < args.cursor!
-      );
-      if (cursorIndex !== -1) {
-        startIndex = cursorIndex;
-      } else {
-        // Cursor is beyond all posts
-        return { posts: [], nextCursor: null, hasMore: false };
-      }
-    }
-
-    // Get the page of posts
-    const postsPage = allPosts.slice(startIndex, startIndex + limit + 1);
-    const hasMore = postsPage.length > limit;
-    const posts = hasMore ? postsPage.slice(0, limit) : postsPage;
-    const nextCursor = hasMore ? posts[posts.length - 1]?.lastActivityAt : null;
-
-    return { posts, nextCursor, hasMore };
+    return {
+      ...results,
+      page: enrichedPage,
+    };
   },
 });
 
 /**
- * Get a single post by ID
+ * Get a single forum post with full details and author info.
  */
-export const getPost = query({
+export const getForumPost = query({
   args: {
     postId: v.id("forumPosts"),
   },
@@ -216,123 +116,140 @@ export const getPost = query({
     const post = await ctx.db.get(args.postId);
     if (!post) return null;
 
-    // Get channel and verify access
+    // Verify channel access
     const channel = await ctx.db.get(post.channelId);
     if (!channel) return null;
 
-    // Check organization membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
         q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
+    if (!membership) return null;
 
-    // If not an org member, check for shared channel access
-    if (!membership) {
-      const sharedMember = await ctx.db
-        .query("sharedChannelMembers")
+    if (channel.isPrivate && membership.role !== "admin") {
+      const channelMember = await ctx.db
+        .query("channelMembers")
         .withIndex("by_channel_and_user", (q) =>
           q.eq("channelId", post.channelId).eq("userId", identity.subject)
         )
-        .first();
-      
-      if (!sharedMember) {
-        return null;
-      }
+        .unique();
+      if (!channelMember) return null;
     }
 
+    const author = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", post.authorId))
+      .unique();
+
+    const authorName = author
+      ? [author.firstName, author.lastName].filter(Boolean).join(" ") || "Unknown"
+      : "Unknown";
+
     return {
-      post,
-      channel,
-      membership,
-      isAdmin: membership?.role === "admin" || false,
-      isAuthor: post.authorId === identity.subject,
+      ...post,
+      authorName,
+      authorImageUrl: author?.imageUrl ?? null,
+      isOwn: post.authorId === identity.subject,
+      isAdmin: membership.role === "admin",
     };
   },
 });
 
 /**
- * Get comments for a forum post with pagination
+ * Get paginated comments for a forum post.
+ * Comments are messages with forumPostId set.
  */
-export const getPostComments = query({
+export const getForumComments = query({
   args: {
     postId: v.id("forumPosts"),
-    limit: v.optional(v.number()),
-    cursor: v.optional(v.number()), // createdAt timestamp for cursor-based pagination
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { comments: [], nextCursor: null, hasMore: false };
+    if (!identity) return { page: [], isDone: true, continueCursor: "" };
 
     const post = await ctx.db.get(args.postId);
-    if (!post) return { comments: [], nextCursor: null, hasMore: false };
+    if (!post) return { page: [], isDone: true, continueCursor: "" };
 
-    // Get channel and verify access
     const channel = await ctx.db.get(post.channelId);
-    if (!channel) return { comments: [], nextCursor: null, hasMore: false };
+    if (!channel) return { page: [], isDone: true, continueCursor: "" };
 
-    // Check organization membership
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_organization_and_user", (q) =>
         q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
+    if (!membership) return { page: [], isDone: true, continueCursor: "" };
 
-    // If not an org member, check for shared channel access
-    if (!membership) {
-      const sharedMember = await ctx.db
-        .query("sharedChannelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", post.channelId).eq("userId", identity.subject)
-        )
-        .first();
-      
-      if (!sharedMember) {
-        return { comments: [], nextCursor: null, hasMore: false };
+    const results = await ctx.db
+      .query("messages")
+      .withIndex("by_forum_post_and_created", (q) =>
+        q.eq("forumPostId", args.postId)
+      )
+      .order("asc")
+      .paginate(args.paginationOpts);
+
+    // Batch fetch user profiles
+    const userIds = new Set<string>();
+    for (const msg of results.page) {
+      userIds.add(msg.userId);
+    }
+
+    const userMap = new Map<string, { firstName?: string; lastName?: string; imageUrl?: string }>();
+    for (const userId of userIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+        .unique();
+      if (user) {
+        userMap.set(userId, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl,
+        });
       }
     }
 
-    const limit = args.limit ?? 50;
+    // Check saved status
+    const savedMessages = await ctx.db
+      .query("savedMessages")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+    const savedSet = new Set(savedMessages.map((s) => s.messageId));
 
-    // Get comments for the post
-    let commentsQuery = ctx.db
-      .query("messages")
-      .withIndex("by_forum_post_and_created", (q) => q.eq("forumPostId", args.postId));
+    const enrichedPage = results.page.map((msg) => {
+      const user = userMap.get(msg.userId);
+      const userName = user
+        ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+        : "Unknown";
+      return {
+        ...msg,
+        userName,
+        userImageUrl: user?.imageUrl ?? null,
+        isSaved: savedSet.has(msg._id),
+        isOwn: msg.userId === identity.subject,
+        parentMessage: null,
+      };
+    });
 
-    // If we have a cursor, filter to get older messages
-    if (args.cursor) {
-      commentsQuery = commentsQuery.filter((q) =>
-        q.lt(q.field("createdAt"), args.cursor!)
-      );
-    }
-
-    // Get one extra to check if there are more
-    const comments = await commentsQuery
-      .order("desc")
-      .take(limit + 1);
-
-    const hasMore = comments.length > limit;
-    const resultComments = hasMore ? comments.slice(0, limit) : comments;
-    
-    // Reverse to show oldest first (chat order)
-    resultComments.reverse();
-
-    const nextCursor = hasMore ? resultComments[0]?.createdAt : null;
-
-    return { comments: resultComments, nextCursor, hasMore };
+    return {
+      ...results,
+      page: enrichedPage,
+    };
   },
 });
 
 // ============================================================================
-// Forum Post Mutations
+// Mutations
 // ============================================================================
 
 /**
- * Create a new forum post
+ * Create a new forum post.
  */
-export const createPost = mutation({
+export const createForumPost = mutation({
   args: {
     channelId: v.id("channels"),
     title: v.string(),
@@ -343,46 +260,44 @@ export const createPost = mutation({
       size: v.number(),
       type: v.string(),
     }))),
-    linkEmbed: v.optional(v.object({
-      url: v.string(),
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      image: v.optional(v.string()),
-      siteName: v.optional(v.string()),
-      favicon: v.optional(v.string()),
-    })),
   },
   handler: async (ctx, args) => {
-    const { userId, channel, isAdmin } = await checkForumChannelAccess(ctx, args.channelId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-    // Check if user can create posts
-    if (!canCreatePost(channel, isAdmin)) {
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify membership
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Check forum post permissions
+    if (channel.forumSettings?.whoCanPost === "admins" && membership.role !== "admin") {
       throw new Error("Only admins can create posts in this forum");
     }
 
-    // Validate title
-    if (!args.title.trim()) {
-      throw new Error("Post title cannot be empty");
-    }
-
-    if (args.title.length > 200) {
-      throw new Error("Post title must be 200 characters or less");
+    // Check read-only
+    if (channel.permissions === "readOnly" && membership.role !== "admin") {
+      throw new Error("This channel is read-only");
     }
 
     const now = Date.now();
-
     const postId = await ctx.db.insert("forumPosts", {
       channelId: args.channelId,
       title: args.title.trim(),
       content: args.content,
-      authorId: userId,
+      authorId: identity.subject,
       status: "open",
-      isPinned: false,
       createdAt: now,
       lastActivityAt: now,
       commentCount: 0,
       attachments: args.attachments,
-      linkEmbed: args.linkEmbed,
     });
 
     return postId;
@@ -390,9 +305,9 @@ export const createPost = mutation({
 });
 
 /**
- * Update a forum post's title and/or content
+ * Update a forum post (title, content, status).
  */
-export const updatePost = mutation({
+export const updateForumPost = mutation({
   args: {
     postId: v.id("forumPosts"),
     title: v.optional(v.string()),
@@ -400,301 +315,208 @@ export const updatePost = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
+    if (!post) throw new Error("Post not found");
+
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Only author or admin can edit
+    if (post.authorId !== identity.subject && membership.role !== "admin") {
+      throw new Error("Not authorized to edit this post");
     }
 
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
+    const updates: Record<string, unknown> = {};
+    if (args.title !== undefined) updates.title = args.title.trim();
+    if (args.content !== undefined) updates.content = args.content;
 
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to edit this post");
-    }
-
-    const updates: Partial<Doc<"forumPosts">> = {};
-
-    if (args.title !== undefined) {
-      if (!args.title.trim()) {
-        throw new Error("Post title cannot be empty");
-      }
-      if (args.title.length > 200) {
-        throw new Error("Post title must be 200 characters or less");
-      }
-      updates.title = args.title.trim();
-    }
-
-    if (args.content !== undefined) {
-      updates.content = args.content;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await ctx.db.patch(args.postId, updates);
-    }
-
-    return args.postId;
+    await ctx.db.patch(args.postId, updates);
   },
 });
 
 /**
- * Delete a forum post and all its comments
+ * Delete a forum post and all its comments.
  */
-export const deletePost = mutation({
+export const deleteForumPost = mutation({
   args: {
     postId: v.id("forumPosts"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
+    if (!post) throw new Error("Post not found");
+
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Only author or admin can delete
+    if (post.authorId !== identity.subject && membership.role !== "admin") {
+      throw new Error("Not authorized to delete this post");
     }
 
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to delete this post");
-    }
-
-    // Delete all comments for this post
+    // Delete all comments (messages with this forumPostId)
     const comments = await ctx.db
       .query("messages")
       .withIndex("by_forum_post", (q) => q.eq("forumPostId", args.postId))
       .collect();
-
     for (const comment of comments) {
       await ctx.db.delete(comment._id);
     }
 
-    // Delete the post
     await ctx.db.delete(args.postId);
-
-    return { success: true };
   },
 });
 
 /**
- * Close a forum post (prevents new comments)
+ * Update forum post status (open/closed/solved).
  */
-export const closePost = mutation({
+export const updatePostStatus = mutation({
+  args: {
+    postId: v.id("forumPosts"),
+    status: v.union(v.literal("open"), v.literal("closed"), v.literal("solved")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Only author or admin can change status
+    if (post.authorId !== identity.subject && membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const updates: Record<string, unknown> = { status: args.status };
+    // Clear solved comment if changing away from solved
+    if (args.status !== "solved") {
+      updates.solvedCommentId = undefined;
+    }
+
+    await ctx.db.patch(args.postId, updates);
+  },
+});
+
+/**
+ * Toggle pin status for a forum post. Admin only.
+ */
+export const togglePinPost = mutation({
   args: {
     postId: v.id("forumPosts"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
+    if (!post) throw new Error("Post not found");
+
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to close this post");
-    }
-
-    await ctx.db.patch(args.postId, { status: "closed" });
-
-    return { success: true };
-  },
-});
-
-/**
- * Reopen a closed forum post
- */
-export const reopenPost = mutation({
-  args: {
-    postId: v.id("forumPosts"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to reopen this post");
-    }
-
-    // Reopen as "open" (remove solved status if it was solved)
-    await ctx.db.patch(args.postId, { 
-      status: "open",
-      solvedCommentId: undefined,
+    await ctx.db.patch(args.postId, {
+      isPinned: post.isPinned ? undefined : true,
     });
-
-    return { success: true };
   },
 });
 
 /**
- * Mark a forum post as solved, optionally with a specific answer comment
+ * Mark a comment as the solved answer.
  */
-export const markAsSolved = mutation({
+export const markSolvedComment = mutation({
   args: {
     postId: v.id("forumPosts"),
-    solvedCommentId: v.optional(v.id("messages")),
+    commentId: v.id("messages"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
+    if (!post) throw new Error("Post not found");
+
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
+
+    // Only post author or admin can mark as solved
+    if (post.authorId !== identity.subject && membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to mark this post as solved");
+    // Verify the comment belongs to this post
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment || comment.forumPostId !== args.postId) {
+      throw new Error("Comment not found on this post");
     }
 
-    // If a specific comment is marked as the solution, verify it belongs to this post
-    if (args.solvedCommentId) {
-      const comment = await ctx.db.get(args.solvedCommentId);
-      if (!comment || comment.forumPostId !== args.postId) {
-        throw new Error("Invalid solution comment");
-      }
+    // Toggle: if already marked, unmark
+    if (post.solvedCommentId === args.commentId) {
+      await ctx.db.patch(args.postId, {
+        status: "open",
+        solvedCommentId: undefined,
+      });
+    } else {
+      await ctx.db.patch(args.postId, {
+        status: "solved",
+        solvedCommentId: args.commentId,
+      });
     }
-
-    await ctx.db.patch(args.postId, { 
-      status: "solved",
-      solvedCommentId: args.solvedCommentId,
-    });
-
-    return { success: true };
   },
 });
 
 /**
- * Remove solved status from a forum post
+ * Send a comment on a forum post.
  */
-export const markAsUnsolved = mutation({
-  args: {
-    postId: v.id("forumPosts"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Check if user can modify this post
-    if (!canModifyPost(post, userId, isAdmin)) {
-      throw new Error("You don't have permission to modify this post");
-    }
-
-    await ctx.db.patch(args.postId, { 
-      status: "open",
-      solvedCommentId: undefined,
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Pin a forum post (admin only)
- */
-export const pinPost = mutation({
-  args: {
-    postId: v.id("forumPosts"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    if (!isAdmin) {
-      throw new Error("Only admins can pin posts");
-    }
-
-    await ctx.db.patch(args.postId, { isPinned: true });
-
-    return { success: true };
-  },
-});
-
-/**
- * Unpin a forum post (admin only)
- */
-export const unpinPost = mutation({
-  args: {
-    postId: v.id("forumPosts"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    if (!isAdmin) {
-      throw new Error("Only admins can unpin posts");
-    }
-
-    await ctx.db.patch(args.postId, { isPinned: false });
-
-    return { success: true };
-  },
-});
-
-/**
- * Send a comment to a forum post
- */
-export const sendComment = mutation({
+export const sendForumComment = mutation({
   args: {
     postId: v.id("forumPosts"),
     content: v.string(),
@@ -704,242 +526,47 @@ export const sendComment = mutation({
       size: v.number(),
       type: v.string(),
     }))),
-    linkEmbed: v.optional(v.object({
-      url: v.string(),
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      image: v.optional(v.string()),
-      siteName: v.optional(v.string()),
-      favicon: v.optional(v.string()),
-    })),
-    parentMessageId: v.optional(v.id("messages")),
     mentions: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const post = await ctx.db.get(args.postId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
+    if (!post) throw new Error("Post not found");
 
-    // Check if post is closed
-    if (post.status === "closed") {
-      throw new Error("This post is closed. No new comments can be added.");
-    }
+    const channel = await ctx.db.get(post.channelId);
+    if (!channel) throw new Error("Channel not found");
 
-    // Verify channel access (this also verifies it's a forum channel)
-    await checkForumChannelAccess(ctx, post.channelId);
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member");
 
-    // Validate parent message if provided (for reply threading)
-    if (args.parentMessageId) {
-      const parentMessage = await ctx.db.get(args.parentMessageId);
-      if (!parentMessage || parentMessage.forumPostId !== args.postId) {
-        throw new Error("Invalid parent message");
-      }
+    // Check read-only
+    if (channel.permissions === "readOnly" && membership.role !== "admin") {
+      throw new Error("This channel is read-only");
     }
 
     const now = Date.now();
-
-    // Create the comment
     const messageId = await ctx.db.insert("messages", {
       forumPostId: args.postId,
-      userId,
+      userId: identity.subject,
       content: args.content,
-      createdAt: now,
       attachments: args.attachments,
-      linkEmbed: args.linkEmbed,
-      parentMessageId: args.parentMessageId,
+      createdAt: now,
       mentions: args.mentions,
     });
 
-    // Update post stats
+    // Update post's comment count and last activity
     await ctx.db.patch(args.postId, {
-      lastActivityAt: now,
       commentCount: post.commentCount + 1,
+      lastActivityAt: now,
     });
 
     return messageId;
-  },
-});
-
-/**
- * Delete a comment from a forum post
- */
-export const deleteComment = mutation({
-  args: {
-    messageId: v.id("messages"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const message = await ctx.db.get(args.messageId);
-    if (!message) {
-      throw new Error("Comment not found");
-    }
-
-    if (!message.forumPostId) {
-      throw new Error("This is not a forum comment");
-    }
-
-    const post = await ctx.db.get(message.forumPostId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Only the comment author or admin can delete
-    if (message.userId !== userId && !isAdmin) {
-      throw new Error("You don't have permission to delete this comment");
-    }
-
-    // If this comment was the solved answer, clear it
-    if (post.solvedCommentId === args.messageId) {
-      await ctx.db.patch(post._id, {
-        solvedCommentId: undefined,
-        status: "open",
-      });
-    }
-
-    // Delete the comment
-    await ctx.db.delete(args.messageId);
-
-    // Update post comment count
-    await ctx.db.patch(post._id, {
-      commentCount: Math.max(0, post.commentCount - 1),
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Edit a comment in a forum post
- */
-export const editComment = mutation({
-  args: {
-    messageId: v.id("messages"),
-    content: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const message = await ctx.db.get(args.messageId);
-    if (!message) {
-      throw new Error("Comment not found");
-    }
-
-    if (!message.forumPostId) {
-      throw new Error("This is not a forum comment");
-    }
-
-    const post = await ctx.db.get(message.forumPostId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    const { isAdmin } = await checkForumChannelAccess(ctx, post.channelId);
-
-    // Only the comment author or admin can edit
-    if (message.userId !== userId && !isAdmin) {
-      throw new Error("You don't have permission to edit this comment");
-    }
-
-    await ctx.db.patch(args.messageId, {
-      content: args.content,
-      editedAt: Date.now(),
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Toggle reaction on a forum comment
- */
-export const toggleCommentReaction = mutation({
-  args: {
-    messageId: v.id("messages"),
-    emoji: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-    const message = await ctx.db.get(args.messageId);
-    if (!message) {
-      throw new Error("Comment not found");
-    }
-
-    if (!message.forumPostId) {
-      throw new Error("This is not a forum comment");
-    }
-
-    const post = await ctx.db.get(message.forumPostId);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    // Verify channel access
-    await checkForumChannelAccess(ctx, post.channelId);
-
-    const reactions = message.reactions || [];
-    const existingIndex = reactions.findIndex(
-      (r) => r.userId === userId && r.emoji === args.emoji
-    );
-
-    if (existingIndex !== -1) {
-      // Remove the reaction
-      reactions.splice(existingIndex, 1);
-    } else {
-      // Add the reaction
-      reactions.push({ userId, emoji: args.emoji });
-    }
-
-    await ctx.db.patch(args.messageId, { reactions });
-
-    return { success: true };
-  },
-});
-
-/**
- * Get organization members for mention autocomplete in forum posts
- */
-export const getForumMembers = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) return [];
-
-    // Get organization members
-    const members = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization", (q) => q.eq("organizationId", channel.organizationId))
-      .collect();
-
-    return members.map((member) => ({
-      userId: member.userId,
-    }));
   },
 });

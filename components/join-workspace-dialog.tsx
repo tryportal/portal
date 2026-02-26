@@ -2,104 +2,116 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { UsersIcon, Spinner } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { WorkspaceIcon } from "@/components/ui/workspace-icon";
-import { analytics } from "@/lib/analytics";
+import { Button } from "@/components/ui/button";
+import { DotLoader } from "@/components/ui/dot-loader";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { WorkspaceIcon } from "@/components/workspace-icon";
 
 interface JoinWorkspaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function JoinWorkspaceDialog({ open, onOpenChange }: JoinWorkspaceDialogProps) {
+export function JoinWorkspaceDialog({
+  open,
+  onOpenChange,
+}: JoinWorkspaceDialogProps) {
   const router = useRouter();
-  const [joiningOrgId, setJoiningOrgId] = useState<Id<"organizations"> | null>(null);
+  const workspaces = useQuery(api.organizations.listPublicWorkspaces);
+  const userWorkspaces = useQuery(api.organizations.getUserWorkspaces);
+  const joinWorkspace = useMutation(api.organizations.joinWorkspace);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  const publicOrgs = useQuery(api.organizations.getPublicOrganizations);
-  const joinOrg = useMutation(api.organizations.joinPublicOrganization);
+  const memberOfIds = new Set(userWorkspaces?.map((ws) => ws!._id) ?? []);
 
-  const handleJoinOrg = async (orgId: Id<"organizations">) => {
-    setJoiningOrgId(orgId);
+  const handleJoin = async (orgId: string, slug: string) => {
+    setJoiningId(orgId);
     try {
-      const result = await joinOrg({ organizationId: orgId });
-      analytics.workspaceJoined({ slug: result.slug });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await joinWorkspace({ organizationId: orgId as any });
       onOpenChange(false);
-      router.push(`/w/${result.slug}`);
-      setJoiningOrgId(null);
+      router.push(`/w/${slug}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Failed to join workspace:", error);
-      toast.error(`Failed to join workspace: ${errorMessage}`);
-      setJoiningOrgId(null);
+      setJoiningId(null);
     }
   };
 
-  const hasPublicOrgs = publicOrgs && publicOrgs.length > 0;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Join a workspace</DialogTitle>
+          <DialogDescription>
+            Browse public workspaces and join one.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 mt-4">
-          {hasPublicOrgs && (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {publicOrgs.map((org) => (
-                <button
-                  key={org._id}
-                  onClick={() => handleJoinOrg(org._id)}
-                  disabled={joiningOrgId !== null}
-                  className="w-full p-3 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-3">
-                    <WorkspaceIcon
-                      name={org.name}
-                      logoUrl={org.logoUrl}
-                      size="lg"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground text-sm truncate">
-                        {org.name}
-                      </h3>
-                      {org.description && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {org.description}
-                        </p>
-                      )}
-                    </div>
-                    {joiningOrgId === org._id ? (
-                      <Spinner className="size-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <UsersIcon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {publicOrgs && publicOrgs.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              No public workspaces available to join.
-            </p>
-          )}
-
-          {publicOrgs === undefined && (
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+          {workspaces === undefined ? (
             <div className="flex items-center justify-center py-8">
-              <Spinner className="size-5 animate-spin text-muted-foreground" />
+              <DotLoader dotCount={7} dotSize={4} gap={5} />
             </div>
+          ) : workspaces.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-xs text-muted-foreground">
+                No public workspaces available.
+              </p>
+            </div>
+          ) : (
+            workspaces.map((workspace) => {
+              const alreadyMember = memberOfIds.has(workspace._id);
+              return (
+                <div
+                  key={workspace._id}
+                  className="flex items-center gap-3 border border-border p-2.5"
+                >
+                  <WorkspaceIcon
+                    logoUrl={workspace.logoUrl}
+                    name={workspace.name}
+                    slug={workspace.slug}
+                    size={32}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {workspace.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {workspace.memberCount}{" "}
+                      {workspace.memberCount === 1 ? "member" : "members"}
+                    </p>
+                  </div>
+                  {alreadyMember ? (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => {
+                        onOpenChange(false);
+                        router.push(`/w/${workspace.slug}`);
+                      }}
+                    >
+                      Open
+                    </Button>
+                  ) : (
+                    <Button
+                      size="xs"
+                      onClick={() => handleJoin(workspace._id, workspace.slug)}
+                      disabled={joiningId !== null}
+                    >
+                      {joiningId === workspace._id ? "Joining..." : "Join"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </DialogContent>

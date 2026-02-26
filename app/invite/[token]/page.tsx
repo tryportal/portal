@@ -1,329 +1,287 @@
 "use client";
 
-import { useAuth, SignIn } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, EnvelopeSimple } from "@phosphor-icons/react";
+import { useQuery, useMutation } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
+import Image from "next/image";
+import Link from "next/link";
+import { LightRays } from "@/components/ui/light-rays";
 import { Button } from "@/components/ui/button";
-import { analytics } from "@/lib/analytics";
-import { useTheme } from "@/lib/theme-provider";
-import { LoadingSpinner } from "@/components/loading-spinner";
-import * as React from "react";
+import { WorkspaceIcon } from "@/components/workspace-icon";
+import { Users, WarningCircle, CheckCircle } from "@phosphor-icons/react";
+import { DotLoader } from "@/components/ui/dot-loader";
 
 export default function InvitePage({
   params,
 }: {
-  params: Promise<{ token: string }> | { token: string };
+  params: Promise<{ token: string }>;
 }) {
+  const { token } = use(params);
   const router = useRouter();
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const [token, setToken] = useState<string>("");
-  const [isAccepting, setIsAccepting] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
+  const invite = useQuery(api.invitations.getInviteByToken, { token });
+  const acceptInvite = useMutation(api.invitations.acceptInvite);
+  const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  const acceptInvitation = useMutation(api.organizations.acceptInvitation);
-
-  // Resolve params if it's a Promise (Next.js 15+)
-  React.useEffect(() => {
-    if (params instanceof Promise) {
-      params.then((resolved) => setToken(resolved.token));
-    } else {
-      setToken(params.token);
-    }
-  }, [params]);
-
-  // Get invitation details
-  const invitationData = useQuery(
-    api.organizations.getInvitationByToken,
-    token ? { token } : "skip"
-  );
-
-  // Handle accepting the invitation when signed in
   const handleAccept = async () => {
-    if (!token) return;
-
-    setIsAccepting(true);
+    setIsJoining(true);
     setError(null);
-
     try {
-      const result = await acceptInvitation({ token });
-      const isLinkInvite = !invitationData?.invitation?.email;
-      analytics.inviteAccepted({ method: isLinkInvite ? "link" : "email" });
-      setSuccess(true);
-
-      // Redirect to the organization workspace after a short delay
-      setTimeout(() => {
-        if (result.slug) {
-          router.replace(`/w/${result.slug}`);
-        } else {
-          router.replace("/setup");
-        }
-      }, 2000);
+      const result = await acceptInvite({ token });
+      router.push(`/w/${result.slug}`);
     } catch (err) {
-      console.error("Failed to accept invitation:", err);
-      setError(err instanceof Error ? err.message : "Failed to accept invitation");
-    } finally {
-      setIsAccepting(false);
+      setError(err instanceof Error ? err.message : "Failed to join workspace");
+      setIsJoining(false);
     }
   };
 
-  // Auto-accept when user signs in and invitation is valid
-  useEffect(() => {
-    if (
-      authLoaded &&
-      isSignedIn &&
-      invitationData?.invitation &&
-      invitationData.invitation.status === "pending" &&
-      !success &&
-      !isAccepting &&
-      !error
-    ) {
-      handleAccept();
-    }
-  }, [authLoaded, isSignedIn, invitationData, success, isAccepting, error]);
+  // Determine the content to show
+  const isLoading = !isLoaded || invite === undefined;
+  const isInvalid = invite === null;
+  const isExpired = invite?.isExpired;
+  const isRevoked = invite?.status === "revoked";
+  const needsAuth = isLoaded && !isSignedIn;
+  const alreadyMember = invite?.alreadyMember;
 
-  // Auto-redirect when invitation is already accepted
-  useEffect(() => {
-    const slug = invitationData?.organization?.slug;
-    if (invitationData?.invitation?.status === "accepted" && slug) {
-      const timer = setTimeout(() => {
-        router.replace(`/w/${slug}`);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [invitationData, router]);
-
-  // Loading state
-  if (!authLoaded || (token && invitationData === undefined)) {
+  const leftPanelText = () => {
+    if (isLoading) return null;
+    if (isInvalid || isExpired || isRevoked)
+      return (
+        <p className="text-sm text-background/70 max-w-xs">
+          This invite link is no longer valid.
+        </p>
+      );
+    if (needsAuth)
+      return (
+        <p className="text-sm text-background/70 max-w-xs">
+          Sign in to accept this invite and join the workspace.
+        </p>
+      );
+    if (alreadyMember)
+      return (
+        <p className="text-sm text-background/70 max-w-xs">
+          You&apos;re already a member of this workspace.
+        </p>
+      );
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
-            <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
-          </div>
-          <LoadingSpinner size="sm" text="Loading invitation..." />
-        </div>
-      </div>
+      <p className="text-sm text-background/70 max-w-xs">
+        You&apos;ve been invited to join a workspace on Portal.
+      </p>
     );
-  }
+  };
 
-  // Invalid or expired invitation
-  if (!invitationData || !invitationData.invitation || !invitationData.organization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
-              <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Invalid Invitation</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              This invitation link is invalid or has expired. Please request a new invitation from your team admin.
-            </p>
-            <Button
-              onClick={() => router.push("/")}
-              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
-            >
-              Go to Homepage
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const { invitation, organization } = invitationData;
-
-  // Already accepted - redirect to workspace
-  if (invitation.status === "accepted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-green-50 flex items-center justify-center">
-              <CheckCircle className="size-5 sm:size-8 text-green-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
-              You&apos;re already a member of {organization.name}
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Taking you to your workspace...
-            </p>
-            <LoadingSpinner size="sm" className="mt-2" />
-            <Button
-              variant="link"
-              onClick={() => router.push(`/w/${organization.slug}`)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Click here if you&apos;re not redirected
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Revoked invitation
-  if (invitation.status !== "pending") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
-              <XCircle className="size-5 sm:size-8 text-amber-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
-              Invitation No Longer Valid
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              This invitation has been revoked. Please request a new invitation from your team admin.
-            </p>
-            <Button
-              onClick={() => router.push("/")}
-              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
-            >
-              Go to Homepage
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Expired
-  if (invitation.expiresAt < Date.now()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-amber-50 flex items-center justify-center">
-              <XCircle className="size-5 sm:size-8 text-amber-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Invitation Expired</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              This invitation has expired. Please request a new invitation from your team admin.
-            </p>
-            <Button
-              onClick={() => router.push("/")}
-              className="mt-4 bg-foreground text-background hover:bg-foreground/90"
-            >
-              Go to Homepage
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Success state
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-green-50 flex items-center justify-center">
-              <CheckCircle className="size-5 sm:size-8 text-green-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Welcome to {organization.name}!</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              You&apos;ve successfully joined the team. Redirecting you to the workspace...
-            </p>
-            <LoadingSpinner size="sm" className="mt-4" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full">
-          <div className="bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border mb-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="size-12 sm:size-16 rounded-full bg-muted flex items-center justify-center">
-                <EnvelopeSimple className="size-5 sm:size-8 text-foreground" weight="fill" />
-              </div>
-              <h1 className="text-lg sm:text-2xl font-semibold text-foreground">
-                You&apos;re invited to join {organization.name}
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Sign in or create an account to accept this invitation and join the team as {invitation.role === "admin" ? "an admin" : "a member"}.
-              </p>
-            </div>
-          </div>
-          <SignIn
-            routing="hash"
-            afterSignInUrl={`/invite/${token}`}
-            afterSignUpUrl={`/invite/${token}`}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Accepting state
-  if (isAccepting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-          <div className="size-12 rounded-xl bg-foreground flex items-center justify-center shadow-lg">
-            <img src={isDark ? "/portal.svg" : "/portal-dark.svg"} alt="Portal" className="size-6 opacity-90" />
-          </div>
-          <LoadingSpinner size="sm" text={`Joining ${organization.name}...`} />
-        </div>
-      </div>
-    );
-  }
-
-  // Error state with retry option
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-[95%] sm:max-w-md w-full bg-card rounded-2xl p-5 sm:p-8 shadow-sm border border-border">
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="size-12 sm:size-16 rounded-full bg-red-50 flex items-center justify-center">
-              <XCircle className="size-5 sm:size-8 text-red-500" weight="fill" />
-            </div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-foreground">Something went wrong</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">{error}</p>
-            <div className="flex gap-3 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/")}
-                className="border-border"
-              >
-                Go Home
-              </Button>
-              <Button
-                onClick={() => {
-                  setError(null);
-                  handleAccept();
-                }}
-                className="bg-foreground text-background hover:bg-foreground/90"
-              >
-                Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Default: accepting invitation (should auto-trigger)
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
-        <LoadingSpinner size="md" />
+    <div className="flex min-h-screen">
+      {/* Left branding panel */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-r border-border bg-foreground p-10 text-background lg:flex">
+        <LightRays mouseInfluence={0} />
+        <Link href="/" className="relative z-10 flex items-center gap-3">
+          <Image
+            src="/portal.svg"
+            alt="Portal"
+            width={24}
+            height={24}
+            className="invert"
+          />
+          <span className="text-sm font-medium">Portal</span>
+        </Link>
+        <div className="relative z-10 max-w-md">{leftPanelText()}</div>
+        <p className="relative z-10 text-xs text-background/40">
+          &copy; {new Date().getFullYear()} Portal. All rights reserved.
+        </p>
+      </div>
+
+      {/* Right content panel */}
+      <div className="flex w-full flex-col lg:w-1/2">
+        {/* Mobile header */}
+        <div className="flex items-center border-b border-border p-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/portal.svg" alt="Portal" width={20} height={20} />
+            <span className="text-xs font-medium">Portal</span>
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-3">
+              <DotLoader />
+            </div>
+          ) : isInvalid ? (
+            <ErrorState
+              title="Invalid invite"
+              description="This invite link doesn't exist or has been deleted."
+            />
+          ) : isExpired ? (
+            <ErrorState
+              title="Invite expired"
+              description="This invite link has expired. Ask the workspace admin for a new one."
+            />
+          ) : isRevoked ? (
+            <ErrorState
+              title="Invite revoked"
+              description="This invite link has been revoked by a workspace admin."
+            />
+          ) : needsAuth ? (
+            <div className="w-full max-w-sm">
+              <WorkspaceCard workspace={invite.workspace} />
+              <div className="mt-6 flex flex-col gap-3">
+                <p className="text-center text-xs text-muted-foreground">
+                  You need to sign in to join this workspace.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="flex-1"
+                    onClick={() =>
+                      router.push(
+                        `/sign-in?redirect_url=/invite/${token}`
+                      )
+                    }
+                  >
+                    Sign in
+                  </Button>
+                  <Button
+                    size="default"
+                    className="flex-1"
+                    onClick={() =>
+                      router.push(
+                        `/get-started?redirect_url=/invite/${token}`
+                      )
+                    }
+                  >
+                    Create account
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : alreadyMember ? (
+            <div className="w-full max-w-sm">
+              <WorkspaceCard workspace={invite.workspace} />
+              <div className="mt-6 flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle size={14} className="text-green-600" />
+                  You&apos;re already a member of this workspace.
+                </div>
+                <Button
+                  size="default"
+                  className="w-full"
+                  onClick={() =>
+                    router.push(`/w/${invite.workspace.slug}`)
+                  }
+                >
+                  Open workspace
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full max-w-sm">
+              <WorkspaceCard workspace={invite.workspace} />
+              <div className="mt-6 flex flex-col gap-3">
+                {error && (
+                  <p className="text-xs text-destructive text-center">
+                    {error}
+                  </p>
+                )}
+                <Button
+                  size="default"
+                  className="w-full"
+                  onClick={handleAccept}
+                  disabled={isJoining}
+                >
+                  {isJoining ? "Joining..." : "Join workspace"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="w-full"
+                  onClick={() => router.push("/")}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Workspace preview card                                              */
+/* ------------------------------------------------------------------ */
+
+function WorkspaceCard({
+  workspace,
+}: {
+  workspace: {
+    name: string;
+    slug: string;
+    description?: string;
+    logoUrl: string | null;
+    memberCount: number;
+  };
+}) {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex-shrink-0">
+        <WorkspaceIcon
+          logoUrl={workspace.logoUrl}
+          name={workspace.name}
+          slug={workspace.slug}
+          size={64}
+        />
+      </div>
+      <div className="text-center">
+        <h1 className="text-lg font-medium tracking-tight">
+          {workspace.name}
+        </h1>
+        {workspace.description && (
+          <p className="mt-1 text-xs text-muted-foreground max-w-xs">
+            {workspace.description}
+          </p>
+        )}
+        <div className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <Users size={12} />
+          <span>
+            {workspace.memberCount}{" "}
+            {workspace.memberCount === 1 ? "member" : "members"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Error state                                                         */
+/* ------------------------------------------------------------------ */
+
+function ErrorState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  const router = useRouter();
+
+  return (
+    <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+      <div className="flex size-12 items-center justify-center bg-muted">
+        <WarningCircle size={24} className="text-muted-foreground" />
+      </div>
+      <div>
+        <h1 className="text-lg font-medium tracking-tight">{title}</h1>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </div>
+      <Button variant="outline" size="default" onClick={() => router.push("/")}>
+        Go home
+      </Button>
+    </div>
+  );
+}

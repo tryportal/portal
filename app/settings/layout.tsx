@@ -1,42 +1,45 @@
 "use client";
 
-import * as React from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { SettingsTopNav } from "@/components/preview/settings-top-nav";
-import { LoadingSpinner } from "@/components/loading-spinner";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { UserMenu } from "@/components/user-menu";
 
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
-
-  // Redirect to sign-in if not authenticated
-  React.useEffect(() => {
-    if (authLoaded && !isSignedIn) {
-      router.replace("/sign-in");
-    }
-  }, [authLoaded, isSignedIn, router]);
-
-  // Not signed in - show nothing (will redirect)
-  if (!authLoaded || !isSignedIn) {
-    return <LoadingSpinner fullScreen />;
-  }
+  const firstWorkspace = useQuery(api.organizations.getUserFirstWorkspace);
+  const backHref = firstWorkspace ? `/w/${firstWorkspace.slug}` : "/";
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
-      {/* Top Navigation */}
-      <SettingsTopNav />
-
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden px-2 sm:px-3">
-        <div className="flex flex-1 overflow-hidden rounded-t-lg border border-border bg-background">
-          {children}
+    <div className="min-h-screen">
+      <header className="border-b border-border">
+        <div className="flex h-14 items-stretch">
+          <Link
+            href="/"
+            className="flex w-14 items-center justify-center border-r border-border hover:bg-muted"
+          >
+            <Image src="/portal.svg" alt="Portal" width={24} height={24} className="dark:invert" />
+          </Link>
+          <Link
+            href={backHref}
+            className="flex items-center gap-2 border-r border-border px-4 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft size={14} />
+            Back
+          </Link>
+          <div className="flex items-center px-4 text-xs font-bold">
+            Settings
+          </div>
+          <div className="flex flex-1" />
+          <UserMenu />
         </div>
-      </div>
+      </header>
+      {children}
     </div>
   );
 }

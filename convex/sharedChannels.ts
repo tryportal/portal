@@ -1,411 +1,272 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Generate a random token for invitations
- */
-function generateToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-/**
- * Check if the current user is an admin of the channel's organization
- */
-async function requireChannelAdmin(
-  ctx: { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: any },
-  channelId: Id<"channels">
-): Promise<{ userId: string; channel: any; organization: any }> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = identity.subject;
-  const channel = await ctx.db.get(channelId);
-  if (!channel) {
-    throw new Error("Channel not found");
-  }
-
-  const organization = await ctx.db.get(channel.organizationId);
-  if (!organization) {
-    throw new Error("Organization not found");
-  }
-
-  const membership = await ctx.db
-    .query("organizationMembers")
-    .withIndex("by_organization_and_user", (q: any) =>
-      q.eq("organizationId", channel.organizationId).eq("userId", userId)
-    )
-    .first();
-
-  if (!membership || membership.role !== "admin") {
-    throw new Error("Only organization admins can share channels externally");
-  }
-
-  return { userId, channel, organization };
-}
+import { Id } from "./_generated/dataModel";
 
 // ============================================================================
 // Mutations
 // ============================================================================
 
 /**
- * Create an email invitation to share a channel with an external user
+ * Create an email-based invite for sharing a channel with an external user.
+ * Returns the invite token for use in sending the email.
  */
-export const createSharedChannelInvite = mutation({
+export const createEmailInvite = mutation({
   args: {
     channelId: v.id("channels"),
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId, channel, organization } = await requireChannelAdmin(ctx, args.channelId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-    // Check if there's already a pending invitation for this email and channel
-    const existingInvite = await ctx.db
-      .query("sharedChannelInvitations")
-      .withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase()))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("channelId"), args.channelId),
-          q.eq(q.field("status"), "pending")
-        )
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
       )
-      .first();
-
-    if (existingInvite) {
-      throw new Error("An invitation has already been sent to this email for this channel");
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    // Check if this user is already a shared member
-    // First we need to find if there's a user with this email
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase()))
-      .first();
-
-    if (existingUser) {
-      // Check if they're already a shared member
-      const existingMember = await ctx.db
-        .query("sharedChannelMembers")
-        .withIndex("by_channel_and_user", (q) =>
-          q.eq("channelId", args.channelId).eq("userId", existingUser.clerkId)
-        )
-        .first();
-
-      if (existingMember) {
-        throw new Error("This user already has access to this channel");
-      }
-
-      // Check if they're already a member of the organization
-      const orgMember = await ctx.db
-        .query("organizationMembers")
-        .withIndex("by_organization_and_user", (q) =>
-          q.eq("organizationId", channel.organizationId).eq("userId", existingUser.clerkId)
-        )
-        .first();
-
-      if (orgMember) {
-        throw new Error("This user is already a member of your workspace");
-      }
-    }
-
-    const token = generateToken();
-
-    const invitationId = await ctx.db.insert("sharedChannelInvitations", {
+    const token = crypto.randomUUID();
+    const inviteId = await ctx.db.insert("sharedChannelInvitations", {
       channelId: args.channelId,
-      email: args.email.toLowerCase(),
-      invitedBy: userId,
+      email: args.email,
+      invitedBy: identity.subject,
       token,
       status: "pending",
       createdAt: Date.now(),
-      isLinkInvite: false,
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    return {
-      invitationId,
-      token,
-      channelName: channel.name,
-      organizationName: organization.name,
-    };
+    return { inviteId, token };
   },
 });
 
 /**
- * Create a shareable link to invite external users to a channel
+ * Create a shareable link invite for a channel.
+ * Returns the invite token for constructing the link.
  */
-export const createSharedChannelLink = mutation({
+export const createInviteLink = mutation({
   args: {
     channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const { userId, channel, organization } = await requireChannelAdmin(ctx, args.channelId);
-
-    // Check if there's already an active link invite for this channel
-    const existingLink = await ctx.db
-      .query("sharedChannelInvitations")
-      .withIndex("by_channel_and_status", (q) =>
-        q.eq("channelId", args.channelId).eq("status", "pending")
-      )
-      .filter((q) => q.eq(q.field("isLinkInvite"), true))
-      .first();
-
-    if (existingLink) {
-      return {
-        token: existingLink.token,
-        channelName: channel.name,
-        organizationName: organization.name,
-      };
-    }
-
-    const token = generateToken();
-
-    await ctx.db.insert("sharedChannelInvitations", {
-      channelId: args.channelId,
-      invitedBy: userId,
-      token,
-      status: "pending",
-      createdAt: Date.now(),
-      isLinkInvite: true,
-    });
-
-    return {
-      token,
-      channelName: channel.name,
-      organizationName: organization.name,
-    };
-  },
-});
-
-/**
- * Revoke a shared channel invitation
- */
-export const revokeSharedChannelInvite = mutation({
-  args: {
-    invitationId: v.id("sharedChannelInvitations"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
     }
 
-    const invitation = await ctx.db.get(args.invitationId);
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-
-    // Verify admin access
-    await requireChannelAdmin(ctx, invitation.channelId);
-
-    await ctx.db.patch(args.invitationId, {
-      status: "revoked",
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Revoke the shareable link for a channel
- */
-export const revokeSharedChannelLink = mutation({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    await requireChannelAdmin(ctx, args.channelId);
-
-    // Find and revoke the active link
-    const existingLink = await ctx.db
+    // Revoke any existing link invites for this channel
+    const existing = await ctx.db
       .query("sharedChannelInvitations")
       .withIndex("by_channel_and_status", (q) =>
         q.eq("channelId", args.channelId).eq("status", "pending")
       )
-      .filter((q) => q.eq(q.field("isLinkInvite"), true))
-      .first();
+      .collect();
 
-    if (existingLink) {
-      await ctx.db.patch(existingLink._id, {
-        status: "revoked",
-      });
+    for (const inv of existing) {
+      if (inv.isLinkInvite) {
+        await ctx.db.patch(inv._id, { status: "revoked" });
+      }
     }
 
-    return { success: true };
+    const token = crypto.randomUUID();
+    const inviteId = await ctx.db.insert("sharedChannelInvitations", {
+      channelId: args.channelId,
+      invitedBy: identity.subject,
+      token,
+      status: "pending",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+      isLinkInvite: true,
+    });
+
+    return { inviteId, token };
   },
 });
 
 /**
- * Accept a shared channel invitation
+ * Revoke all active link invites for a channel.
  */
-export const acceptSharedChannelInvite = mutation({
+export const revokeInviteLink = mutation({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
+    const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const invites = await ctx.db
+      .query("sharedChannelInvitations")
+      .withIndex("by_channel_and_status", (q) =>
+        q.eq("channelId", args.channelId).eq("status", "pending")
+      )
+      .collect();
+
+    for (const inv of invites) {
+      if (inv.isLinkInvite) {
+        await ctx.db.patch(inv._id, { status: "revoked" });
+      }
+    }
+  },
+});
+
+/**
+ * Accept a shared channel invite.
+ * Validates the token and adds the user as a shared channel member.
+ */
+export const acceptInvite = mutation({
   args: {
     token: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
-
-    // Find the invitation
-    const invitation = await ctx.db
+    const invite = await ctx.db
       .query("sharedChannelInvitations")
       .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
+      .unique();
 
-    if (!invitation) {
-      throw new Error("Invalid invitation");
-    }
-
-    if (invitation.status !== "pending") {
-      throw new Error("This invitation is no longer valid");
-    }
-
-    // Check expiration if set
-    if (invitation.expiresAt && invitation.expiresAt < Date.now()) {
-      throw new Error("This invitation has expired");
-    }
-
-    const channel = await ctx.db.get(invitation.channelId);
-    if (!channel) {
-      throw new Error("Channel no longer exists");
-    }
-
-    const organization = await ctx.db.get(channel.organizationId);
-    if (!organization) {
-      throw new Error("Organization no longer exists");
-    }
-
-    // Check if user is already a member of the organization
-    const orgMember = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", userId)
-      )
-      .first();
-
-    if (orgMember) {
-      throw new Error("You are already a member of this workspace. You have access to this channel.");
-    }
+    if (!invite) throw new Error("Invalid invite");
+    if (invite.status === "revoked") throw new Error("Invite has been revoked");
+    if (invite.expiresAt && invite.expiresAt < Date.now()) throw new Error("Invite has expired");
 
     // Check if already a shared member
     const existingMember = await ctx.db
       .query("sharedChannelMembers")
       .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", invitation.channelId).eq("userId", userId)
+        q.eq("channelId", invite.channelId).eq("userId", identity.subject)
       )
-      .first();
+      .unique();
 
     if (existingMember) {
-      throw new Error("You already have access to this channel");
+      // Already a member, just get channel info for redirect
+      const channel = await ctx.db.get(invite.channelId);
+      if (!channel) throw new Error("Channel not found");
+      const org = await ctx.db.get(channel.organizationId);
+      if (!org) throw new Error("Workspace not found");
+      const categories = await ctx.db
+        .query("channelCategories")
+        .withIndex("by_organization", (q) => q.eq("organizationId", channel.organizationId))
+        .collect();
+      const category = categories.find((c) => c._id === channel.categoryId);
+      return {
+        slug: org.slug,
+        categorySlug: category ? category.name.toLowerCase().replace(/\s+/g, "-") : "general",
+        channelName: channel.name,
+      };
     }
 
-    // Get user's primary organization (if any)
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
-      .first();
+    // Find user's source organization (their primary workspace)
+    const userOrgs = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
 
-    const sourceOrganizationId = user?.primaryWorkspaceId;
+    const sourceOrgId = userOrgs.length > 0 ? userOrgs[0].organizationId : undefined;
 
-    // Add user as shared channel member
+    // Add as shared member
     await ctx.db.insert("sharedChannelMembers", {
-      channelId: invitation.channelId,
-      userId,
-      sourceOrganizationId,
+      channelId: invite.channelId,
+      userId: identity.subject,
+      sourceOrganizationId: sourceOrgId,
       addedAt: Date.now(),
-      addedBy: invitation.invitedBy,
+      addedBy: invite.invitedBy,
     });
 
-    // Mark email invitations as accepted (link invites stay pending for reuse)
-    if (!invitation.isLinkInvite) {
-      await ctx.db.patch(invitation._id, {
-        status: "accepted",
-      });
+    // Mark email invites as accepted (link invites stay pending for reuse)
+    if (!invite.isLinkInvite) {
+      await ctx.db.patch(invite._id, { status: "accepted" });
     }
 
-    // Get category for URL construction
-    const category = await ctx.db.get(channel.categoryId);
+    // Get channel info for redirect
+    const channel = await ctx.db.get(invite.channelId);
+    if (!channel) throw new Error("Channel not found");
+    const org = await ctx.db.get(channel.organizationId);
+    if (!org) throw new Error("Workspace not found");
+    const categories = await ctx.db
+      .query("channelCategories")
+      .withIndex("by_organization", (q) => q.eq("organizationId", channel.organizationId))
+      .collect();
+    const category = categories.find((c) => c._id === channel.categoryId);
 
     return {
-      channelId: channel._id,
+      slug: org.slug,
+      categorySlug: category ? category.name.toLowerCase().replace(/\s+/g, "-") : "general",
       channelName: channel.name,
-      categoryName: category?.name || "general",
-      organizationSlug: organization.slug,
-      organizationName: organization.name,
     };
   },
 });
 
 /**
- * Leave a shared channel (for external users)
+ * Remove a shared member from a channel.
  */
-export const leaveSharedChannel = mutation({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    const membership = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", args.channelId).eq("userId", userId)
-      )
-      .first();
-
-    if (!membership) {
-      throw new Error("You are not an external member of this channel");
-    }
-
-    await ctx.db.delete(membership._id);
-
-    return { success: true };
-  },
-});
-
-/**
- * Remove an external member from a shared channel (admin only)
- */
-export const removeExternalMember = mutation({
+export const removeSharedMember = mutation({
   args: {
     channelId: v.id("channels"),
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireChannelAdmin(ctx, args.channelId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Verify admin
     const membership = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+
+    const member = await ctx.db
       .query("sharedChannelMembers")
       .withIndex("by_channel_and_user", (q) =>
         q.eq("channelId", args.channelId).eq("userId", args.userId)
       )
-      .first();
+      .unique();
 
-    if (!membership) {
-      throw new Error("User is not an external member of this channel");
+    if (member) {
+      await ctx.db.delete(member._id);
     }
-
-    await ctx.db.delete(membership._id);
-
-    return { success: true };
   },
 });
 
@@ -414,429 +275,250 @@ export const removeExternalMember = mutation({
 // ============================================================================
 
 /**
- * Get shared channel invitation by token (for accept page)
+ * Get the active link invite for a channel (if any).
  */
-export const getSharedChannelInviteByToken = query({
+export const getActiveInviteLink = query({
+  args: {
+    channelId: v.id("channels"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const invites = await ctx.db
+      .query("sharedChannelInvitations")
+      .withIndex("by_channel_and_status", (q) =>
+        q.eq("channelId", args.channelId).eq("status", "pending")
+      )
+      .collect();
+
+    const linkInvite = invites.find(
+      (inv) => inv.isLinkInvite && (!inv.expiresAt || inv.expiresAt > Date.now())
+    );
+
+    return linkInvite ?? null;
+  },
+});
+
+/**
+ * Get invite details by token (public query for invite acceptance page).
+ */
+export const getInviteByToken = query({
   args: {
     token: v.string(),
   },
   handler: async (ctx, args) => {
-    const invitation = await ctx.db
+    const identity = await ctx.auth.getUserIdentity();
+
+    const invite = await ctx.db
       .query("sharedChannelInvitations")
       .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
+      .unique();
 
-    if (!invitation) {
-      return null;
+    if (!invite) return null;
+
+    const channel = await ctx.db.get(invite.channelId);
+    if (!channel) return null;
+
+    const org = await ctx.db.get(channel.organizationId);
+    if (!org) return null;
+
+    // Get workspace logo URL
+    let logoUrl: string | null = null;
+    if (org.logoId) {
+      logoUrl = await ctx.storage.getUrl(org.logoId);
+    } else if (org.imageUrl) {
+      logoUrl = org.imageUrl;
     }
 
-    const channel = await ctx.db.get(invitation.channelId);
-    if (!channel) {
-      return null;
+    // Check if user is already a shared member
+    let alreadyMember = false;
+    if (identity) {
+      const existingMember = await ctx.db
+        .query("sharedChannelMembers")
+        .withIndex("by_channel_and_user", (q) =>
+          q.eq("channelId", invite.channelId).eq("userId", identity.subject)
+        )
+        .unique();
+      // Also check if they're a workspace member
+      const orgMember = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_organization_and_user", (q) =>
+          q.eq("organizationId", org._id).eq("userId", identity.subject)
+        )
+        .unique();
+      alreadyMember = !!existingMember || !!orgMember;
     }
-
-    const organization = await ctx.db.get(channel.organizationId);
-    if (!organization) {
-      return null;
-    }
-
-    // Get the inviter's info
-    const inviter = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", invitation.invitedBy))
-      .first();
 
     return {
-      invitation: {
-        _id: invitation._id,
-        status: invitation.status,
-        email: invitation.email,
-        createdAt: invitation.createdAt,
-        expiresAt: invitation.expiresAt,
-        isLinkInvite: invitation.isLinkInvite,
-      },
       channel: {
-        _id: channel._id,
         name: channel.name,
-        icon: channel.icon,
         description: channel.description,
       },
-      organization: {
-        _id: organization._id,
-        name: organization.name,
-        slug: organization.slug,
+      workspace: {
+        name: org.name,
+        slug: org.slug,
+        logoUrl,
       },
-      inviter: inviter
-        ? {
-            firstName: inviter.firstName,
-            lastName: inviter.lastName,
-            imageUrl: inviter.imageUrl,
-          }
-        : null,
+      isExpired: invite.expiresAt ? invite.expiresAt < Date.now() : false,
+      status: invite.status,
+      alreadyMember,
     };
   },
 });
 
 /**
- * Get the active shareable link for a channel
+ * Get all shared members of a channel with user profiles.
  */
-export const getSharedChannelLink = query({
+export const getSharedMembers = query({
   args: {
     channelId: v.id("channels"),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
+    if (!identity) return [];
 
-    // Verify the user is an admin of the channel's org
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      return null;
-    }
-
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      return null;
-    }
-
-    const link = await ctx.db
-      .query("sharedChannelInvitations")
-      .withIndex("by_channel_and_status", (q) =>
-        q.eq("channelId", args.channelId).eq("status", "pending")
-      )
-      .filter((q) => q.eq(q.field("isLinkInvite"), true))
-      .first();
-
-    return link ? { token: link.token, createdAt: link.createdAt } : null;
-  },
-});
-
-/**
- * Get all external members of a shared channel
- */
-export const getSharedChannelMembers = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      return [];
-    }
-
-    // Check if user has access (either org member or shared member)
-    const orgMember = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
-      )
-      .first();
-
-    const sharedMember = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_channel_and_user", (q) =>
-        q.eq("channelId", args.channelId).eq("userId", identity.subject)
-      )
-      .first();
-
-    if (!orgMember && !sharedMember) {
-      return [];
-    }
-
-    // Get all shared members
     const members = await ctx.db
       .query("sharedChannelMembers")
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
       .collect();
 
-    // Enrich with user data
-    const enrichedMembers = await Promise.all(
-      members.map(async (member) => {
-        const user = await ctx.db
-          .query("users")
-          .withIndex("by_clerk_id", (q) => q.eq("clerkId", member.userId))
-          .first();
+    const enriched = [];
+    for (const member of members) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", member.userId))
+        .unique();
 
-        let sourceOrg = null;
-        if (member.sourceOrganizationId) {
-          sourceOrg = await ctx.db.get(member.sourceOrganizationId);
+      let sourceOrgName: string | undefined;
+      let sourceOrgLogoUrl: string | null = null;
+      if (member.sourceOrganizationId) {
+        const sourceOrg = await ctx.db.get(member.sourceOrganizationId);
+        if (sourceOrg) {
+          sourceOrgName = sourceOrg.name;
+          if (sourceOrg.logoId) {
+            sourceOrgLogoUrl = await ctx.storage.getUrl(sourceOrg.logoId);
+          } else if (sourceOrg.imageUrl) {
+            sourceOrgLogoUrl = sourceOrg.imageUrl;
+          }
+        }
+      }
+
+      enriched.push({
+        _id: member._id,
+        userId: member.userId,
+        addedAt: member.addedAt,
+        userName: user
+          ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown",
+        userImageUrl: user?.imageUrl ?? null,
+        sourceOrgName,
+        sourceOrgLogoUrl,
+      });
+    }
+
+    return enriched;
+  },
+});
+
+/**
+ * Get all channels shared with the current user, grouped by source workspace.
+ */
+export const getMySharedChannels = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    // Group by workspace
+    const workspaceMap = new Map<
+      string,
+      {
+        orgId: string;
+        name: string;
+        slug: string;
+        logoUrl: string | null;
+        channels: { _id: string; name: string; categorySlug: string }[];
+      }
+    >();
+
+    const seenChannels = new Set<string>();
+    const addChannel = async (channelId: Id<"channels">) => {
+      if (seenChannels.has(channelId as string)) return;
+      seenChannels.add(channelId as string);
+      const channel = await ctx.db.get(channelId);
+      if (!channel) return;
+
+      const orgIdStr = channel.organizationId as string;
+
+      if (!workspaceMap.has(orgIdStr)) {
+        const org = await ctx.db.get(channel.organizationId);
+        if (!org) return;
+
+        let logoUrl: string | null = null;
+        if (org.logoId) {
+          logoUrl = await ctx.storage.getUrl(org.logoId);
+        } else if (org.imageUrl) {
+          logoUrl = org.imageUrl;
         }
 
-        return {
-          _id: member._id,
-          userId: member.userId,
-          addedAt: member.addedAt,
-          user: user
-            ? {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                imageUrl: user.imageUrl,
-              }
-            : null,
-          sourceOrganization: sourceOrg
-            ? {
-                name: sourceOrg.name,
-                slug: sourceOrg.slug,
-              }
-            : null,
-        };
-      })
-    );
+        workspaceMap.set(orgIdStr, {
+          orgId: orgIdStr,
+          name: org.name,
+          slug: org.slug,
+          logoUrl,
+          channels: [],
+        });
+      }
 
-    return enrichedMembers;
-  },
-});
+      const existing = workspaceMap.get(orgIdStr)!.channels;
+      const category = await ctx.db.get(channel.categoryId);
+      const categorySlug = category
+        ? category.name.toLowerCase().replace(/\s+/g, "-")
+        : "general";
 
-/**
- * Get all channels shared with the current user (from other workspaces)
- */
-export const getSharedChannelsForUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
+      existing.push({
+        _id: channel._id as string,
+        name: channel.name,
+        categorySlug,
+      });
+    };
 
-    const userId = identity.subject;
-
-    // Get all shared channel memberships for this user
-    const memberships = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Enrich with channel and organization data
-    const channels = await Promise.all(
-      memberships.map(async (membership) => {
-        const channel = await ctx.db.get(membership.channelId);
-        if (!channel) return null;
-
-        const organization = await ctx.db.get(channel.organizationId);
-        if (!organization) return null;
-
-        const category = await ctx.db.get(channel.categoryId);
-
-        return {
-          _id: channel._id,
-          name: channel.name,
-          icon: channel.icon,
-          description: channel.description,
-          categoryName: category?.name || "general",
-          organization: {
-            _id: organization._id,
-            name: organization.name,
-            slug: organization.slug,
-          },
-          addedAt: membership.addedAt,
-        };
-      })
-    );
-
-    // Filter out nulls and sort by most recently added
-    return channels
-      .filter((c): c is NonNullable<typeof c> => c !== null)
-      .sort((a, b) => b.addedAt - a.addedAt);
-  },
-});
-
-/**
- * Get pending shared channel invitations for a channel (admin only)
- */
-export const getPendingSharedInvitations = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      return [];
-    }
-
-    // Check admin access
-    const membership = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", channel.organizationId).eq("userId", identity.subject)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      return [];
-    }
-
-    // Get pending email invitations (not link invites)
-    const invitations = await ctx.db
-      .query("sharedChannelInvitations")
-      .withIndex("by_channel_and_status", (q) =>
-        q.eq("channelId", args.channelId).eq("status", "pending")
-      )
-      .filter((q) => q.neq(q.field("isLinkInvite"), true))
-      .collect();
-
-    return invitations.map((inv) => ({
-      _id: inv._id,
-      email: inv.email,
-      createdAt: inv.createdAt,
-      expiresAt: inv.expiresAt,
-    }));
-  },
-});
-
-/**
- * Check if a channel has any external sharing (for UI indicators)
- */
-export const isChannelShared = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return false;
-    }
-
-    // Check if there are any shared members
-    const sharedMember = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-      .first();
-
-    if (sharedMember) {
-      return true;
-    }
-
-    // Check if there's an active share link
-    const shareLink = await ctx.db
-      .query("sharedChannelInvitations")
-      .withIndex("by_channel_and_status", (q) =>
-        q.eq("channelId", args.channelId).eq("status", "pending")
-      )
-      .filter((q) => q.eq(q.field("isLinkInvite"), true))
-      .first();
-
-    return !!shareLink;
-  },
-});
-
-/**
- * Get shared channel count for sidebar badge
- */
-export const getSharedChannelCount = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return 0;
-    }
-
+    // 1. Channels shared WITH me (I'm a shared member)
     const memberships = await ctx.db
       .query("sharedChannelMembers")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
 
-    return memberships.length;
-  },
-});
-
-/**
- * Get unread shared channels for the current user
- */
-export const getUnreadSharedChannels = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return {};
+    for (const m of memberships) {
+      await addChannel(m.channelId);
     }
 
-    const userId = identity.subject;
-
-    // Get all shared channels for this user
-    const sharedMemberships = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+    // 2. Channels I own that have shared members (I'm a workspace member)
+    const myOrgs = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
 
-    const unreadChannels: Record<string, boolean> = {};
+    for (const org of myOrgs) {
+      // Get all channels in this org
+      const channels = await ctx.db
+        .query("channels")
+        .withIndex("by_organization", (q) => q.eq("organizationId", org.organizationId))
+        .collect();
 
-    // For each shared channel, check if there are unread messages
-    for (const membership of sharedMemberships) {
-      // Use the timestamp when the user was added as the baseline
-      // All messages after this time should be considered for unread status
-      const membershipTime = membership.addedAt;
+      for (const channel of channels) {
+        // Check if this channel has any shared members
+        const sharedMember = await ctx.db
+          .query("sharedChannelMembers")
+          .withIndex("by_channel", (q) => q.eq("channelId", channel._id))
+          .first();
 
-      // Get the latest message in this channel that was created after the membership
-      const latestMessage = await ctx.db
-        .query("messages")
-        .withIndex("by_channel", (q) => q.eq("channelId", membership.channelId))
-        .order("desc")
-        .first();
-
-      // If there's a message after the membership was created, mark as unread
-      // In a real app, you'd track lastReadAt per user per channel
-      if (latestMessage && latestMessage._creationTime > membershipTime) {
-        unreadChannels[membership.channelId] = true;
+        if (sharedMember) {
+          await addChannel(channel._id);
+        }
       }
     }
 
-    return unreadChannels;
-  },
-});
-
-/**
- * Check if the current user has access to any shared channels in a workspace
- * Used by the layout to allow external users to access shared channels
- */
-export const hasSharedChannelAccessInWorkspace = query({
-  args: {
-    organizationId: v.id("organizations"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return false;
-    }
-
-    const userId = identity.subject;
-
-    // Get all shared channel memberships for this user
-    const sharedMemberships = await ctx.db
-      .query("sharedChannelMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    if (sharedMemberships.length === 0) {
-      return false;
-    }
-
-    // Check if any of these shared channels belong to this organization
-    for (const membership of sharedMemberships) {
-      const channel = await ctx.db.get(membership.channelId);
-      if (channel && channel.organizationId === args.organizationId) {
-        return true;
-      }
-    }
-
-    return false;
+    return Array.from(workspaceMap.values());
   },
 });

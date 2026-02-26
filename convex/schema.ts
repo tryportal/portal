@@ -15,6 +15,8 @@ export default defineSchema({
     primaryWorkspaceId: v.optional(v.id("organizations")), // User's preferred default workspace
     // DM sharing - unique handle for shareable DM links (3-12 chars, alphanumeric + underscore, stored lowercase)
     handle: v.optional(v.string()),
+    // Browser notification preference
+    notificationsEnabled: v.optional(v.boolean()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"])
@@ -36,6 +38,7 @@ export default defineSchema({
     organizationId: v.id("organizations"),
     name: v.string(),
     order: v.number(),
+    isPrivate: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_organization", ["organizationId"])
@@ -61,6 +64,17 @@ export default defineSchema({
     .index("by_organization", ["organizationId"])
     .index("by_category", ["categoryId"])
     .index("by_category_and_order", ["categoryId", "order"]),
+
+  // Members of private categories - only users in this table can access channels in a private category
+  categoryMembers: defineTable({
+    categoryId: v.id("channelCategories"),
+    userId: v.string(), // Clerk user ID
+    addedAt: v.number(),
+    addedBy: v.string(), // Clerk user ID of who added this member
+  })
+    .index("by_category", ["categoryId"])
+    .index("by_user", ["userId"])
+    .index("by_category_and_user", ["categoryId", "userId"]),
 
   // Members of private channels - only users in this table can access a private channel
   channelMembers: defineTable({
@@ -306,6 +320,13 @@ export default defineSchema({
   // ============================================================================
   // Forum Posts - Posts in forum-type channels
   // ============================================================================
+
+  // Tracks when a user last cleared their inbox (mentions before this timestamp are hidden)
+  inboxClearedAt: defineTable({
+    userId: v.string(),
+    organizationId: v.id("organizations"),
+    clearedAt: v.number(),
+  }).index("by_user_and_org", ["userId", "organizationId"]),
 
   forumPosts: defineTable({
     channelId: v.id("channels"), // The forum channel this post belongs to
