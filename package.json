@@ -65,7 +65,7 @@
   ],
   "overrides": {
     "@emoji-mart/react": {
-      "react": "19.2.3"
+      "react": "^19.0.0"
     }
   }
 }
