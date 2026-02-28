@@ -147,8 +147,19 @@ export const getForumPost = query({
       ? [author.firstName, author.lastName].filter(Boolean).join(" ") || "Unknown"
       : "Unknown";
 
+    // Resolve attachment storage URLs
+    const attachments = post.attachments
+      ? await Promise.all(
+          post.attachments.map(async (att) => ({
+            ...att,
+            url: (await ctx.storage.getUrl(att.storageId)) ?? null,
+          }))
+        )
+      : undefined;
+
     return {
       ...post,
+      attachments,
       authorName,
       authorImageUrl: author?.imageUrl ?? null,
       isOwn: post.authorId === identity.subject,
@@ -220,6 +231,19 @@ export const getForumComments = query({
       .collect();
     const savedSet = new Set(savedMessages.map((s) => s.messageId));
 
+    // Batch resolve attachment storage URLs
+    const attachmentUrlMap = new Map<string, string>();
+    for (const msg of results.page) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          if (!attachmentUrlMap.has(att.storageId)) {
+            const url = await ctx.storage.getUrl(att.storageId);
+            if (url) attachmentUrlMap.set(att.storageId, url);
+          }
+        }
+      }
+    }
+
     const enrichedPage = results.page.map((msg) => {
       const user = userMap.get(msg.userId);
       const userName = user
@@ -232,6 +256,10 @@ export const getForumComments = query({
         isSaved: savedSet.has(msg._id),
         isOwn: msg.userId === identity.subject,
         parentMessage: null,
+        attachments: msg.attachments?.map((att) => ({
+          ...att,
+          url: attachmentUrlMap.get(att.storageId) ?? null,
+        })),
       };
     });
 
