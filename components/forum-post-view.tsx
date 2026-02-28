@@ -18,6 +18,7 @@ import {
   X,
   File,
   ChatCircle,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 import {
   DropdownMenu,
@@ -96,6 +97,128 @@ const statusConfig = {
   solved: { label: "Solved", icon: CheckCircle, className: "text-emerald-600 bg-emerald-50 border-emerald-200" },
   closed: { label: "Closed", icon: XCircle, className: "text-stone-500 bg-stone-50 border-stone-200" },
 };
+
+type Attachment = {
+  storageId: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string | null;
+};
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ImageLightbox({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 flex size-8 items-center justify-center text-white/70 hover:text-white transition-colors"
+      >
+        <X size={18} />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        className="max-h-[85vh] max-w-[90vw] object-contain select-none"
+        onClick={(e) => e.stopPropagation()}
+        draggable={false}
+      />
+    </div>
+  );
+}
+
+function AttachmentList({ attachments }: { attachments: Attachment[] }) {
+  const [lightboxSrc, setLightboxSrc] = useState<{ src: string; name: string } | null>(null);
+
+  const images = attachments.filter((a) => a.type.startsWith("image/"));
+  const videos = attachments.filter((a) => a.type.startsWith("video/"));
+  const files = attachments.filter((a) => !a.type.startsWith("image/") && !a.type.startsWith("video/"));
+
+  const handleDownload = async (att: Attachment) => {
+    if (!att.url) return;
+    const response = await fetch(att.url);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = att.name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <>
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc.src} name={lightboxSrc.name} onClose={() => setLightboxSrc(null)} />
+      )}
+      {images.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {images.map((att, i) =>
+            att.url ? (
+              <button
+                key={i}
+                onClick={() => setLightboxSrc({ src: att.url!, name: att.name })}
+                className="block overflow-hidden border border-border hover:border-foreground/20 transition-colors cursor-pointer"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={att.url}
+                  alt={att.name}
+                  className="max-h-60 max-w-full object-contain bg-muted/20 md:max-w-72"
+                  loading="lazy"
+                />
+              </button>
+            ) : null
+          )}
+        </div>
+      )}
+      {videos.length > 0 && (
+        <div className="mt-3 flex flex-col gap-2">
+          {videos.map((att, i) =>
+            att.url ? (
+              <div key={i} className="max-w-full overflow-hidden border border-border md:max-w-96">
+                <video src={att.url} controls preload="metadata" className="max-h-72 w-full bg-black">
+                  <track kind="captions" />
+                </video>
+              </div>
+            ) : null
+          )}
+        </div>
+      )}
+      {files.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {files.map((att, i) => (
+            <div key={i} className="flex items-center gap-2.5 border border-border bg-muted/30 px-3 py-2">
+              <File size={14} className="shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-medium truncate block max-w-48">{att.name}</span>
+                <span className="text-[10px] text-muted-foreground">{formatFileSize(att.size)}</span>
+              </div>
+              {att.url && (
+                <button
+                  onClick={() => handleDownload(att)}
+                  className="flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  title="Download"
+                >
+                  <DownloadSimple size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 export function ForumPostView({
   postId,
@@ -368,17 +491,7 @@ export function ForumPostView({
 
           {/* Attachments */}
           {post.attachments && post.attachments.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {post.attachments.map((att, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
-                >
-                  <File size={12} className="shrink-0 text-muted-foreground" />
-                  <span className="text-[11px] truncate max-w-40">{att.name}</span>
-                </div>
-              ))}
-            </div>
+            <AttachmentList attachments={post.attachments} />
           )}
         </div>
 
@@ -458,17 +571,7 @@ export function ForumPostView({
 
                         {/* Comment attachments */}
                         {comment.attachments && comment.attachments.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {comment.attachments.map((att, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1"
-                              >
-                                <File size={12} className="shrink-0 text-muted-foreground" />
-                                <span className="text-[11px] truncate max-w-32">{att.name}</span>
-                              </div>
-                            ))}
-                          </div>
+                          <AttachmentList attachments={comment.attachments} />
                         )}
                       </div>
 

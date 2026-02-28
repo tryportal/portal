@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Copy, Check } from "@phosphor-icons/react";
+import { useTheme } from "next-themes";
 
 interface ShikiCodeProps {
   code: string;
@@ -12,24 +13,24 @@ interface ShikiCodeProps {
 export function ShikiCode({ code, language }: ShikiCodeProps) {
   const [html, setHtml] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
     codeToHtml(code, {
       lang: language,
-      theme: "github-light",
+      theme: resolvedTheme === "dark" ? "github-dark" : "github-light",
     })
       .then((result) => {
         if (!cancelled) setHtml(result);
       })
       .catch(() => {
-        // Fallback: show as plain code block
         if (!cancelled) setHtml("");
       });
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, resolvedTheme]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
