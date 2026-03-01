@@ -181,6 +181,18 @@ export default function SignInPage() {
                       Verify
                     </Button>
                   </SignIn.Action>
+                  <SignIn.Action
+                    resend
+                    asChild
+                    fallback={<p className="text-center text-xs text-muted-foreground">Resend code</p>}
+                  >
+                    <button
+                      type="button"
+                      className="text-center text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                      Resend code
+                    </button>
+                  </SignIn.Action>
                 </SignIn.Strategy>
 
                 {/* Phone code strategy */}
@@ -262,6 +274,18 @@ export default function SignInPage() {
                     <Button size="lg" className="w-full">
                       Verify
                     </Button>
+                  </SignIn.Action>
+                  <SignIn.Action
+                    resend
+                    asChild
+                    fallback={<p className="text-center text-xs text-muted-foreground">Resend code</p>}
+                  >
+                    <button
+                      type="button"
+                      className="text-center text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                      Resend code
+                    </button>
                   </SignIn.Action>
                 </SignIn.Strategy>
               </FieldGroup>

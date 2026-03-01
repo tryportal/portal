@@ -228,6 +228,18 @@ export default function GetStartedPage() {
                       Verify
                     </Button>
                   </SignUp.Action>
+                  <SignUp.Action
+                    resend
+                    asChild
+                    fallback={<p className="text-center text-xs text-muted-foreground">Resend code</p>}
+                  >
+                    <button
+                      type="button"
+                      className="text-center text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                      Resend code
+                    </button>
+                  </SignUp.Action>
                 </SignUp.Strategy>
 
                 <SignUp.Strategy name="phone_code">
