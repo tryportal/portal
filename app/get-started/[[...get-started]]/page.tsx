@@ -20,6 +20,7 @@ function OTPInput() {
     <Clerk.Input
       type="otp"
       autoSubmit
+      className="flex flex-row gap-2 justify-center"
       render={({ value, status }) => (
         <div
           data-status={status}
@@ -140,12 +141,12 @@ export default function GetStartedPage() {
               </FieldGroup>
               <p className="mt-6 text-center text-xs text-muted-foreground">
                 Already have an account?{" "}
-                <Clerk.Link
-                  navigate="sign-in"
+                <Link
+                  href="/sign-in"
                   className="text-foreground underline underline-offset-4 hover:no-underline"
                 >
                   Sign in
-                </Clerk.Link>
+                </Link>
               </p>
             </SignUp.Step>
 
@@ -218,9 +219,7 @@ export default function GetStartedPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Verification code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>
@@ -237,9 +236,7 @@ export default function GetStartedPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Phone verification code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>

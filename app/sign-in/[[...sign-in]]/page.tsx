@@ -20,6 +20,7 @@ function OTPInput() {
     <Clerk.Input
       type="otp"
       autoSubmit
+      className="flex flex-row gap-2 justify-center"
       render={({ value, status }) => (
         <div
           data-status={status}
@@ -104,12 +105,12 @@ export default function SignInPage() {
               </FieldGroup>
               <p className="mt-6 text-center text-xs text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Clerk.Link
-                  navigate="sign-up"
+                <Link
+                  href="/get-started"
                   className="text-foreground underline underline-offset-4 hover:no-underline"
                 >
                   Get started
-                </Clerk.Link>
+                </Link>
               </p>
             </SignIn.Step>
 
@@ -171,9 +172,7 @@ export default function SignInPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Email code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>
@@ -191,9 +190,7 @@ export default function SignInPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Phone code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>
@@ -211,9 +208,7 @@ export default function SignInPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Authenticator code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>
@@ -259,9 +254,7 @@ export default function SignInPage() {
                       <Clerk.Label asChild>
                         <FieldLabel>Reset code</FieldLabel>
                       </Clerk.Label>
-                      <div className="flex justify-center gap-1.5">
-                        <OTPInput />
-                      </div>
+                      <OTPInput />
                       <Clerk.FieldError className="text-destructive text-xs" />
                     </Field>
                   </Clerk.Field>
